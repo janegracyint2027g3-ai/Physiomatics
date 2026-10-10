@@ -9,5 +9,7 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Pose analysis runs fully client-side (MediaPipe tasks-vision, dynamically imported in PoseAnalyzer) and session history lives in localStorage — no backend yet, so videos never leave the device.
-- Lead forms hand off to WhatsApp via `whatsappLink` in src/lib/site.ts — no backend is connected, so this keeps forms functional instead of failing silently.
+# Project decisions
+
+- Enquiry forms save to the `public.leads` table (anon INSERT-only RLS, no read policy) before handing off to WhatsApp, so submissions are stored even if the visitor never presses send in WhatsApp.
+- WhatsApp handoff goes through `whatsappLink` in `src/lib/site.ts`; the number lives in one constant there so it can be swapped in a single place.
