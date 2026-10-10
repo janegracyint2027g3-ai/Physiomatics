@@ -35,11 +35,11 @@ function leadRow(formType: string, data: FormData) {
     job_title: get("Role / job title"),
     organization: get("Organization name"),
     country: get("Country"),
-    organization_type: get("Organization type") || get("I am a…"),
+    organization_type: get("Organization type") || get("Role"),
     audience_size: get("Number of patients / students"),
-    message: get("How can we help?"),
+    message: get("Message"),
     challenge: get("Main challenge"),
-    requirements: get("Requirements & timeline"),
+    requirements: get("Requirements and timeline"),
   };
 }
 
