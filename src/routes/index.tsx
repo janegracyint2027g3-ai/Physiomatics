@@ -125,6 +125,7 @@ function Home() {
             <ShieldCheck className="size-7 text-primary" />
             <h3 className="mt-4 text-2xl">Physiotherapist oversight, by design</h3>
             <p className="mt-3 text-muted-foreground">Results are estimates meant for professional review. Physiomatics supports — and never replaces — your physiotherapist. It does not diagnose conditions or guarantee recovery.</p>
+            <Link to="/safety" className="mt-4 inline-block text-sm font-semibold text-primary">Our safety principles →</Link>
           </div>
           <div className="rounded-3xl border bg-card p-8">
             <h3 className="text-2xl">Progress over time</h3>
