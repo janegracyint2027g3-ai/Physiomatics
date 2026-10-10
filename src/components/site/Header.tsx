@@ -7,6 +7,7 @@ import { platformMenu, solutionsMenu } from "@/lib/site";
 const simple = [
   { to: "/how-it-works", label: "How It Works" },
   { to: "/resources", label: "Resources" },
+  { to: "/blog", label: "Blog" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
 ] as const;
