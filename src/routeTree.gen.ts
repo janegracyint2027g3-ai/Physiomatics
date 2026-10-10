@@ -15,8 +15,10 @@ import { Route as AnalyzeRouteImport } from './routes/analyze'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as PlatformRouteImport } from './routes/platform'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as SolutionsRouteImport } from './routes/solutions'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 
@@ -50,6 +52,11 @@ const PlatformRoute = PlatformRouteImport.update({
   path: '/platform',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResourcesRoute = ResourcesRouteImport.update({
   id: '/resources',
   path: '/resources',
@@ -58,6 +65,11 @@ const ResourcesRoute = ResourcesRouteImport.update({
 const SolutionsRoute = SolutionsRouteImport.update({
   id: '/solutions',
   path: '/solutions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
@@ -78,8 +90,10 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/how-it-works': typeof HowItWorksRoute
   '/platform': typeof PlatformRoute
+  '/privacy': typeof PrivacyRoute
   '/resources': typeof ResourcesRoute
   '/solutions': typeof SolutionsRoute
+  '/terms': typeof TermsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/': typeof BlogIndexRoute
 }
@@ -90,8 +104,10 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/how-it-works': typeof HowItWorksRoute
   '/platform': typeof PlatformRoute
+  '/privacy': typeof PrivacyRoute
   '/resources': typeof ResourcesRoute
   '/solutions': typeof SolutionsRoute
+  '/terms': typeof TermsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog': typeof BlogIndexRoute
 }
@@ -103,8 +119,10 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/how-it-works': typeof HowItWorksRoute
   '/platform': typeof PlatformRoute
+  '/privacy': typeof PrivacyRoute
   '/resources': typeof ResourcesRoute
   '/solutions': typeof SolutionsRoute
+  '/terms': typeof TermsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/blog/': typeof BlogIndexRoute
 }
@@ -117,8 +135,10 @@ export interface FileRouteTypes {
     | '/contact'
     | '/how-it-works'
     | '/platform'
+    | '/privacy'
     | '/resources'
     | '/solutions'
+    | '/terms'
     | '/blog/$slug'
     | '/blog/'
   fileRoutesByTo: FileRoutesByTo
@@ -129,8 +149,10 @@ export interface FileRouteTypes {
     | '/contact'
     | '/how-it-works'
     | '/platform'
+    | '/privacy'
     | '/resources'
     | '/solutions'
+    | '/terms'
     | '/blog/$slug'
     | '/blog'
   id:
@@ -141,8 +163,10 @@ export interface FileRouteTypes {
     | '/contact'
     | '/how-it-works'
     | '/platform'
+    | '/privacy'
     | '/resources'
     | '/solutions'
+    | '/terms'
     | '/blog/$slug'
     | '/blog/'
   fileRoutesById: FileRoutesById
@@ -154,8 +178,10 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   HowItWorksRoute: typeof HowItWorksRoute
   PlatformRoute: typeof PlatformRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResourcesRoute: typeof ResourcesRoute
   SolutionsRoute: typeof SolutionsRoute
+  TermsRoute: typeof TermsRoute
   BlogSlugRoute: typeof BlogSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
 }
@@ -204,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlatformRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/resources': {
       id: '/resources'
       path: '/resources'
@@ -216,6 +249,13 @@ declare module '@tanstack/react-router' {
       path: '/solutions'
       fullPath: '/solutions'
       preLoaderRoute: typeof SolutionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/': {
@@ -242,8 +282,10 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   HowItWorksRoute: HowItWorksRoute,
   PlatformRoute: PlatformRoute,
+  PrivacyRoute: PrivacyRoute,
   ResourcesRoute: ResourcesRoute,
   SolutionsRoute: SolutionsRoute,
+  TermsRoute: TermsRoute,
   BlogSlugRoute: BlogSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
 }
