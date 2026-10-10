@@ -37,7 +37,7 @@ const tree: Record<string, Node> = {
 export function Assistant() {
   const [open, setOpen] = useState(false);
   const [node, setNode] = useState("start");
-  const n = tree[node];
+  const n = tree[node]!;
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
       {open && (

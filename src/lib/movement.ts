@@ -5,7 +5,8 @@ export type ExerciseId = "squat" | "knee_ext" | "arm_raise";
 // MediaPipe Pose landmark indices
 const L = { shoulder: [11, 12], elbow: [13, 14], hip: [23, 24], knee: [25, 26], ankle: [27, 28] } as const;
 
-function angle(a: LM, b: LM, c: LM) {
+function angle(pa?: LM, pb?: LM, pc?: LM) {
+  const a = pa!, b = pb!, c = pc!;
   const ab = Math.atan2(a.y - b.y, a.x - b.x);
   const cb = Math.atan2(c.y - b.y, c.x - b.x);
   let d = Math.abs(((ab - cb) * 180) / Math.PI);
@@ -14,7 +15,7 @@ function angle(a: LM, b: LM, c: LM) {
 }
 
 function bestSide(p: LM[], ids: number[][]) {
-  const score = (s: 0 | 1) => ids.reduce((acc, j) => acc + (p[j[s]].visibility ?? 0), 0) / ids.length;
+  const score = (s: 0 | 1) => ids.reduce((acc, j) => acc + (p[j[s]!]?.visibility ?? 0), 0) / ids.length;
   const l = score(0), r = score(1);
   return l >= r ? { s: 0 as const, vis: l } : { s: 1 as const, vis: r };
 }
