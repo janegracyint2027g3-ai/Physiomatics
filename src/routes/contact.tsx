@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,10 +23,34 @@ export const Route = createFileRoute("/contact")({
 
 const roles = ["Physiotherapist / clinic", "Elderly individual / caregiver", "Injury rehabilitation", "Educator / institution", "Partner / organization"];
 
+function leadRow(formType: string, data: FormData) {
+  const get = (k: string) => String(data.get(k) ?? "").trim();
+  return {
+    form_type: formType,
+    full_name: get("Full name"),
+    contact: get("Email or phone"),
+    email: get("Work email"),
+    phone: get("Phone"),
+    job_title: get("Role / job title"),
+    organization: get("Organization name"),
+    country: get("Country"),
+    organization_type: get("Organization type") || get("I am a…"),
+    audience_size: get("Number of patients / students"),
+    message: get("How can we help?"),
+    challenge: get("Main challenge"),
+    requirements: get("Requirements & timeline"),
+  };
+}
+
+async function saveLead(formType: string, data: FormData) {
+  const { error } = await supabase.from("leads").insert(leadRow(formType, data));
+  if (error) console.error("Failed to save enquiry:", error.message);
+  return !error;
+}
+
 function sendViaWhatsApp(title: string, data: FormData) {
   const lines = [title, ...[...data.entries()].filter(([, v]) => String(v).trim()).map(([k, v]) => `${k}: ${v}`)];
   window.open(whatsappLink(lines.join("\n")), "_blank", "noopener");
-  toast.success("Your enquiry is ready in WhatsApp — press send to deliver it.");
 }
 
 function Field({ name, label, type = "text", required }: { name: string; label: string; type?: string; required?: boolean }) {
@@ -39,9 +64,15 @@ function Field({ name, label, type = "text", required }: { name: string; label: 
 
 function Contact() {
   const [mode, setMode] = useState<"quick" | "long">("quick");
-  const submit = (title: string) => (e: FormEvent<HTMLFormElement>) => {
+  const submit = (formType: string, title: string) => async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    sendViaWhatsApp(title, new FormData(e.currentTarget));
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const saved = await saveLead(formType, data);
+    sendViaWhatsApp(title, data);
+    form.reset();
+    if (saved) toast.success("Your enquiry is saved — and ready in WhatsApp. Press send to deliver it.");
+    else toast.warning("We couldn't save your enquiry right now, but WhatsApp is open — press send to deliver it.");
   };
   return (
     <>
@@ -59,7 +90,7 @@ function Contact() {
         </div>
 
         {mode === "quick" ? (
-          <form onSubmit={submit("Physiomatics — Quick enquiry")} className="grid gap-4 rounded-3xl border bg-card p-8 shadow-soft">
+          <form onSubmit={submit("quick_enquiry", "Physiomatics — Quick enquiry")} className="grid gap-4 rounded-3xl border bg-card p-8 shadow-soft">
             <Field name="name" label="Full name" required />
             <Field name="contact" label="Email or phone" required />
             <div className="grid gap-1.5">
@@ -74,7 +105,7 @@ function Contact() {
             <Button type="submit" variant="hero" size="lg">Send enquiry</Button>
           </form>
         ) : (
-          <form onSubmit={submit("Physiomatics — Consultation request")} className="grid gap-8 rounded-3xl border bg-card p-8 shadow-soft">
+          <form onSubmit={submit("consultation", "Physiomatics — Consultation request")} className="grid gap-8 rounded-3xl border bg-card p-8 shadow-soft">
             <fieldset className="grid gap-4 md:grid-cols-2">
               <legend className="mb-3 font-display text-xl">Contact details</legend>
               <Field name="lname" label="Full name" required />
