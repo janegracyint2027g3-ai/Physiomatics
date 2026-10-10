@@ -35,7 +35,7 @@ function Inbox() {
 
   const setStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("leads").update({ status }).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["leads"] });
   };
 
