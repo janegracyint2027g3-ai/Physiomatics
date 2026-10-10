@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,10 +23,34 @@ export const Route = createFileRoute("/contact")({
 
 const roles = ["Physiotherapist / clinic", "Elderly individual / caregiver", "Injury rehabilitation", "Educator / institution", "Partner / organization"];
 
+function leadRow(formType: string, data: FormData) {
+  const get = (k: string) => String(data.get(k) ?? "").trim();
+  return {
+    form_type: formType,
+    full_name: get("Full name"),
+    contact: get("Email or phone"),
+    email: get("Work email"),
+    phone: get("Phone"),
+    job_title: get("Role / job title"),
+    organization: get("Organization name"),
+    country: get("Country"),
+    organization_type: get("Organization type") || get("I am a…"),
+    audience_size: get("Number of patients / students"),
+    message: get("How can we help?"),
+    challenge: get("Main challenge"),
+    requirements: get("Requirements & timeline"),
+  };
+}
+
+async function saveLead(formType: string, data: FormData) {
+  const { error } = await supabase.from("leads").insert(leadRow(formType, data));
+  if (error) console.error("Failed to save enquiry:", error.message);
+  return !error;
+}
+
 function sendViaWhatsApp(title: string, data: FormData) {
   const lines = [title, ...[...data.entries()].filter(([, v]) => String(v).trim()).map(([k, v]) => `${k}: ${v}`)];
   window.open(whatsappLink(lines.join("\n")), "_blank", "noopener");
-  toast.success("Your enquiry is ready in WhatsApp — press send to deliver it.");
 }
 
 function Field({ name, label, type = "text", required }: { name: string; label: string; type?: string; required?: boolean }) {
