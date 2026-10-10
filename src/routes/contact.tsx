@@ -90,7 +90,7 @@ function Contact() {
         </div>
 
         {mode === "quick" ? (
-          <form onSubmit={submit("Physiomatics — Quick enquiry")} className="grid gap-4 rounded-3xl border bg-card p-8 shadow-soft">
+          <form onSubmit={submit("quick_enquiry", "Physiomatics — Quick enquiry")} className="grid gap-4 rounded-3xl border bg-card p-8 shadow-soft">
             <Field name="name" label="Full name" required />
             <Field name="contact" label="Email or phone" required />
             <div className="grid gap-1.5">
@@ -105,7 +105,7 @@ function Contact() {
             <Button type="submit" variant="hero" size="lg">Send enquiry</Button>
           </form>
         ) : (
-          <form onSubmit={submit("Physiomatics — Consultation request")} className="grid gap-8 rounded-3xl border bg-card p-8 shadow-soft">
+          <form onSubmit={submit("consultation", "Physiomatics — Consultation request")} className="grid gap-8 rounded-3xl border bg-card p-8 shadow-soft">
             <fieldset className="grid gap-4 md:grid-cols-2">
               <legend className="mb-3 font-display text-xl">Contact details</legend>
               <Field name="lname" label="Full name" required />
