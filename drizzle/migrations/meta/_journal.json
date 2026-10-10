@@ -8,6 +8,13 @@
       "when": 1791639778668,
       "tag": "0000_create_leads_table",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791641371023,
+      "tag": "0001_admin_roles_leads_inbox",
+      "breakpoints": true
     }
   ]
 }
