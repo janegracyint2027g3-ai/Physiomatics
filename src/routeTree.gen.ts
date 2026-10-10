@@ -19,6 +19,7 @@ import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResourcesRouteImport } from './routes/resources'
+import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
@@ -74,6 +75,11 @@ const ResourcesRoute = ResourcesRouteImport.update({
   path: '/resources',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SafetyRoute = SafetyRouteImport.update({
+  id: '/safety',
+  path: '/safety',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SolutionsRoute = SolutionsRouteImport.update({
   id: '/solutions',
   path: '/solutions',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
   '/resources': typeof ResourcesRoute
+  '/safety': typeof SafetyRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/inbox': typeof AuthenticatedInboxRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
   '/resources': typeof ResourcesRoute
+  '/safety': typeof SafetyRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/inbox': typeof AuthenticatedInboxRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
   '/resources': typeof ResourcesRoute
+  '/safety': typeof SafetyRoute
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/platform'
     | '/privacy'
     | '/resources'
+    | '/safety'
     | '/solutions'
     | '/terms'
     | '/inbox'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/platform'
     | '/privacy'
     | '/resources'
+    | '/safety'
     | '/solutions'
     | '/terms'
     | '/inbox'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/platform'
     | '/privacy'
     | '/resources'
+    | '/safety'
     | '/solutions'
     | '/terms'
     | '/_authenticated/inbox'
@@ -213,6 +225,7 @@ export interface RootRouteChildren {
   PlatformRoute: typeof PlatformRoute
   PrivacyRoute: typeof PrivacyRoute
   ResourcesRoute: typeof ResourcesRoute
+  SafetyRoute: typeof SafetyRoute
   SolutionsRoute: typeof SolutionsRoute
   TermsRoute: typeof TermsRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -291,6 +304,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/safety': {
+      id: '/safety'
+      path: '/safety'
+      fullPath: '/safety'
+      preLoaderRoute: typeof SafetyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/solutions': {
       id: '/solutions'
       path: '/solutions'
@@ -351,6 +371,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlatformRoute: PlatformRoute,
   PrivacyRoute: PrivacyRoute,
   ResourcesRoute: ResourcesRoute,
+  SafetyRoute: SafetyRoute,
   SolutionsRoute: SolutionsRoute,
   TermsRoute: TermsRoute,
   BlogSlugRoute: BlogSlugRoute,
