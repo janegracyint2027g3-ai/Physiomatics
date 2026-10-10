@@ -25,6 +25,7 @@ export function Footer() {
           <Link to="/about" className="opacity-75 hover:opacity-100">About</Link>
           <Link to="/privacy" className="opacity-75 hover:opacity-100">Privacy policy</Link>
           <Link to="/terms" className="opacity-75 hover:opacity-100">Terms of use</Link>
+          <Link to="/inbox" className="opacity-75 hover:opacity-100">Team sign in</Link>
         </div>
       </div>
       <div className="border-t border-ink-foreground/10 py-6 text-center text-xs opacity-60">
