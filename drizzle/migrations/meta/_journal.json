@@ -15,6 +15,13 @@
       "when": 1791641371023,
       "tag": "0001_admin_roles_leads_inbox",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791641691972,
+      "tag": "0002_feedback_testimonials",
+      "breakpoints": true
     }
   ]
 }
