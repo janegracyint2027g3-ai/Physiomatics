@@ -14,7 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      leads: {
+        Row: {
+          audience_size: string | null
+          challenge: string | null
+          contact: string | null
+          country: string | null
+          created_at: string
+          details: Json
+          email: string | null
+          form_type: string
+          full_name: string
+          id: string
+          job_title: string | null
+          message: string | null
+          organization: string | null
+          organization_type: string | null
+          phone: string | null
+          requirements: string | null
+        }
+        Insert: {
+          audience_size?: string | null
+          challenge?: string | null
+          contact?: string | null
+          country?: string | null
+          created_at?: string
+          details?: Json
+          email?: string | null
+          form_type?: string
+          full_name: string
+          id?: string
+          job_title?: string | null
+          message?: string | null
+          organization?: string | null
+          organization_type?: string | null
+          phone?: string | null
+          requirements?: string | null
+        }
+        Update: {
+          audience_size?: string | null
+          challenge?: string | null
+          contact?: string | null
+          country?: string | null
+          created_at?: string
+          details?: Json
+          email?: string | null
+          form_type?: string
+          full_name?: string
+          id?: string
+          job_title?: string | null
+          message?: string | null
+          organization?: string | null
+          organization_type?: string | null
+          phone?: string | null
+          requirements?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
