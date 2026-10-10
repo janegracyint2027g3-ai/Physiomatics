@@ -22,7 +22,9 @@ export function Footer() {
           <div className="font-semibold">Contact</div>
           <Link to="/contact" className="opacity-75 hover:opacity-100">Book a demo</Link>
           <a href={whatsappLink(WA_MESSAGES.general)} target="_blank" rel="noreferrer" className="opacity-75 hover:opacity-100">Chat on WhatsApp</a>
-          <Link to="/about" className="opacity-75 hover:opacity-100">About & privacy</Link>
+          <Link to="/about" className="opacity-75 hover:opacity-100">About</Link>
+          <Link to="/privacy" className="opacity-75 hover:opacity-100">Privacy policy</Link>
+          <Link to="/terms" className="opacity-75 hover:opacity-100">Terms of use</Link>
         </div>
       </div>
       <div className="border-t border-ink-foreground/10 py-6 text-center text-xs opacity-60">
