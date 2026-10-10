@@ -16,6 +16,7 @@ export function Footer() {
           <Link to="/solutions" className="opacity-75 hover:opacity-100">Solutions</Link>
           <Link to="/how-it-works" className="opacity-75 hover:opacity-100">How It Works</Link>
           <Link to="/resources" className="opacity-75 hover:opacity-100">Resources & FAQ</Link>
+          <Link to="/blog" className="opacity-75 hover:opacity-100">Blog</Link>
         </div>
         <div className="grid gap-2 text-sm">
           <div className="font-semibold">Contact</div>
