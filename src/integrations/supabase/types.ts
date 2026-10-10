@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      feedback: {
+        Row: {
+          approved: boolean
+          consent_to_publish: boolean
+          created_at: string
+          full_name: string
+          id: string
+          message: string
+          rating: number
+          role: string | null
+        }
+        Insert: {
+          approved?: boolean
+          consent_to_publish?: boolean
+          created_at?: string
+          full_name: string
+          id?: string
+          message: string
+          rating?: number
+          role?: string | null
+        }
+        Update: {
+          approved?: boolean
+          consent_to_publish?: boolean
+          created_at?: string
+          full_name?: string
+          id?: string
+          message?: string
+          rating?: number
+          role?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           audience_size: string | null
