@@ -25,6 +25,7 @@ const roles = ["Physiotherapist / clinic", "Elderly individual / caregiver", "In
 
 function leadRow(formType: string, data: FormData) {
   const get = (k: string) => String(data.get(k) ?? "").trim();
+  // field names below match each input's name attribute
   return {
     form_type: formType,
     full_name: get("Full name"),
