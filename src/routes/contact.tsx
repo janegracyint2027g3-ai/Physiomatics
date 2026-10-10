@@ -64,9 +64,15 @@ function Field({ name, label, type = "text", required }: { name: string; label: 
 
 function Contact() {
   const [mode, setMode] = useState<"quick" | "long">("quick");
-  const submit = (title: string) => (e: FormEvent<HTMLFormElement>) => {
+  const submit = (formType: string, title: string) => async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    sendViaWhatsApp(title, new FormData(e.currentTarget));
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    const saved = await saveLead(formType, data);
+    sendViaWhatsApp(title, data);
+    form.reset();
+    if (saved) toast.success("Your enquiry is saved — and ready in WhatsApp. Press send to deliver it.");
+    else toast.warning("We couldn't save your enquiry right now, but WhatsApp is open — press send to deliver it.");
   };
   return (
     <>
