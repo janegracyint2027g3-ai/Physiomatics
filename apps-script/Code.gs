@@ -224,6 +224,15 @@ function INITIALIZE_ALL_TABS() {
  */
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
+  if (params.action === "sync_airtable") {
+    try {
+      var resultMsg = SYNC_ALL_SHEET_DATA_TO_AIRTABLE();
+      return json_({ success: true, message: resultMsg });
+    } catch (err) {
+      log_("doGet_sync_airtable", "ERROR", String(err));
+      return json_({ success: false, message: String(err.message || err) });
+    }
+  }
   if (params.action || params.event_name || params.event_type) {
     try {
       return processEvent_(params);
