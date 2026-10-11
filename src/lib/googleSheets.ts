@@ -1,6 +1,12 @@
 /**
- * Utility to sync form submissions, user feedback, analytics, and session telemetry
- * to the Google Apps Script Web App configured in .env via VITE_GOOGLE_SHEETS_URL.
+ * Utility to sync form submissions, user feedback, analytics, and session
+ * telemetry to the Google Apps Script Web App (VITE_GOOGLE_SHEETS_URL).
+ *
+ * WHY GET params?
+ * With mode:'no-cors' the browser never reads the response, so we can't know
+ * if the POST body was received. Google Apps Script reliably reads GET query
+ * parameters via e.parameter regardless of CORS, making GET the safest choice
+ * for cross-origin fire-and-forget calls to Apps Script.
  */
 
 const GOOGLE_SHEETS_URL =
@@ -9,16 +15,14 @@ const GOOGLE_SHEETS_URL =
 
 export interface SheetPayload {
   action?: string;
-  formType?: string;
-  source?: string;
-  timestamp?: string;
-  [key: string]: any;
+  form_type?: string;
+  [key: string]: string | number | boolean | undefined;
 }
 
 /**
- * Send data to Google Sheets via fetch.
- * Uses mode: 'no-cors' so that browser CORS restrictions with Google Apps Script
- * redirects (302) do not throw errors or block form progression.
+ * Encode all fields as URL query parameters and fire a GET request.
+ * Apps Script reads them via e.parameter.fieldName in doGet(e).
+ * mode:'no-cors' suppresses CORS errors on the 302 redirect Apps Script returns.
  */
 export async function sendToGoogleSheet(payload: SheetPayload): Promise<boolean> {
   if (!GOOGLE_SHEETS_URL) {
@@ -26,28 +30,42 @@ export async function sendToGoogleSheet(payload: SheetPayload): Promise<boolean>
     return false;
   }
 
-  const dataToSend = {
-    ...payload,
-    timestamp: payload.timestamp || new Date().toISOString(),
-    userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "Unknown",
-    pageUrl: typeof window !== "undefined" ? window.location.href : "Unknown",
+  const params: Record<string, string> = {
+    timestamp: new Date().toISOString(),
+    pageUrl:
+      typeof window !== "undefined" ? window.location.href : "Unknown",
   };
 
-  try {
-    // Google Apps Script accepts text/plain or application/x-www-form-urlencoded easily without CORS preflight blocks
-    await fetch(GOOGLE_SHEETS_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8",
-      },
-      body: JSON.stringify(dataToSend),
-    });
+  // Flatten payload into string values
+  Object.entries(payload).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) params[k] = String(v);
+  });
 
-    console.info("Synced to Google Sheets successfully:", payload.formType || payload.action || "record");
+  const qs = new URLSearchParams(params).toString();
+  const url = `${GOOGLE_SHEETS_URL}?${qs}`;
+
+  try {
+    await fetch(url, { method: "GET", mode: "no-cors" });
+    console.info(
+      "[Sheets] ✓ sent:",
+      payload.action || payload.form_type || "event"
+    );
     return true;
   } catch (err) {
-    console.error("Failed to sync to Google Sheets:", err);
+    console.error("[Sheets] ✗ failed:", err);
     return false;
   }
 }
+
+/* ─── Convenience helpers ──────────────────────────────────────────────── */
+
+/** Call this on any button/link click you want tracked. */
+export function trackClick(label: string, extra?: Record<string, string>) {
+  sendToGoogleSheet({ action: "click", label, ...extra }).catch(() => {});
+}
+
+/** Call this with a section name when a landmark section enters the viewport. */
+export function trackScroll(section: string) {
+  sendToGoogleSheet({ action: "scroll", section }).catch(() => {});
+}
+

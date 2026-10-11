@@ -120,6 +120,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 import { SessionTracker } from "@/components/site/SessionTracker";
+import { EngagementTracker } from "@/components/site/EngagementTracker";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -128,6 +129,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <SessionTracker />
+      <EngagementTracker />
       <Header />
       <main>
         <Outlet />
