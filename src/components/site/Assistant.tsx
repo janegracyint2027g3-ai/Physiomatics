@@ -153,6 +153,155 @@ const tree: Record<string, TreeNode> = {
     text: "Physiomatics offers a free demo. Pricing is customised by clinic size. Book a consultation and we'll send you a tailored proposal.",
     options: [{ label: "Book consultation", to: "/contact" }, { label: "Try analyser free", to: "/analyze" }, { label: "Chat on WhatsApp", wa: "general" }],
   },
+  // ── Page-specific nodes (one per route) ──────────────────────────────────
+  home: {
+    text: "Welcome to Physiomatics! 👋 I can help you explore AI-assisted physiotherapy, find the right solution for your role, or book a demo. What brings you here today?",
+    options: [{ label: "See how it works", to: "/how-it-works" }, { label: "Find my solution", next: "start" }, { label: "Book a demo", to: "/contact" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  analyze: {
+    text: "📹 You're on the Pose Analyser. Upload an exercise video and our AI detects body landmarks, measures joint angles and counts reps automatically. Need tips for the best recording setup?",
+    options: [{ label: "Who is this for?", next: "clinic" }, { label: "Privacy & data", next: "pricing" }, { label: "Book a demo", to: "/contact" }, { label: "Chat on WhatsApp", wa: "clinic" }],
+  },
+  how_it_works: {
+    text: "🔬 Physiomatics uses MediaPipe to detect 33 body landmarks per frame, compute joint angles in real time and count exercise reps — all inside your browser. No data leaves your device during analysis.",
+    options: [{ label: "See the workflow", to: "/how-it-works/workflow" }, { label: "Privacy details", to: "/how-it-works/privacy" }, { label: "Try it now", to: "/analyze" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  workflow: {
+    text: "🔄 The Physiomatics workflow: Record exercise → Upload video → AI detects landmarks → Joint angles & reps computed → Report shared with physiotherapist. Simple, fast and private.",
+    options: [{ label: "Try the analyser", to: "/analyze" }, { label: "Book a demo", to: "/contact" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  vision: {
+    text: "👁️ Our computer-vision engine runs fully in the browser using MediaPipe BlazePose. It identifies 33 skeletal landmarks to compute precise joint angles without needing a wearable device.",
+    options: [{ label: "Try the analyser", to: "/analyze" }, { label: "How it works", to: "/how-it-works" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  privacy: {
+    text: "🔒 Your videos are processed locally in the browser — they are never uploaded to a server. We don't store identifiable patient data in our analytics tools. A Data Processing Agreement is available for enterprise clients.",
+    options: [{ label: "Contact for DPA", to: "/contact" }, { label: "Privacy policy", to: "/privacy" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  solutions: {
+    text: "🩺 Physiomatics has tailored solutions for physiotherapy clinics, elderly care, home rehabilitation, sports academies, educators and caregivers. Which applies to you?",
+    options: [{ label: "Physiotherapy clinics", to: "/solutions/clinics" }, { label: "Elderly care", to: "/solutions/elderly" }, { label: "Rehabilitation", to: "/solutions/rehab" }, { label: "Education", to: "/solutions/education" }],
+  },
+  solutions_clinics: {
+    text: "🏥 Clinic solution: Review patient home-exercise videos remotely, compare session timelines, get rep & angle data per patient — and only call in the ones who need it. Scales from solo practitioners to multi-clinician centres.",
+    options: [{ label: "ICP — Clinics", to: "/icp/clinics" }, { label: "Book a demo", to: "/contact" }, { label: "Chat on WhatsApp", wa: "clinic" }],
+  },
+  solutions_elderly: {
+    text: "👴 Elderly solution: Large on-screen controls, high-contrast UI and seated exercise support. Family members can watch recorded sessions from anywhere and share them with the care team.",
+    options: [{ label: "Elderly care ICP", to: "/icp/elderly-care" }, { label: "Caregiver ICP", to: "/icp/caregivers" }, { label: "Chat on WhatsApp", wa: "elderly" }],
+  },
+  solutions_rehab: {
+    text: "🦵 Rehabilitation solution: Upload prescribed exercise videos, track joint-angle recovery over weeks, and generate a shareable progress report for your physiotherapist — all from home.",
+    options: [{ label: "Rehab patient ICP", to: "/icp/rehab-patients" }, { label: "Try the analyser", to: "/analyze" }, { label: "Chat on WhatsApp", wa: "rehab" }],
+  },
+  solutions_caregiver: {
+    text: "❤️ Caregiver solution: You don't need clinical training. Record a session, Physiomatics measures the range of motion and flags if the patient is meeting their physiotherapist's targets.",
+    options: [{ label: "Caregiver ICP", to: "/icp/caregivers" }, { label: "Book a consultation", to: "/contact" }, { label: "Chat on WhatsApp", wa: "elderly" }],
+  },
+  solutions_education: {
+    text: "🎓 Education solution: Use Physiomatics to demonstrate joint-angle concepts, biomechanics principles and movement analysis in real time with actual video — perfect for physiotherapy curriculum.",
+    options: [{ label: "Resources", to: "/resources" }, { label: "Partner with us", to: "/contact" }, { label: "Chat on WhatsApp", wa: "education" }],
+  },
+  icp: {
+    text: "🎯 Our Ideal Customer Profiles (ICPs) show you exactly how Physiomatics fits your specific role. Select yours for tailored content and a relevant case study.",
+    options: [{ label: "Physiotherapists", to: "/icp/physiotherapists" }, { label: "Clinics", to: "/icp/clinics" }, { label: "Elderly care", to: "/icp/elderly-care" }, { label: "Sports academies", to: "/icp/sports-academies" }],
+  },
+  icp_physio: {
+    text: "👨‍⚕️ For physiotherapists: Review home exercise videos asynchronously, see joint-angle timelines, and compare progress between sessions — saving hours of manual assessment each week.",
+    options: [{ label: "Request free demo", to: "/contact" }, { label: "Try the analyser", to: "/analyze" }, { label: "Chat on WhatsApp", wa: "clinic" }],
+  },
+  icp_clinic: {
+    text: "🏥 For clinics: A shared dashboard where every physiotherapist can monitor their patient caseloads, compare session histories and flag patients who need urgent in-person review.",
+    options: [{ label: "Request clinic demo", to: "/contact" }, { label: "See pricing", next: "pricing" }, { label: "Chat on WhatsApp", wa: "clinic" }],
+  },
+  icp_caregivers: {
+    text: "❤️ For caregivers: Record your loved one's exercises at home. Physiomatics measures whether they're hitting the physiotherapist's prescribed range of motion — no clinical expertise needed.",
+    options: [{ label: "Request free demo", to: "/contact" }, { label: "Solutions for elderly", to: "/solutions/elderly" }, { label: "Chat on WhatsApp", wa: "elderly" }],
+  },
+  icp_elderly: {
+    text: "👴 For elderly individuals: Simple, accessible interface with large buttons and high contrast. Seated exercises like knee extensions are fully supported. Family can monitor sessions remotely.",
+    options: [{ label: "Request free demo", to: "/contact" }, { label: "Caregiver solution", to: "/icp/caregivers" }, { label: "Chat on WhatsApp", wa: "elderly" }],
+  },
+  icp_rehab: {
+    text: "🦵 For rehabilitation patients: Track your recovery progress at home, see your joint angle improve week by week, and share a report with your physiotherapist — no extra clinic visits needed.",
+    options: [{ label: "Request free demo", to: "/contact" }, { label: "Try the analyser", to: "/analyze" }, { label: "Chat on WhatsApp", wa: "rehab" }],
+  },
+  icp_sports: {
+    text: "🏃 For sports academies: Monitor multiple athletes' movement quality — squat mechanics, sprint posture, throwing biomechanics — flag injury risk early and track improvements across the season.",
+    options: [{ label: "Request sports demo", to: "/contact" }, { label: "Try the analyser", to: "/analyze" }, { label: "Chat on WhatsApp", wa: "clinic" }],
+  },
+  platform: {
+    text: "🖥️ The Physiomatics platform includes a Pose Analyser, Movement Tracker, Progress Dashboard and Training Library. Which would you like to explore?",
+    options: [{ label: "Movement tracker", to: "/platform/movement" }, { label: "Progress dashboard", to: "/platform/progress" }, { label: "Training library", to: "/platform/training" }, { label: "Book a demo", to: "/contact" }],
+  },
+  platform_movement: {
+    text: "🦴 The Movement Tracker analyses video frame-by-frame, identifies 33 skeletal landmarks, and computes joint angles over time so you can see how movement changes within a single session.",
+    options: [{ label: "Try it live", to: "/analyze" }, { label: "Book a demo", to: "/contact" }, { label: "Chat on WhatsApp", wa: "clinic" }],
+  },
+  platform_progress: {
+    text: "📈 The Progress Dashboard shows how joint range of motion, rep count and confidence scores change session-over-session. Ideal for physiotherapists reviewing a patient's rehabilitation trajectory.",
+    options: [{ label: "Book a demo", to: "/contact" }, { label: "Chat on WhatsApp", wa: "clinic" }],
+  },
+  platform_training: {
+    text: "📚 The Training Library contains guided exercise templates — each with target joint angles and rep targets — so patients always know exactly what their physiotherapist expects.",
+    options: [{ label: "Resources", to: "/resources" }, { label: "Book a demo", to: "/contact" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  platform_dashboard: {
+    text: "📊 The Clinic Dashboard gives your whole team a single view of all active patients — latest session, progress trend and flags for anyone needing urgent review.",
+    options: [{ label: "Book a clinic demo", to: "/contact" }, { label: "Chat on WhatsApp", wa: "clinic" }],
+  },
+  resources: {
+    text: "📖 The Resources section has clinical guides, FAQs, an anatomy reference and a rehab exercise library. What are you looking for?",
+    options: [{ label: "FAQs", to: "/resources/faqs" }, { label: "Anatomy reference", to: "/resources/anatomy" }, { label: "Rehab exercise library", to: "/resources/rehab" }, { label: "Resource library", to: "/resources/library" }],
+  },
+  resources_faqs: {
+    text: "❓ Can't find your answer in the FAQs? Ask me directly — I know Physiomatics inside out — or reach our team on WhatsApp.",
+    options: [{ label: "Ask a question", to: "/contact" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  resources_anatomy: {
+    text: "🦴 The Anatomy Reference explains the joints and muscles Physiomatics tracks — hip, knee, ankle, shoulder, elbow and wrist — and what normal range-of-motion looks like for common exercises.",
+    options: [{ label: "Try the analyser", to: "/analyze" }, { label: "Rehab library", to: "/resources/rehab" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  resources_rehab: {
+    text: "🏋️ The Rehab Exercise Library has step-by-step guides for common prescribed exercises — knee extensions, shoulder circles, hip flexor stretches — each with the target angle range Physiomatics measures.",
+    options: [{ label: "Try the analyser", to: "/analyze" }, { label: "Book a consultation", to: "/contact" }, { label: "Chat on WhatsApp", wa: "rehab" }],
+  },
+  resources_library: {
+    text: "📂 The Resource Library has downloadable guides, research summaries and clinical templates for physiotherapists and educators using Physiomatics in practice.",
+    options: [{ label: "Partner with us", to: "/contact" }, { label: "Chat on WhatsApp", wa: "education" }],
+  },
+  contact: {
+    text: "📩 You're on the Contact page. Send a quick enquiry, book a detailed consultation, or leave feedback below. How can we help you today?",
+    options: [{ label: "See pricing info", next: "pricing" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  feedback: {
+    text: "💬 Thanks for taking the time to give feedback! Our product team reads every message. You can also use the feedback form right here on this page.",
+    options: [{ label: "Contact us", to: "/contact" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  about: {
+    text: "🏢 Physiomatics is building the next generation of remote physiotherapy monitoring — making clinical-grade movement analysis accessible to every patient, caregiver and clinic worldwide.",
+    options: [{ label: "Our mission", to: "/about/mission" }, { label: "Meet the team", to: "/about/team" }, { label: "Careers", to: "/about/careers" }, { label: "Contact us", to: "/contact" }],
+  },
+  about_mission: {
+    text: "🎯 Our mission: Democratise physiotherapy by giving every patient access to clinical-quality movement analysis — regardless of where they live or whether they can afford frequent clinic visits.",
+    options: [{ label: "How we do it", to: "/how-it-works" }, { label: "Meet the team", to: "/about/team" }, { label: "Contact us", to: "/contact" }],
+  },
+  about_team: {
+    text: "👥 The Physiomatics team combines expertise in computer vision, clinical physiotherapy and healthcare product design. We'd love to connect!",
+    options: [{ label: "Contact the team", to: "/contact" }, { label: "Careers", to: "/about/careers" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  about_careers: {
+    text: "💼 Interested in joining Physiomatics? We're always looking for people passionate about AI, healthcare and making a real impact on patients' lives.",
+    options: [{ label: "Get in touch", to: "/contact" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  blog: {
+    text: "📝 Our blog covers AI in physiotherapy, clinical case studies, biomechanics research and product updates. Is there a topic you'd like to learn more about?",
+    options: [{ label: "Resources", to: "/resources" }, { label: "Contact us", to: "/contact" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
+  safety: {
+    text: "⚠️ Safety reminder: Physiomatics is a monitoring and analysis tool only. It does not provide medical diagnoses. Always follow your physiotherapist's prescribed plan and stop any exercise that causes pain.",
+    options: [{ label: "Contact a professional", to: "/contact" }, { label: "Privacy policy", to: "/privacy" }, { label: "Chat on WhatsApp", wa: "general" }],
+  },
 };
 
 // ─── Message type ────────────────────────────────────────────────────────────
@@ -167,16 +316,78 @@ export function Assistant() {
   const [showTree, setShowTree] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Auto-open on analyze / solutions pages
+  // ── Map every route to the correct chatbot node ───────────────────────────
+  // Exact matches take priority; prefix matches are fallbacks.
+  const PAGE_CONTEXT: { match: string | string[]; node: string; autoOpen?: boolean }[] = [
+    // Home
+    { match: "/",                          node: "home" },
+    // Analyse
+    { match: "/analyze",                   node: "analyze",          autoOpen: true },
+    // How it works
+    { match: "/how-it-works/workflow",     node: "workflow" },
+    { match: "/how-it-works/vision",       node: "vision" },
+    { match: "/how-it-works/privacy",      node: "privacy" },
+    { match: "/how-it-works",              node: "how_it_works" },
+    // Solutions
+    { match: "/solutions/clinics",         node: "solutions_clinics" },
+    { match: "/solutions/elderly",         node: "solutions_elderly", autoOpen: true },
+    { match: "/solutions/rehab",           node: "solutions_rehab" },
+    { match: "/solutions/caregiver",       node: "solutions_caregiver" },
+    { match: "/solutions/education",       node: "solutions_education" },
+    { match: "/solutions",                 node: "solutions" },
+    // ICP pages
+    { match: "/icp/physiotherapists",      node: "icp_physio" },
+    { match: "/icp/clinics",               node: "icp_clinic" },
+    { match: "/icp/caregivers",            node: "icp_caregivers" },
+    { match: "/icp/elderly-care",          node: "icp_elderly" },
+    { match: "/icp/rehab-patients",        node: "icp_rehab" },
+    { match: "/icp/sports-academies",      node: "icp_sports" },
+    { match: "/icp",                       node: "icp" },
+    // Platform
+    { match: "/platform/movement",         node: "platform_movement" },
+    { match: "/platform/progress",         node: "platform_progress" },
+    { match: "/platform/training",         node: "platform_training" },
+    { match: "/platform/dashboard",        node: "platform_dashboard" },
+    { match: "/platform",                  node: "platform" },
+    // Resources
+    { match: "/resources/faqs",            node: "resources_faqs" },
+    { match: "/resources/anatomy",         node: "resources_anatomy" },
+    { match: "/resources/rehab",           node: "resources_rehab" },
+    { match: "/resources/library",         node: "resources_library" },
+    { match: "/resources",                 node: "resources" },
+    // Contact
+    { match: ["/contact", "/contact/demo", "/contact/enquiry", "/contact/consultation"], node: "contact" },
+    // Feedback
+    { match: "/feedback",                  node: "feedback" },
+    // About
+    { match: "/about/mission",             node: "about_mission" },
+    { match: "/about/team",               node: "about_team" },
+    { match: "/about/careers",             node: "about_careers" },
+    { match: "/about",                     node: "about" },
+    // Blog
+    { match: "/blog",                      node: "blog" },
+    // Legal / safety
+    { match: "/safety",                    node: "safety" },
+    { match: "/privacy",                   node: "privacy" },
+  ];
+
+  // Set chatbot node whenever the route changes
   useEffect(() => {
-    let nextNode = "start";
-    if (location.pathname.includes("/analyze")) nextNode = "clinic";
-    else if (location.pathname.includes("/solutions")) nextNode = "elderly";
-    else if (location.pathname.includes("/icp/elderly") || location.pathname.includes("/icp/caregiver")) nextNode = "elderly";
-    else if (location.pathname.includes("/icp/rehab")) nextNode = "rehab";
-    else if (location.pathname.includes("/icp/sports")) nextNode = "sports";
-    setNode(nextNode);
+    const path = location.pathname.replace(/\/$/, "") || "/";
+    let matched = "start";
+    let shouldAutoOpen = false;
+    for (const ctx of PAGE_CONTEXT) {
+      const matchers = Array.isArray(ctx.match) ? ctx.match : [ctx.match];
+      if (matchers.some((m) => path === m || path.startsWith(m + "/"))) {
+        matched = ctx.node;
+        if (ctx.autoOpen) shouldAutoOpen = true;
+        break; // first (most specific) match wins
+      }
+    }
+    setNode(matched);
     setShowTree(true);
+    if (shouldAutoOpen && !open) setTimeout(() => setOpen(true), 1800);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   // On node change, reset messages to the node greeting
