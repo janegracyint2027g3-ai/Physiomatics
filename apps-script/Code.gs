@@ -708,31 +708,122 @@ function routeTelemetry_(ss, p) {
 function sendLeadAlert_(p, subject) {
   if (!CONFIG.ENABLE_EMAIL_NOTIFICATIONS) return;
   var recipients = EMAIL_CONFIG.leadEmails || [EMAIL_CONFIG.adminEmail];
-  var body = [
-    "A new submission was received on the Physiomatics website.",
-    "",
-    "Type:                " + p.lead_type,
-    "Received:            " + p.received_at,
-    "Name:                " + p.name,
-    "Email:               " + p.email,
-    "Phone:               " + p.phone,
-    "Organization/Clinic: " + p.organization,
-    "Role:                " + p.role,
-    "Interest/Segment:    " + p.interest,
-    "Subject/Challenge:   " + p.subject,
-    "Message:             " + p.message,
-    "Page:                " + p.page_path,
-    "Website:             " + CONFIG.WEBSITE,
-    "",
-    "Open the Google Sheet to review and manage this enquiry."
+
+  var badgeColor = "#2563eb";
+  var badgeText = "New Enquiry";
+  var leadKind = String(p.lead_type || "").toLowerCase();
+  if (leadKind.indexOf("demo") >= 0) {
+    badgeColor = "#7c3aed";
+    badgeText = "Demo Request";
+  } else if (leadKind.indexOf("consultation") >= 0) {
+    badgeColor = "#059669";
+    badgeText = "Consultation Request";
+  } else if (leadKind.indexOf("quick") >= 0) {
+    badgeColor = "#0284c7";
+    badgeText = "Quick Enquiry";
+  } else if (leadKind.indexOf("feedback") >= 0) {
+    badgeColor = "#d97706";
+    badgeText = "User Feedback";
+  }
+
+  var waNum = "918072782352";
+  var rawPhone = String(p.phone || "").replace(/[^\d]/g, "");
+  var waLeadLink = rawPhone ? "https://wa.me/" + rawPhone : "";
+
+  var fields = [
+    { label: "Full Name", val: p.name, icon: "👤", strong: true },
+    { label: "Email Address", val: p.email ? "<a href='mailto:" + html_(p.email) + "' style='color:#2563eb;text-decoration:none'>" + html_(p.email) + "</a>" : "", icon: "✉️" },
+    { label: "Phone Number", val: p.phone ? "<a href='tel:" + html_(p.phone) + "' style='color:#2563eb;text-decoration:none'>" + html_(p.phone) + "</a>" : "", icon: "📞" },
+    { label: "Organization / Clinic", val: p.organization, icon: "🏥" },
+    { label: "Role / Job Title", val: p.role, icon: "💼" },
+    { label: "Service / Segment", val: p.interest, icon: "🎯" },
+    { label: "Topic / Challenge", val: p.subject, icon: "📌" },
+    { label: "Location", val: [p.geo_city, p.geo_region, p.geo_country].filter(Boolean).join(", "), icon: "📍" },
+    { label: "Source Page", val: p.page_path, icon: "🔗" },
+    { label: "Submission Time", val: p.received_at, icon: "🕒" }
+  ];
+
+  var rowsHtml = "";
+  fields.forEach(function(f) {
+    if (!f.val) return;
+    rowsHtml +=
+      "<tr style='border-bottom:1px solid #f1f5f9;'>" +
+        "<td style='padding:12px 14px;color:#64748b;font-size:13px;font-weight:600;white-space:nowrap;width:35%;'>" +
+          f.icon + " " + html_(f.label) +
+        "</td>" +
+        "<td style='padding:12px 14px;color:#0f172a;font-size:14px;" + (f.strong ? "font-weight:700;" : "") + "'>" +
+          (f.label === "Email Address" || f.label === "Phone Number" ? f.val : html_(f.val)) +
+        "</td>" +
+      "</tr>";
+  });
+
+  var messageBoxHtml = "";
+  if (p.message) {
+    messageBoxHtml =
+      "<div style='margin-top:20px;padding:16px 18px;background:#f8fafc;border-left:4px solid " + badgeColor + ";border-radius:6px;'>" +
+        "<div style='font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;'>Visitor Message</div>" +
+        "<div style='font-size:14px;color:#1e293b;line-height:1.6;white-space:pre-wrap;'>" + html_(p.message) + "</div>" +
+      "</div>";
+  }
+
+  var ssUrl = "";
+  try { ssUrl = getSpreadsheet().getUrl(); } catch (e) { ssUrl = CONFIG.WEBSITE; }
+
+  var actionButtonsHtml =
+    "<div style='margin-top:26px;display:flex;gap:10px;text-align:center;'>" +
+      (p.email ? "<a href='mailto:" + html_(p.email) + "?subject=Re: Physiomatics Enquiry' style='display:inline-block;padding:11px 20px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;margin-right:8px;'>Reply by Email</a>" : "") +
+      (waLeadLink ? "<a href='" + waLeadLink + "' style='display:inline-block;padding:11px 20px;background:#059669;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;margin-right:8px;'>WhatsApp Visitor</a>" : "") +
+      "<a href='" + ssUrl + "' style='display:inline-block;padding:11px 20px;background:#f1f5f9;color:#334155;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;border:1px solid #cbd5e1;'>Open Google Sheet</a>" +
+    "</div>";
+
+  var htmlBody =
+    "<!DOCTYPE html><html><head><meta charset='utf-8'></head><body style='margin:0;padding:24px;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;'>" +
+      "<div style='max-width:620px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,0.06);border:1px solid #e2e8f0;'>" +
+        // Header
+        "<div style='background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:28px 24px;border-bottom:3px solid " + badgeColor + ";'>" +
+          "<div style='display:inline-block;padding:4px 10px;background:" + badgeColor + ";color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:20px;margin-bottom:10px;'>" +
+            badgeText +
+          "</div>" +
+          "<h1 style='margin:0;color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px;'>New Lead from " + (p.name ? html_(p.name) : "Physiomatics") + "</h1>" +
+          "<p style='margin:6px 0 0 0;color:#94a3b8;font-size:13px;'>Captured live on <a href='" + CONFIG.WEBSITE + "' style='color:#38bdf8;text-decoration:none;'>" + CONFIG.WEBSITE + "</a></p>" +
+        "</div>" +
+        // Body
+        "<div style='padding:24px;'>" +
+          "<table style='width:100%;border-collapse:collapse;'>" +
+            rowsHtml +
+          "</table>" +
+          messageBoxHtml +
+          actionButtonsHtml +
+        "</div>" +
+        // Footer
+        "<div style='background:#f8fafc;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px;'>" +
+          "Physiomatics Website Intelligence System &bull; Automatically saved to Google Sheets & Airtable" +
+        "</div>" +
+      "</div>" +
+    "</body></html>";
+
+  var plainBody = [
+    "[" + badgeText + "] New submission on Physiomatics",
+    "Name: " + p.name,
+    "Email: " + p.email,
+    "Phone: " + p.phone,
+    "Organization: " + p.organization,
+    "Role: " + p.role,
+    "Interest: " + p.interest,
+    "Subject: " + p.subject,
+    "Message: " + p.message,
+    "Page: " + p.page_path,
+    "Received: " + p.received_at,
+    "Google Sheet: " + ssUrl
   ].join("\n");
 
   recipients.forEach(function (to) {
     try {
       MailApp.sendEmail({
         to: to,
-        subject: subject,
-        body: body,
+        subject: "⚡ [" + badgeText + "] " + (p.name || "New Lead") + (p.organization ? " &bull; " + p.organization : ""),
+        body: plainBody,
+        htmlBody: htmlBody,
         name: EMAIL_CONFIG.name,
         replyTo: p.email && isEmail_(p.email) ? p.email : EMAIL_CONFIG.replyTo
       });
@@ -746,35 +837,186 @@ function sendPeriodicExecutiveDigest(intervalName) {
   BUILD_AGGREGATED_INTERVAL_SUMMARIES();
   var ss  = getSpreadsheet();
   var map = { Daily: "Daily_Summary", Weekly: "Weekly_Summary", Monthly: "Monthly_Summary" };
-  var sheet = ss.getSheetByName(map[intervalName]);
+  var tabName = map[intervalName] || "Daily_Summary";
+  var sheet = ss.getSheetByName(tabName);
+
   if (!sheet || sheet.getLastRow() < 2) {
     log_("sendPeriodicExecutiveDigest", "SKIPPED", "No summary data for " + intervalName);
     return;
   }
 
-  var rows   = sheet.getDataRange().getDisplayValues();
-  var header = rows[0];
-  var target = rows[1];
-  var metrics = [];
-  for (var i = 0; i < header.length; i++) {
-    metrics.push(
-      "<tr><td style='padding:9px;border-bottom:1px solid #e2e8f0;color:#475569'>" + html_(header[i]) +
-      "</td><td style='padding:9px;border-bottom:1px solid #e2e8f0;font-weight:700'>" + html_(target[i]) + "</td></tr>"
+  var data = sheet.getDataRange().getDisplayValues();
+  var header = data[0];
+  var latest = data[1] || [];
+
+  // Map header indexes
+  var idx = function(name) { return header.indexOf(name); };
+  var dateStr     = latest[0] || "Latest";
+  var totalEvents = Number(latest[idx("Total_Events")]) || 0;
+  var visitors    = Number(latest[idx("Unique_Visitors")]) || 0;
+  var pageViews   = Number(latest[idx("Page_Views")]) || 0;
+  var demos       = Number(latest[idx("Demo_Requests")]) || 0;
+  var quick       = Number(latest[idx("Quick_Enquiries")]) || 0;
+  var consults    = Number(latest[idx("Consultations")]) || 0;
+  var chatbot     = Number(latest[idx("Chatbot_Messages")]) || 0;
+  var feedback    = Number(latest[idx("Feedback_Count")]) || 0;
+  var leads       = Number(latest[idx("Total_Leads")]) || (demos + quick + consults);
+  var convRate    = latest[idx("Conversion_Rate")] || (visitors ? ((leads / visitors) * 100).toFixed(1) + "%" : "0.0%");
+  var avgDuration = latest[idx("Avg_Engagement_Sec")] || "0";
+
+  // Build horizontal progress bar for Lead Distribution
+  var maxLead = Math.max(demos, quick, consults, feedback, 1);
+  var barRow = function(name, count, color) {
+    var pct = Math.min(100, Math.round((count / maxLead) * 100));
+    return (
+      "<div style='margin-bottom:12px;'>" +
+        "<div style='display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:#334155;margin-bottom:4px;'>" +
+          "<span>" + name + "</span>" +
+          "<span style='color:" + color + ";font-weight:700;'>" + count + "</span>" +
+        "</div>" +
+        "<div style='background:#f1f5f9;height:8px;border-radius:4px;overflow:hidden;'>" +
+          "<div style='background:" + color + ";height:8px;width:" + pct + "%;border-radius:4px;'></div>" +
+        "</div>" +
+      "</div>"
     );
+  };
+
+  // Recent historical rows (up to 5 past intervals) for mini trend chart
+  var trendRowsHtml = "";
+  for (var r = 1; r < Math.min(data.length, 6); r++) {
+    var row = data[r];
+    trendRowsHtml +=
+      "<tr style='border-bottom:1px solid #f1f5f9;font-size:13px;'>" +
+        "<td style='padding:8px 10px;font-weight:600;color:#1e293b;'>" + html_(row[0]) + "</td>" +
+        "<td style='padding:8px 10px;color:#2563eb;text-align:center;font-weight:700;'>" + html_(row[idx("Unique_Visitors")]) + "</td>" +
+        "<td style='padding:8px 10px;color:#475569;text-align:center;'>" + html_(row[idx("Page_Views")]) + "</td>" +
+        "<td style='padding:8px 10px;color:#059669;text-align:center;font-weight:700;'>" + html_(row[idx("Total_Leads")]) + "</td>" +
+        "<td style='padding:8px 10px;color:#7c3aed;text-align:center;font-weight:700;'>" + html_(row[idx("Conversion_Rate")]) + "</td>" +
+      "</tr>";
   }
 
+  var ssUrl = "";
+  try { ssUrl = ss.getUrl(); } catch (e) { ssUrl = CONFIG.WEBSITE; }
+
   var htmlBody =
-    "<div style='font-family:Arial,sans-serif;max-width:640px;margin:auto;border:1px solid #dbeafe;border-radius:12px;overflow:hidden'>" +
-    "<div style='background:#155e75;color:white;padding:24px'><h2 style='margin:0'>Physiomatics Website Report</h2>" +
-    "<p style='margin:8px 0 0'>" + html_(intervalName) + " summary</p></div>" +
-    "<div style='padding:20px'><table style='width:100%;border-collapse:collapse'>" + metrics.join("") +
-    "</table><p style='margin-top:20px'><a href='" + ss.getUrl() + "'>Open Physiomatics Google Sheet</a></p></div></div>";
+    "<!DOCTYPE html><html><head><meta charset='utf-8'></head><body style='margin:0;padding:24px;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;'>" +
+      "<div style='max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,0.06);border:1px solid #e2e8f0;'>" +
+
+        // Header with gradient
+        "<div style='background:linear-gradient(135deg,#0284c7 0%,#0f172a 100%);padding:28px 24px;color:#ffffff;'>" +
+          "<div style='display:inline-block;padding:3px 10px;background:rgba(255,255,255,0.2);color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:20px;margin-bottom:8px;'>" +
+            intervalName + " Executive Digest" +
+          "</div>" +
+          "<h1 style='margin:0;font-size:24px;font-weight:800;letter-spacing:-0.5px;'>Physiomatics Performance Dashboard</h1>" +
+          "<p style='margin:6px 0 0 0;color:#bae6fd;font-size:13px;'>Reporting Period: <strong>" + dateStr + "</strong> &bull; Asia/Kolkata (IST)</p>" +
+        "</div>" +
+
+        // Metric KPI Grid (4 Cards)
+        "<div style='padding:20px 24px 10px 24px;background:#ffffff;'>" +
+          "<div style='display:table;width:100%;margin-bottom:14px;'>" +
+            // KPI 1: Visitors
+            "<div style='display:table-cell;width:50%;padding-right:8px;padding-bottom:12px;vertical-align:top;'>" +
+              "<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;'>" +
+                "<div style='color:#15803d;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>Unique Visitors</div>" +
+                "<div style='color:#166534;font-size:28px;font-weight:800;margin-top:4px;'>" + visitors + "</div>" +
+                "<div style='color:#15803d;font-size:12px;margin-top:2px;'>" + pageViews + " total page views</div>" +
+              "</div>" +
+            "</div>" +
+            // KPI 2: Total Leads
+            "<div style='display:table-cell;width:50%;padding-left:8px;padding-bottom:12px;vertical-align:top;'>" +
+              "<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;'>" +
+                "<div style='color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>Total Leads</div>" +
+                "<div style='color:#1e40af;font-size:28px;font-weight:800;margin-top:4px;'>" + leads + "</div>" +
+                "<div style='color:#1d4ed8;font-size:12px;margin-top:2px;'>Conversion: <strong>" + convRate + "</strong></div>" +
+              "</div>" +
+            "</div>" +
+          "</div>" +
+
+          "<div style='display:table;width:100%;margin-bottom:20px;'>" +
+            // KPI 3: Engagement
+            "<div style='display:table-cell;width:50%;padding-right:8px;vertical-align:top;'>" +
+              "<div style='background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:16px;'>" +
+                "<div style='color:#7e22ce;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>Avg Engagement</div>" +
+                "<div style='color:#6b21a8;font-size:28px;font-weight:800;margin-top:4px;'>" + avgDuration + "s</div>" +
+                "<div style='color:#7e22ce;font-size:12px;margin-top:2px;'>" + totalEvents + " live interactions</div>" +
+              "</div>" +
+            "</div>" +
+            // KPI 4: Inquiries & Chat
+            "<div style='display:table-cell;width:50%;padding-left:8px;vertical-align:top;'>" +
+              "<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;'>" +
+                "<div style='color:#b45309;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>AI Chat & Feedback</div>" +
+                "<div style='color:#92400e;font-size:28px;font-weight:800;margin-top:4px;'>" + (chatbot + feedback) + "</div>" +
+                "<div style='color:#b45309;font-size:12px;margin-top:2px;'>" + chatbot + " chats &bull; " + feedback + " feedback</div>" +
+              "</div>" +
+            "</div>" +
+          "</div>" +
+
+          // Visual Funnel & Lead Breakdown Chart
+          "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:20px;'>" +
+            "<h3 style='margin:0 0 14px 0;font-size:15px;color:#0f172a;font-weight:700;'>📊 Lead & Conversion Breakdown</h3>" +
+            barRow("🎯 Demo / ICP Requests", demos, "#7c3aed") +
+            barRow("💬 Consultation Requests", consults, "#059669") +
+            barRow("⚡ Quick Enquiries", quick, "#0284c7") +
+            barRow("🤖 AI Chatbot Inquiries", chatbot, "#f59e0b") +
+            barRow("⭐ Customer Feedback", feedback, "#ec4899") +
+          "</div>" +
+
+          // Trend Table
+          "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:24px;'>" +
+            "<h3 style='margin:0 0 12px 0;font-size:15px;color:#0f172a;font-weight:700;'>📈 Recent Performance History</h3>" +
+            "<table style='width:100%;border-collapse:collapse;'>" +
+              "<thead>" +
+                "<tr style='background:#f8fafc;border-bottom:2px solid #e2e8f0;font-size:12px;color:#64748b;text-transform:uppercase;'>" +
+                  "<th style='padding:8px 10px;text-align:left;'>Period</th>" +
+                  "<th style='padding:8px 10px;text-align:center;'>Visitors</th>" +
+                  "<th style='padding:8px 10px;text-align:center;'>Views</th>" +
+                  "<th style='padding:8px 10px;text-align:center;'>Leads</th>" +
+                  "<th style='padding:8px 10px;text-align:center;'>Conv.</th>" +
+                "</tr>" +
+              "</thead>" +
+              "<tbody>" +
+                trendRowsHtml +
+              "</tbody>" +
+            "</table>" +
+          "</div>" +
+
+          // CTA Action Buttons
+          "<div style='text-align:center;margin-bottom:12px;'>" +
+            "<a href='" + ssUrl + "' style='display:inline-block;padding:12px 24px;background:#0284c7;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;margin-right:8px;'>Open Live Google Sheet</a>" +
+            "<a href='https://airtable.com/apptNJUsbdqh4dxvS' style='display:inline-block;padding:12px 24px;background:#059669;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;margin-right:8px;'>Open Airtable Base</a>" +
+            "<a href='" + CONFIG.WEBSITE + "' style='display:inline-block;padding:12px 24px;background:#f1f5f9;color:#334155;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;border:1px solid #cbd5e1;'>Visit Website</a>" +
+          "</div>" +
+
+        "</div>" +
+
+        // Footer
+        "<div style='background:#f8fafc;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px;'>" +
+          "Physiomatics Website Intelligence System &bull; Automatically generated by Google Apps Script" +
+        "</div>" +
+
+      "</div>" +
+    "</body></html>";
+
+  var plainBody = [
+    "[" + intervalName + " Summary] Physiomatics Website Report",
+    "Period: " + dateStr,
+    "Unique Visitors: " + visitors,
+    "Total Page Views: " + pageViews,
+    "Total Leads: " + leads + " (" + convRate + ")",
+    "Demo Requests: " + demos,
+    "Consultations: " + consults,
+    "Quick Enquiries: " + quick,
+    "Chatbot Messages: " + chatbot,
+    "Avg Engagement: " + avgDuration + "s",
+    "Sheet URL: " + ssUrl
+  ].join("\n");
 
   (EMAIL_CONFIG.reportEmails || [EMAIL_CONFIG.adminEmail]).forEach(function (to) {
     try {
       MailApp.sendEmail({
         to: to,
-        subject: "[Physiomatics] " + intervalName + " Website Summary",
+        subject: "📊 [Physiomatics] " + intervalName + " Executive Digest — " + visitors + " Visitors, " + leads + " Leads (" + convRate + ")",
+        body: plainBody,
         htmlBody: htmlBody,
         name: EMAIL_CONFIG.name,
         replyTo: EMAIL_CONFIG.replyTo
