@@ -273,6 +273,15 @@ function processEvent_(rawPayload) {
 
   routeTelemetry_(ss, p);
 
+  // Auto-update Daily/Weekly/Monthly summary tabs in real-time on key events
+  if (kind || p.event_name === "session_start" || p.event_type === "session" || p.event_type === "conversion") {
+    try {
+      BUILD_AGGREGATED_INTERVAL_SUMMARIES();
+    } catch (aggErr) {
+      log_("processEvent_agg", "WARN", String(aggErr));
+    }
+  }
+
   return json_({ success: true, message: "Received.", eventId: p.event_id });
 }
 
@@ -367,19 +376,58 @@ function enrichPayload_(raw) {
   p.geo_region       = str_(first_(p, ["geo_region", "region", "state"], ""));
   // "country" plain field from contact.tsx
   p.geo_country      = str_(first_(p, ["geo_country", "country"], ""));
-  p.geo_country_code = str_(first_(p, ["geo_country_code", "country_code"], ""));
+  p.geo_country_code = str_(first_(p, ["geo_country_code", "country_code", "countryCode"], ""));
   p.geo_timezone     = str_(first_(p, ["geo_timezone", "geoTimezone", "timezone"], ""));
   p.location_method  = str_(first_(p, ["location_method", "locationMethod"], ""));
   p.consent_status   = str_(first_(p, ["consent_status", "locationConsent"], ""));
   p.client_ip        = str_(first_(p, ["client_ip", "clientIp", "ip_address", "ipAddress"], ""));
-  p.ip_city          = str_(first_(p, ["ip_city",    "ipCity"],    ""));
-  p.ip_region        = str_(first_(p, ["ip_region",  "ipRegion"],  ""));
-  p.ip_country       = str_(first_(p, ["ip_country", "ipCountry"], ""));
-  p.ip_country_code  = str_(first_(p, ["ip_country_code", "ipCountryCode"], ""));
-  p.ip_org           = str_(first_(p, ["ip_org", "ipOrg", "isp", "organization_name"], ""));
+  p.ip_city          = str_(first_(p, ["ip_city",    "ipCity"],    p.geo_city));
+  p.ip_region        = str_(first_(p, ["ip_region",  "ipRegion"],  p.geo_region));
+  p.ip_country       = str_(first_(p, ["ip_country", "ipCountry"], p.geo_country));
+  p.ip_country_code  = str_(first_(p, ["ip_country_code", "ipCountryCode"], p.geo_country_code));
+  p.ip_org           = str_(first_(p, ["ip_org", "ipOrg", "isp", "organization_name", "asnOrganization"], ""));
   p.ip_asn           = str_(first_(p, ["ip_asn", "ipAsn", "asn"], ""));
   p.ip_source        = str_(first_(p, ["ip_source", "ipSource"], ""));
   p.security_event   = str_(first_(p, ["security_event", "securityEvent"], ""));
+
+  // Server-side IP lookup fallback if client_ip exists but coordinates or city are missing
+  if (p.client_ip && (!p.latitude || !p.geo_city)) {
+    try {
+      var geoRes = UrlFetchApp.fetch("https://freeipapi.com/api/json/" + encodeURIComponent(p.client_ip), {
+        muteHttpExceptions: true
+      });
+      if (geoRes.getResponseCode() === 200) {
+        var geoData = JSON.parse(geoRes.getContentText());
+        if (geoData) {
+          if (!p.latitude && geoData.latitude !== undefined) p.latitude = geoData.latitude;
+          if (!p.longitude && geoData.longitude !== undefined) p.longitude = geoData.longitude;
+          if (!p.geo_city) p.geo_city = geoData.cityName || "";
+          if (!p.geo_region) p.geo_region = geoData.regionName || "";
+          if (!p.geo_country) p.geo_country = geoData.countryName || "";
+          if (!p.geo_country_code) p.geo_country_code = geoData.countryCode || "";
+          if (!p.geo_timezone && Array.isArray(geoData.timeZones)) p.geo_timezone = geoData.timeZones[0] || "";
+          if (!p.ip_city) p.ip_city = p.geo_city;
+          if (!p.ip_region) p.ip_region = p.geo_region;
+          if (!p.ip_country) p.ip_country = p.geo_country;
+          if (!p.ip_country_code) p.ip_country_code = p.geo_country_code;
+          if (!p.ip_org) p.ip_org = geoData.asnOrganization || "";
+          if (!p.ip_asn) p.ip_asn = geoData.asn ? String(geoData.asn) : "";
+          if (!p.location_method) p.location_method = "server_ip_lookup";
+          if (!p.ip_source) p.ip_source = "freeipapi_server";
+        }
+      }
+    } catch (ignoreGeo) {}
+  }
+
+  // Country fallback for India if coordinates missing
+  if (p.geo_country && norm_(p.geo_country) === "india") {
+    if (!p.latitude) p.latitude = 20.5937;
+    if (!p.longitude) p.longitude = 78.9629;
+    if (!p.geo_country_code) p.geo_country_code = "IN";
+    if (!p.geo_timezone) p.geo_timezone = "Asia/Kolkata";
+    if (!p.location_method) p.location_method = "country_centroid";
+  }
+
   p.source_environment = str_(first_(p, ["source_environment", "environment"], CONFIG.DEFAULT_ENVIRONMENT));
   p.lead_source   = str_(first_(p, ["lead_source", "leadSource", "source"], "website"));
   p.lead_status   = str_(first_(p, ["lead_status",   "leadStatus"],   "New"));
@@ -592,38 +640,47 @@ function routeTelemetry_(ss, p) {
   }
 
   // Form interactions
-  if (type === "form" || name.indexOf("form") >= 0 || p.form_status) {
+  if (type === "form" || name.indexOf("form") >= 0 || p.form_status || Boolean(p.lead_type)) {
     appendValues_(getTab(ss, "Form_Interactions"), [
       p.received_at, p.event_id, p.visitor_id, p.session_id, p.page_url,
-      p.page_path, p.form_name, p.form_id, p.form_status, p.event_type, p.event_name
+      p.page_path, p.form_name || p.lead_type || "form", p.form_id || "form",
+      p.form_status || "submitted", p.event_type, p.event_name
     ]);
   }
 
-  // Conversions
-  if (type === "conversion" || p.conversion_name) {
+  // Conversions (lead submissions, signups, booking requests)
+  if (type === "conversion" || p.conversion_name || Boolean(p.lead_type)) {
     appendValues_(getTab(ss, "Conversion_Events"), [
-      p.received_at, p.event_id, p.visitor_id, p.session_id, p.conversion_name,
-      p.conversion_value, p.page_url, p.traffic_source, p.utm_source,
-      p.utm_medium, p.utm_campaign, p.lead_type
+      p.received_at, p.event_id, p.visitor_id, p.session_id,
+      p.conversion_name || p.lead_type || "lead_submission",
+      p.conversion_value || 1, p.page_url, p.traffic_source, p.utm_source,
+      p.utm_medium, p.utm_campaign, p.lead_type || "conversion"
     ]);
   }
 
-  // Geo (only when frontend sends with consent)
-  if (p.latitude !== "" || p.longitude !== "" || p.geo_city || p.geo_country) {
+  // Eligible events for Geo & IP intelligence (sessions, page views, leads, conversions)
+  var isGeoEligible = (type === "session" || name.indexOf("session") >= 0 ||
+                       type === "page_view" || name === "page_view" ||
+                       Boolean(p.lead_type) || type === "geo" || type === "conversion");
+
+  // Geo intelligence
+  if (isGeoEligible && (p.latitude !== "" || p.longitude !== "" || p.geo_city || p.geo_country || p.geo_timezone)) {
     appendValues_(getTab(ss, "Geo_Timezone_Intelligence"), [
       p.received_at, p.event_id, p.visitor_id, p.session_id, p.page_url,
-      p.latitude, p.longitude, p.geo_accuracy_meters, p.geo_city, p.geo_region,
-      p.geo_country, p.geo_country_code, p.geo_timezone, p.location_method,
-      p.consent_status, p.source_environment
+      p.latitude, p.longitude, p.geo_accuracy_meters || 5000, p.geo_city, p.geo_region,
+      p.geo_country, p.geo_country_code, p.geo_timezone, p.location_method || "ip_lookup",
+      p.consent_status || "implicit", p.source_environment
     ]);
   }
 
-  // IP intelligence (only from trusted server-side provider)
-  if (p.client_ip || p.ip_country || p.ip_city || p.ip_asn || p.security_event) {
+  // IP intelligence
+  if (isGeoEligible && (p.client_ip || p.ip_country || p.ip_city || p.ip_asn || p.security_event)) {
     appendValues_(getTab(ss, "IP_Security_Intelligence"), [
       p.received_at, p.event_id, p.visitor_id, p.session_id, p.page_url,
-      p.client_ip, p.ip_city, p.ip_region, p.ip_country, p.ip_country_code,
-      p.ip_org, p.ip_asn, p.ip_source, p.security_event, p.source_environment
+      p.client_ip, p.ip_city || p.geo_city, p.ip_region || p.geo_region,
+      p.ip_country || p.geo_country, p.ip_country_code || p.geo_country_code,
+      p.ip_org, p.ip_asn, p.ip_source || "lookup", p.security_event || "standard_traffic",
+      p.source_environment
     ]);
   }
 }
@@ -884,6 +941,7 @@ function appendValues_(sheet, row) {
 
 function safeCell_(value) {
   if (value === null || value === undefined) return "";
+  if (typeof value === "number") return value;
   if (typeof value === "object") {
     try { value = JSON.stringify(value); } catch (e) { value = String(value); }
   }

@@ -12,7 +12,7 @@
 
 import { useEffect, useRef } from "react";
 import { useLocation } from "@tanstack/react-router";
-import { sendToGoogleSheet, trackClick } from "@/lib/googleSheets";
+import { sendToGoogleSheet, trackClick, trackPageView } from "@/lib/googleSheets";
 
 const SCROLL_THRESHOLDS = [25, 50, 75, 100];
 
@@ -21,10 +21,26 @@ export function EngagementTracker() {
   const sentDepths = useRef<Set<number>>(new Set());
   const pageLoadRef = useRef<number>(Date.now());
 
-  // ── Reset per navigation ──────────────────────────────────────────────
+  // ── Track page view & reset per navigation ─────────────────────────────
   useEffect(() => {
     sentDepths.current = new Set();
-    pageLoadRef.current = Date.now();
+    const startTime = Date.now();
+    pageLoadRef.current = startTime;
+
+    // Track page view immediately for Page_Performance & Traffic_Sources
+    trackPageView(location.pathname);
+
+    return () => {
+      const elapsed = Math.round((Date.now() - startTime) / 1000);
+      if (elapsed >= 3) {
+        sendToGoogleSheet({
+          action: "page_leave",
+          event_type: "page_engagement",
+          page_path: location.pathname,
+          time_on_page_seconds: elapsed,
+        }).catch(() => {});
+      }
+    };
   }, [location.pathname]);
 
   // ── Scroll depth tracker ──────────────────────────────────────────────

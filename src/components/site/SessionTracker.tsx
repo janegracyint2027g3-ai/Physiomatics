@@ -16,6 +16,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { resolveVisitorSession } from "@/lib/visitorSession";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
+import { getGeoIntelligence } from "@/lib/geoIntelligence";
 import { X } from "lucide-react";
 
 /* ─── Time-aware greeting ─────────────────────────────────────────────────── */
@@ -240,28 +241,61 @@ export function SessionTracker() {
       return;
     }
 
-    // ── Google Sheets: only fire when 30-min rule says new session ─────────
+    // ── Google Sheets: fire when 30-min rule says new session ─────────
     if (session.isNewSession) {
-      sendToGoogleSheet({
-        action:       "session_start",
-        form_type:    "analytics",
-        visitor_id:   session.visitorId,
-        session_id:   session.sessionId,
-        visit_number: session.visitCount,
-        visitor_type: session.visitorType,
-        landing_page: window.location.pathname,
-        referrer:     document.referrer,
-        device_type:  window.screen.width < 768  ? "mobile"
-                    : window.screen.width < 1024 ? "tablet" : "desktop",
-        browser: /Edg\//.test(navigator.userAgent)     ? "Edge"
-               : /OPR\//.test(navigator.userAgent)     ? "Opera"
-               : /Chrome\//.test(navigator.userAgent)  ? "Chrome"
-               : /Firefox\//.test(navigator.userAgent) ? "Firefox"
-               : /Safari\//.test(navigator.userAgent)  ? "Safari"
-               : "Other",
-        language: navigator.language,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      }).catch(() => {});
+      getGeoIntelligence()
+        .then((geo) => {
+          sendToGoogleSheet({
+            action:       "session_start",
+            event_type:   "session",
+            event_name:   "session_start",
+            form_type:    "analytics",
+            visitor_id:   session.visitorId,
+            session_id:   session.sessionId,
+            visit_number: session.visitCount,
+            visitor_type: session.visitorType,
+            landing_page: window.location.pathname,
+            referrer:     document.referrer,
+            device_type:  window.screen.width < 768  ? "mobile"
+                        : window.screen.width < 1024 ? "tablet" : "desktop",
+            browser: /Edg\//.test(navigator.userAgent)     ? "Edge"
+                   : /OPR\//.test(navigator.userAgent)     ? "Opera"
+                   : /Chrome\//.test(navigator.userAgent)  ? "Chrome"
+                   : /Firefox\//.test(navigator.userAgent) ? "Firefox"
+                   : /Safari\//.test(navigator.userAgent)  ? "Safari"
+                   : "Other",
+            language: navigator.language,
+            timezone: geo.geo_timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+            latitude: geo.latitude,
+            longitude: geo.longitude,
+            geo_accuracy_meters: geo.geo_accuracy_meters,
+            geo_city: geo.geo_city,
+            geo_region: geo.geo_region,
+            geo_country: geo.geo_country,
+            geo_country_code: geo.geo_country_code,
+            location_method: geo.location_method,
+            consent_status: geo.consent_status,
+            client_ip: geo.client_ip,
+            ip_city: geo.ip_city,
+            ip_region: geo.ip_region,
+            ip_country: geo.ip_country,
+            ip_country_code: geo.ip_country_code,
+            ip_org: geo.ip_org,
+            ip_asn: geo.ip_asn,
+            ip_source: geo.ip_source,
+            security_event: geo.security_event,
+          }).catch(() => {});
+        })
+        .catch(() => {
+          sendToGoogleSheet({
+            action:       "session_start",
+            event_type:   "session",
+            event_name:   "session_start",
+            visitor_id:   session.visitorId,
+            session_id:   session.sessionId,
+            visit_number: session.visitCount,
+          }).catch(() => {});
+        });
     }
 
     // ── Show banner on every new tab/window open ───────────────────────────

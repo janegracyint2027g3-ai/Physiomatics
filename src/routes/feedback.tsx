@@ -34,6 +34,8 @@ function FeedbackPage() {
     sendToGoogleSheet({
       action: "user_feedback",
       form_type: "feedback",
+      form_name: "feedback",
+      form_status: "submitted",
       category,
       message: feedback.trim(),
     }).catch((err) => console.error("Google Sheets feedback sync error:", err));

@@ -2,16 +2,24 @@
  * Utility to sync form submissions, user feedback, analytics, and session
  * telemetry to the Google Apps Script Web App (VITE_GOOGLE_SHEETS_URL).
  *
- * WHY GET params?
- * With mode:'no-cors' the browser never reads the response, so we can't know
- * if the POST body was received. Google Apps Script reliably reads GET query
- * parameters via e.parameter regardless of CORS, making GET the safest choice
- * for cross-origin fire-and-forget calls to Apps Script.
+ * Automatically attaches:
+ * - Anonymous visitor_id and session_id from visitorSession.ts
+ * - Real client geolocation (latitude, longitude, city, region, country, timezone)
+ * - Network intelligence (client_ip, ISP/Org, ASN, proxy flag)
+ *
+ * Cross-origin calls use GET query parameters with mode:'no-cors', which reliably
+ * delivers events to Google Apps Script's doGet(e) without CORS blockage.
  */
+
+import { resolveVisitorSession } from "@/lib/visitorSession";
+import { getCachedGeoIntelligence, getGeoIntelligence } from "@/lib/geoIntelligence";
 
 const GOOGLE_SHEETS_URL =
   import.meta.env.VITE_GOOGLE_SHEETS_URL ||
   "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
+
+const GOOGLE_ANALYTICS_URL =
+  import.meta.env.VITE_GOOGLE_ANALYTICS_URL || "";
 
 export interface SheetPayload {
   action?: string;
@@ -20,9 +28,8 @@ export interface SheetPayload {
 }
 
 /**
- * Encode all fields as URL query parameters and fire a GET request.
+ * Encode all fields as URL query parameters and fire requests to Google Apps Script.
  * Apps Script reads them via e.parameter.fieldName in doGet(e).
- * mode:'no-cors' suppresses CORS errors on the 302 redirect Apps Script returns.
  */
 export async function sendToGoogleSheet(payload: SheetPayload): Promise<boolean> {
   if (!GOOGLE_SHEETS_URL) {
@@ -30,42 +37,137 @@ export async function sendToGoogleSheet(payload: SheetPayload): Promise<boolean>
     return false;
   }
 
-  const params: Record<string, string> = {
+  // 1. Session resolution (anonymous UUIDs)
+  let visitorId = "";
+  let sessionId = "";
+  try {
+    const session = resolveVisitorSession();
+    visitorId = session.visitorId;
+    sessionId = session.sessionId;
+  } catch {
+    // fallback if SSR/unavailable
+  }
+
+  // 2. Geolocation & IP intelligence (from cache or trigger in background)
+  const geo = getCachedGeoIntelligence();
+
+  // If cache is empty and in browser, kick off background fetch for next events
+  if (typeof window !== "undefined" && !geo.latitude && !geo.geo_city) {
+    getGeoIntelligence().catch(() => {});
+  }
+
+  const baseParams: Record<string, string> = {
     timestamp: new Date().toISOString(),
-    pageUrl:
-      typeof window !== "undefined" ? window.location.href : "Unknown",
+    pageUrl: typeof window !== "undefined" ? window.location.href : "Unknown",
+    page_path: typeof window !== "undefined" ? window.location.pathname : "/",
+    page_title: typeof document !== "undefined" ? document.title : "",
+    referrer: typeof document !== "undefined" ? document.referrer : "",
+    language: typeof navigator !== "undefined" ? navigator.language : "",
+    timezone:
+      typeof Intl !== "undefined"
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : "Asia/Kolkata",
   };
 
-  // Flatten payload into string values
-  Object.entries(payload).forEach(([k, v]) => {
-    if (v !== undefined && v !== null) params[k] = String(v);
+  if (visitorId && !payload.visitor_id) baseParams.visitor_id = visitorId;
+  if (sessionId && !payload.session_id) baseParams.session_id = sessionId;
+
+  // Merge Geo & IP intelligence fields if not already provided
+  const geoKeys: (keyof typeof geo)[] = [
+    "latitude",
+    "longitude",
+    "geo_accuracy_meters",
+    "geo_city",
+    "geo_region",
+    "geo_country",
+    "geo_country_code",
+    "geo_timezone",
+    "location_method",
+    "consent_status",
+    "client_ip",
+    "ip_city",
+    "ip_region",
+    "ip_country",
+    "ip_country_code",
+    "ip_org",
+    "ip_asn",
+    "ip_source",
+    "security_event",
+  ];
+
+  geoKeys.forEach((k) => {
+    if (geo[k] !== undefined && geo[k] !== "" && payload[k] === undefined) {
+      baseParams[k] = String(geo[k]);
+    }
   });
 
-  const qs = new URLSearchParams(params).toString();
-  const url = `${GOOGLE_SHEETS_URL}?${qs}`;
+  // Flatten payload into string values (payload overrides base)
+  Object.entries(payload).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) {
+      baseParams[k] = String(v);
+    }
+  });
 
+  const qs = new URLSearchParams(baseParams).toString();
+  const primaryUrl = `${GOOGLE_SHEETS_URL}?${qs}`;
+
+  let success = false;
   try {
-    await fetch(url, { method: "GET", mode: "no-cors" });
+    await fetch(primaryUrl, { method: "GET", mode: "no-cors" });
+    success = true;
     console.info(
       "[Sheets] ✓ sent:",
       payload.action || payload.form_type || "event"
     );
-    return true;
   } catch (err) {
-    console.error("[Sheets] ✗ failed:", err);
-    return false;
+    console.error("[Sheets] ✗ primary failed:", err);
   }
+
+  // Also send to secondary analytics URL if provided in .env
+  if (GOOGLE_ANALYTICS_URL && GOOGLE_ANALYTICS_URL !== GOOGLE_SHEETS_URL) {
+    try {
+      const secondaryUrl = `${GOOGLE_ANALYTICS_URL}?${qs}`;
+      fetch(secondaryUrl, { method: "GET", mode: "no-cors" }).catch(() => {});
+    } catch {
+      // ignore secondary errors
+    }
+  }
+
+  return success;
 }
 
 /* ─── Convenience helpers ──────────────────────────────────────────────── */
 
-/** Call this on any button/link click you want tracked. */
+/** Call this on page navigation to track page views & performance */
+export function trackPageView(pagePath: string, title?: string) {
+  sendToGoogleSheet({
+    action: "page_view",
+    event_type: "page_view",
+    event_name: "page_view",
+    page_path: pagePath,
+    page_title: title || (typeof document !== "undefined" ? document.title : ""),
+    traffic_source:
+      typeof document !== "undefined" && document.referrer ? "referral" : "direct",
+    referrer_url: typeof document !== "undefined" ? document.referrer : "",
+  }).catch(() => {});
+}
+
+/** Call this on any button/link click you want tracked */
 export function trackClick(label: string, extra?: Record<string, string>) {
-  sendToGoogleSheet({ action: "click", label, ...extra }).catch(() => {});
+  sendToGoogleSheet({
+    action: "click",
+    event_type: "click",
+    label,
+    element_text: label,
+    ...extra,
+  }).catch(() => {});
 }
 
-/** Call this with a section name when a landmark section enters the viewport. */
+/** Call this with a section name when a landmark section enters the viewport */
 export function trackScroll(section: string) {
-  sendToGoogleSheet({ action: "scroll", section }).catch(() => {});
+  sendToGoogleSheet({
+    action: "scroll",
+    event_type: "scroll",
+    section,
+  }).catch(() => {});
 }
-

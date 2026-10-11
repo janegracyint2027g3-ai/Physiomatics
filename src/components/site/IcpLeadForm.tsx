@@ -44,6 +44,10 @@ export function IcpLeadForm({
     // 1. Google Sheets (fire-and-forget)
     sendToGoogleSheet({
       action: "icp_lead",
+      form_name: "icp_lead",
+      form_status: "submitted",
+      conversion_name: "demo_request",
+      conversion_value: 1,
       ...payload,
     }).catch((err) => console.error("IcpLeadForm Sheets error:", err));
 

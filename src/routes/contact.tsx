@@ -50,6 +50,11 @@ async function saveLead(formType: string, data: FormData) {
   // 1. Sync to Google Sheets
   sendToGoogleSheet({
     action: "lead_submission",
+    form_type: formType,
+    form_name: formType,
+    form_status: "submitted",
+    conversion_name: formType,
+    conversion_value: 1,
     ...row,
   }).catch((err) => console.error("Google Sheets sync warning:", err));
 
