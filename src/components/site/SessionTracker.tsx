@@ -1,39 +1,31 @@
 /**
  * SessionTracker — Physiomatics Returning Visitor Recognition & Session Tracker
  *
- * Mounted once in __root.tsx. On every page mount it calls resolveVisitorSession()
- * which is idempotent — it only starts a new session (and increments the visit
- * counter) when ≥ 30 minutes of inactivity have elapsed. Page navigations and
- * refreshes within the same 30-minute window are counted as ONE session.
+ * Shows a top banner with:
+ *   • Time-based greeting  (Good Morning / Afternoon / Evening / Night)
+ *   • Personalized message  (first visit vs returning + visit #N)
+ *   • Auto-dismiss after 7 seconds, or close on X
  *
- * What gets sent to Google Sheets (Visitor_Sessions tab):
- *   action          → "session_start"      (exact name expected by Apps Script)
- *   form_type       → "analytics"
- *   visitor_id      → persistent anonymous UUID
- *   session_id      → UUID for this session
- *   visit_number    → total sessions started (= visit count)
- *   visitor_type    → "new" | "returning"
- *   landing_page    → window.location.pathname at session start
- *   referrer        → document.referrer (empty for direct traffic)
- *   device_type     → "mobile" | "tablet" | "desktop"
- *   browser         → rough browser label from UA
- *   language        → navigator.language
- *   timezone        → Intl.DateTimeFormat timezone
+ * Session logic (via visitorSession.ts):
+ *   • New session only when ≥30 min of inactivity.
+ *   • Page navigations / refreshes within 30 min = SAME session (no duplicate banner).
  *
- * Shows:
- *   • A modal welcome popup on new session start (not a toast, per requirements)
- *   • First visit: "Welcome to Physiomatics!"
- *   • Returning visit N: "Welcome back! This is your 3rd visit to Physiomatics."
- *
- * Popup is shown ONCE per session. Keyboard-accessible (Escape closes it,
- * focus is trapped inside the dialog). Does NOT show again on page navigation
- * within the same session.
+ * Google Sheets: fires session_start with full payload on new session only.
  */
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Bot } from "lucide-react";
 import { resolveVisitorSession } from "@/lib/visitorSession";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
+import { X } from "lucide-react";
+
+/* ─── Time greeting ──────────────────────────────────────────────────────── */
+function getGreeting(): { text: string; emoji: string } {
+  const hour = new Date().getHours();
+  if (hour >= 5  && hour < 12) return { text: "Good Morning",   emoji: "🌅" };
+  if (hour >= 12 && hour < 17) return { text: "Good Afternoon", emoji: "☀️" };
+  if (hour >= 17 && hour < 21) return { text: "Good Evening",   emoji: "🌆" };
+  return                               { text: "Good Night",     emoji: "🌙" };
+}
 
 function getOrdinal(n: number): string {
   const s = ["th", "st", "nd", "rd"];
@@ -41,144 +33,176 @@ function getOrdinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-/* ─── Welcome Popup ──────────────────────────────────────────────────────── */
-interface WelcomePopupProps {
+/* ─── Top Banner ─────────────────────────────────────────────────────────── */
+interface BannerProps {
   visitCount: number;
   visitorType: "new" | "returning";
   onClose: () => void;
 }
 
-function WelcomePopup({ visitCount, visitorType, onClose }: WelcomePopupProps) {
+function WelcomeBanner({ visitCount, visitorType, onClose }: BannerProps) {
+  const { text: greeting, emoji } = getGreeting();
+  const isNew = visitorType === "new" || visitCount <= 1;
   const closeRef = useRef<HTMLButtonElement>(null);
 
-  // Trap focus inside dialog + close on Escape
+  // Auto-dismiss after 7 s
   useEffect(() => {
-    closeRef.current?.focus();
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    const t = setTimeout(onClose, 7000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  // Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const isNew = visitorType === "new" || visitCount === 1;
-  const heading = isNew
-    ? "Welcome to Physiomatics!"
-    : `Welcome back!`;
-  const body = isNew
-    ? "We're glad you're here. Explore AI-assisted physiotherapy training — designed for clinics, caregivers, and patients."
-    : `This is your ${getOrdinal(visitCount)} visit to Physiomatics. Ready to pick up where you left off?`;
+  const message = isNew
+    ? "Welcome to Physiomatics! We're glad you're here."
+    : `Welcome back to Physiomatics!`;
+
+  const visitBadge = !isNew ? `Visit #${visitCount}` : null;
 
   return (
-    /* Backdrop */
     <div
-      role="presentation"
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      role="status"
+      aria-live="polite"
+      aria-label="Welcome notification"
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        background: "linear-gradient(90deg, #1e0a3c 0%, #3b0764 40%, #1e1b4b 100%)",
+        borderBottom: "1px solid rgba(139,92,246,0.4)",
+        boxShadow: "0 4px 32px rgba(109,40,217,0.25)",
+        animation: "banner-slide-down 0.4s cubic-bezier(0.22,1,0.36,1) both",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "10px 20px",
+        minHeight: "48px",
+      }}
     >
-      {/* Dialog */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="welcome-heading"
-        aria-describedby="welcome-body"
-        className="relative w-full max-w-sm rounded-3xl border bg-card shadow-2xl overflow-hidden"
-        style={{ animation: "welcome-rise 0.35s cubic-bezier(0.22,1,0.36,1) both" }}
-        onClick={(e) => e.stopPropagation()}
+      {/* Greeting icon */}
+      <span
+        style={{ fontSize: "1.2rem", lineHeight: 1, flexShrink: 0 }}
+        aria-hidden="true"
       >
-        {/* Purple gradient header */}
-        <div
-          className="flex flex-col items-center gap-3 px-6 pt-8 pb-6"
+        {emoji}
+      </span>
+
+      {/* Text */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          flexWrap: "wrap",
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        {/* Greeting label */}
+        <span
           style={{
-            background: "linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #4f46e5 100%)",
+            color: "#c4b5fd",
+            fontWeight: 700,
+            fontSize: "0.875rem",
+            letterSpacing: "0.01em",
+            flexShrink: 0,
           }}
         >
-          {/* Animated icon */}
-          <div
-            className="grid size-16 place-items-center rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg"
-            style={{ animation: "welcome-bounce 0.6s 0.35s cubic-bezier(0.34,1.56,0.64,1) both" }}
-          >
-            <Bot className="size-8 text-white" />
-          </div>
+          {greeting}!
+        </span>
 
-          <h2
-            id="welcome-heading"
-            className="text-center text-xl font-bold text-white"
-          >
-            {heading}
-          </h2>
-        </div>
+        {/* Message */}
+        <span
+          style={{
+            color: "#e5e7eb",
+            fontSize: "0.875rem",
+            fontWeight: 400,
+          }}
+        >
+          {message}
+        </span>
 
-        {/* Body */}
-        <div className="px-6 py-5">
-          <p
-            id="welcome-body"
-            className="text-center text-sm text-muted-foreground leading-relaxed"
-          >
-            {body}
-          </p>
-
-          {!isNew && (
-            <div className="mt-3 flex items-center justify-center gap-2">
-              {Array.from({ length: Math.min(visitCount, 5) }).map((_, i) => (
-                <div
-                  key={i}
-                  className="size-2 rounded-full"
-                  style={{
-                    background: i < visitCount ? "#7c3aed" : "#e5e7eb",
-                    opacity: i < visitCount ? 1 : 0.3,
-                  }}
-                />
-              ))}
-              {visitCount > 5 && (
-                <span className="text-xs text-muted-foreground">+{visitCount - 5}</span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* CTA */}
-        <div className="px-6 pb-6 flex flex-col gap-2">
-          <button
-            ref={closeRef}
-            onClick={onClose}
-            className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500"
+        {/* Visit badge */}
+        {visitBadge && (
+          <span
+            aria-label={`Visit number ${visitCount}`}
             style={{
-              background: "linear-gradient(90deg, #5b21b6, #7c3aed)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              background: "rgba(139,92,246,0.25)",
+              border: "1px solid rgba(139,92,246,0.5)",
+              color: "#c4b5fd",
+              fontWeight: 700,
+              fontSize: "0.75rem",
+              padding: "2px 10px",
+              borderRadius: "999px",
+              letterSpacing: "0.03em",
+              flexShrink: 0,
             }}
           >
-            {isNew ? "Explore Physiomatics" : "Continue"}
-          </button>
-          <button
-            onClick={onClose}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors text-center py-1"
-            aria-label="Dismiss welcome message"
-          >
-            Dismiss
-          </button>
-        </div>
-
-        {/* Close X button */}
-        <button
-          onClick={onClose}
-          aria-label="Close welcome popup"
-          className="absolute top-3 right-3 grid size-8 place-items-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
+            {visitBadge}
+          </span>
+        )}
       </div>
 
-      <style>{`
-        @keyframes welcome-rise {
-          from { opacity: 0; transform: translateY(24px) scale(0.96); }
-          to   { opacity: 1; transform: translateY(0)    scale(1);    }
+      {/* Progress bar — auto-dismiss countdown */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          height: "2px",
+          background: "linear-gradient(90deg, #7c3aed, #a78bfa)",
+          animation: "banner-progress 7s linear both",
+          borderRadius: "0 2px 2px 0",
+        }}
+      />
+
+      {/* Close button */}
+      <button
+        ref={closeRef}
+        onClick={onClose}
+        aria-label="Dismiss welcome message"
+        style={{
+          display: "grid",
+          placeItems: "center",
+          width: "28px",
+          height: "28px",
+          borderRadius: "50%",
+          border: "1px solid rgba(139,92,246,0.35)",
+          background: "rgba(139,92,246,0.15)",
+          color: "#c4b5fd",
+          cursor: "pointer",
+          flexShrink: 0,
+          transition: "background 0.15s",
+        }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.background = "rgba(139,92,246,0.35)")
         }
-        @keyframes welcome-bounce {
-          from { opacity: 0; transform: scale(0.5); }
-          to   { opacity: 1; transform: scale(1);   }
+        onMouseLeave={(e) =>
+          (e.currentTarget.style.background = "rgba(139,92,246,0.15)")
+        }
+      >
+        <X size={14} />
+      </button>
+
+      <style>{`
+        @keyframes banner-slide-down {
+          from { transform: translateY(-100%); opacity: 0; }
+          to   { transform: translateY(0);     opacity: 1; }
+        }
+        @keyframes banner-progress {
+          from { width: 100%; }
+          to   { width: 0%; }
         }
       `}</style>
     </div>
@@ -187,69 +211,70 @@ function WelcomePopup({ visitCount, visitorType, onClose }: WelcomePopupProps) {
 
 /* ─── SessionTracker ─────────────────────────────────────────────────────── */
 export function SessionTracker() {
-  const [popup, setPopup] = useState<{
+  const [banner, setBanner] = useState<{
     show: boolean;
     visitCount: number;
     visitorType: "new" | "returning";
   } | null>(null);
 
-  const closePopup = useCallback(() => {
-    setPopup((p) => p ? { ...p, show: false } : null);
+  const closeBanner = useCallback(() => {
+    setBanner((b) => (b ? { ...b, show: false } : null));
   }, []);
 
   useEffect(() => {
     const session = resolveVisitorSession();
 
     if (session.isNewSession) {
-      // ── Fire session_start to Google Sheets (Visitor_Sessions tab) ───────
+      /* ── Fire session_start to Google Sheets ── */
       sendToGoogleSheet({
-        action:        "session_start",
-        form_type:     "analytics",
-        visitor_id:    session.visitorId,
-        session_id:    session.sessionId,
-        visit_number:  session.visitCount,
-        visitor_type:  session.visitorType,
-        landing_page:  typeof window !== "undefined" ? window.location.pathname : "",
-        referrer:      typeof document !== "undefined" ? document.referrer : "",
-        device_type:   typeof window !== "undefined"
-                         ? (window.screen.width < 768 ? "mobile"
-                           : window.screen.width < 1024 ? "tablet" : "desktop")
-                         : "desktop",
-        browser:       typeof navigator !== "undefined"
-                         ? (/Edg\//.test(navigator.userAgent)     ? "Edge"
-                           : /OPR\//.test(navigator.userAgent)    ? "Opera"
-                           : /Chrome\//.test(navigator.userAgent) ? "Chrome"
-                           : /Firefox\//.test(navigator.userAgent)? "Firefox"
-                           : /Safari\//.test(navigator.userAgent) ? "Safari"
-                           : "Other")
-                         : "unknown",
-        language:      typeof navigator !== "undefined" ? navigator.language : "",
-        timezone:      typeof Intl !== "undefined"
-                         ? Intl.DateTimeFormat().resolvedOptions().timeZone
-                         : "",
+        action:       "session_start",
+        form_type:    "analytics",
+        visitor_id:   session.visitorId,
+        session_id:   session.sessionId,
+        visit_number: session.visitCount,
+        visitor_type: session.visitorType,
+        landing_page: typeof window   !== "undefined" ? window.location.pathname : "",
+        referrer:     typeof document !== "undefined" ? document.referrer       : "",
+        device_type:  typeof window   !== "undefined"
+                        ? window.screen.width < 768  ? "mobile"
+                        : window.screen.width < 1024 ? "tablet"
+                        : "desktop"
+                        : "desktop",
+        browser: typeof navigator !== "undefined"
+          ? /Edg\//.test(navigator.userAgent)     ? "Edge"
+          : /OPR\//.test(navigator.userAgent)     ? "Opera"
+          : /Chrome\//.test(navigator.userAgent)  ? "Chrome"
+          : /Firefox\//.test(navigator.userAgent) ? "Firefox"
+          : /Safari\//.test(navigator.userAgent)  ? "Safari"
+          : "Other"
+          : "unknown",
+        language: typeof navigator !== "undefined" ? navigator.language : "",
+        timezone: typeof Intl !== "undefined"
+          ? Intl.DateTimeFormat().resolvedOptions().timeZone
+          : "",
       }).catch((err) =>
         console.error("[SessionTracker] Google Sheets sync error:", err)
       );
 
-      // ── Show welcome popup (after a short delay for page paint) ──────────
+      /* ── Show banner after 800 ms (let page paint first) ── */
       setTimeout(() => {
-        setPopup({
+        setBanner({
           show:        true,
           visitCount:  session.visitCount,
           visitorType: session.visitorType,
         });
-      }, 1200);
+      }, 800);
     }
-    // No else — same session, no popup, no Sheet call.
-  }, []); // ← empty deps: runs once per component mount (= once per browser tab load)
+    // Same session → nothing shown, no Sheet call.
+  }, []); // runs once per tab-load
 
-  if (!popup?.show) return null;
+  if (!banner?.show) return null;
 
   return (
-    <WelcomePopup
-      visitCount={popup.visitCount}
-      visitorType={popup.visitorType}
-      onClose={closePopup}
+    <WelcomeBanner
+      visitCount={banner.visitCount}
+      visitorType={banner.visitorType}
+      onClose={closeBanner}
     />
   );
 }
