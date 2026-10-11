@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { whatsappLink } from "@/lib/site";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
+import { saveLeadToAirtable } from "@/lib/airtable";
 
 interface IcpLeadFormProps {
   segment: string;           // e.g. "Physiotherapist", "Sports Academy"
@@ -59,6 +60,15 @@ export function IcpLeadForm({
       setClarityTag("lead_segment", segment);
       upgradeClaritySession(`demo_${segment}`);
     } catch (_) {}
+
+    // 1c. Sync to Airtable
+    saveLeadToAirtable({
+      name: name.trim(),
+      phone: contact.trim(),
+      organization: segment,
+      interest: segment,
+      lead_type: "demo_request",
+    }).catch(() => {});
 
     // 2. Supabase
     const { error } = await supabase.from("leads").insert(payload);

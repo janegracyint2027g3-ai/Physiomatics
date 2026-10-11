@@ -11,6 +11,7 @@ import { whatsappLink } from "@/lib/site";
 import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus } from "lucide-react";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
+import { saveLeadToAirtable } from "@/lib/airtable";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -66,6 +67,20 @@ async function saveLead(formType: string, data: FormData) {
     setClarityTag("lead_type", formType);
     upgradeClaritySession(`lead_${formType}`);
   } catch (_) {}
+
+  // 1c. Sync to Airtable
+  saveLeadToAirtable({
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    organization: row.organization,
+    role: row.role || row.job_title,
+    interest: row.interest,
+    subject: row.challenge || row.subject,
+    message: row.message,
+    lead_type: formType,
+    country: row.country,
+  }).catch(() => {});
 
   // 2. Save to Supabase leads table
   const { error } = await supabase.from("leads").insert(row);

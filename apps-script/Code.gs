@@ -44,6 +44,13 @@ var EMAIL_CONFIG = {
   replyTo: "janegracy.int2027g3@gmail.com"
 };
 
+var AIRTABLE_CONFIG = {
+  ENABLED: true,
+  TOKEN: "PASTE_YOUR_AIRTABLE_TOKEN_HERE", // Personal Access Token (pats...)
+  BASE_ID: "apptNJUsbdqh4dxvS",
+  TABLE_NAME: "Leads"
+};
+
 var TAB_HEADERS = {
   Live_Traffic_Events: [
     "received_at", "event_id", "event_type", "event_name", "visitor_id",
@@ -580,6 +587,8 @@ function saveMasterLead_(ss, p) {
     p.page_path, p.lead_source, p.lead_status, p.follow_up_status,
     p.source_environment
   ]);
+  // Forward lead to Airtable
+  syncLeadToAirtable_(p);
 }
 
 /* --------------------------- TELEMETRY ROUTING ----------------------------- */
@@ -1022,6 +1031,8 @@ function onOpen() {
     .addItem("Initialize all tabs",                     "INITIALIZE_ALL_TABS")
     .addItem("Rebuild daily/weekly/monthly summaries",   "BUILD_AGGREGATED_INTERVAL_SUMMARIES")
     .addSeparator()
+    .addItem("Sync Google Sheet leads to Airtable",      "SYNC_ALL_SHEET_DATA_TO_AIRTABLE")
+    .addSeparator()
     .addItem("Test: ICP demo request",                   "TEST_ICPDemoRequest")
     .addItem("Test: Quick enquiry",                      "TEST_QuickEnquiry")
     .addItem("Test: Consultation request",               "TEST_ConsultationRequest")
@@ -1032,4 +1043,104 @@ function onOpen() {
     .addSeparator()
     .addItem("Enable scheduled reports",                 "setupPhysiomaticsTriggers")
     .addToUi();
+}
+
+/* --------------------------- AIRTABLE SYNC -------------------------------- */
+
+function syncLeadToAirtable_(p) {
+  if (!AIRTABLE_CONFIG.ENABLED) return;
+  var baseId = String(AIRTABLE_CONFIG.BASE_ID || "").trim();
+  if (!baseId || baseId.indexOf("PASTE_") === 0) return;
+
+  try {
+    var url = "https://api.airtable.com/v0/" + baseId + "/" + encodeURIComponent(AIRTABLE_CONFIG.TABLE_NAME);
+    var fields = {
+      "Name": p.name || "Anonymous Visitor",
+      "Email": p.email || "",
+      "Phone": p.phone || "",
+      "Organization": p.organization || "",
+      "Role": p.role || "",
+      "Interest": p.interest || "",
+      "Subject": p.subject || "",
+      "Message": p.message || "",
+      "Lead Type": p.lead_type || "",
+      "Page": p.page_path || "",
+      "Lead ID": p.lead_id || "",
+      "Visitor ID": p.visitor_id || "",
+      "Session ID": p.session_id || "",
+      "City": p.geo_city || "",
+      "Country": p.geo_country || "",
+      "Received At": p.received_at || formatDate_(new Date())
+    };
+
+    Object.keys(fields).forEach(function(k) {
+      if (fields[k] === "") delete fields[k];
+    });
+
+    var options = {
+      method: "post",
+      headers: {
+        "Authorization": "Bearer " + AIRTABLE_CONFIG.TOKEN,
+        "Content-Type": "application/json"
+      },
+      payload: JSON.stringify({ records: [{ fields: fields }], typecast: true }),
+      muteHttpExceptions: true
+    };
+
+    var res = UrlFetchApp.fetch(url, options);
+    log_("syncLeadToAirtable_", "INFO", "Status: " + res.getResponseCode());
+  } catch (err) {
+    log_("syncLeadToAirtable_", "ERROR", String(err));
+  }
+}
+
+function SYNC_ALL_SHEET_DATA_TO_AIRTABLE() {
+  var baseId = String(AIRTABLE_CONFIG.BASE_ID || "").trim();
+  if (!baseId || baseId.indexOf("PASTE_") === 0) {
+    throw new Error("Please set AIRTABLE_CONFIG.BASE_ID to your Airtable Base ID (appXXXXXXXXXXXXXX) at the top of Code.gs");
+  }
+
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName("Lead_Management");
+  if (!sheet || sheet.getLastRow() < 2) {
+    return "No leads found in Lead_Management to sync.";
+  }
+
+  var data = sheet.getDataRange().getDisplayValues();
+  var header = data[0];
+  var rows = data.slice(1);
+  var url = "https://api.airtable.com/v0/" + baseId + "/" + encodeURIComponent(AIRTABLE_CONFIG.TABLE_NAME);
+  var syncedCount = 0;
+
+  for (var i = 0; i < rows.length; i += 10) {
+    var chunk = rows.slice(i, i + 10);
+    var records = chunk.map(function(row) {
+      var f = {};
+      for (var col = 0; col < header.length; col++) {
+        var key = header[col];
+        var val = row[col];
+        if (val) f[key] = val;
+      }
+      return { fields: f };
+    });
+
+    var options = {
+      method: "post",
+      headers: {
+        "Authorization": "Bearer " + AIRTABLE_CONFIG.TOKEN,
+        "Content-Type": "application/json"
+      },
+      payload: JSON.stringify({ records: records, typecast: true }),
+      muteHttpExceptions: true
+    };
+
+    var res = UrlFetchApp.fetch(url, options);
+    if (res.getResponseCode() === 200 || res.getResponseCode() === 201) {
+      syncedCount += chunk.length;
+    }
+    Utilities.sleep(250);
+  }
+
+  log_("SYNC_ALL_SHEET_DATA_TO_AIRTABLE", "SUCCESS", "Synced " + syncedCount + " records.");
+  return "Successfully synced " + syncedCount + " leads from Google Sheet to Airtable!";
 }
