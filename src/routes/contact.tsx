@@ -12,6 +12,7 @@ import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus } from
 import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
 import { saveLeadToAirtable } from "@/lib/airtable";
+import { createJiraLeadWithSubtasks } from "@/lib/jira";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -76,6 +77,20 @@ async function saveLead(formType: string, data: FormData) {
     organization: row.organization,
     role: row.role || row.job_title,
     interest: row.interest,
+    subject: row.challenge || row.subject,
+    message: row.message,
+    lead_type: formType,
+    country: row.country,
+  }).catch(() => {});
+
+  // 1d. Sync to Jira (Parent Task + 8 Subtasks)
+  createJiraLeadWithSubtasks({
+    name: row.name || row.full_name,
+    email: row.email || (row.contact && row.contact.includes("@") ? row.contact : ""),
+    phone: row.phone || (row.contact && !row.contact.includes("@") ? row.contact : ""),
+    organization: row.organization,
+    role: row.role || row.job_title,
+    interest: row.interest || row.organization_type,
     subject: row.challenge || row.subject,
     message: row.message,
     lead_type: formType,

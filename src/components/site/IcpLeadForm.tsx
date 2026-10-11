@@ -14,6 +14,7 @@ import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { whatsappLink } from "@/lib/site";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
 import { saveLeadToAirtable } from "@/lib/airtable";
+import { createJiraLeadWithSubtasks } from "@/lib/jira";
 
 interface IcpLeadFormProps {
   segment: string;           // e.g. "Physiotherapist", "Sports Academy"
@@ -68,6 +69,17 @@ export function IcpLeadForm({
       organization: segment,
       interest: segment,
       lead_type: "demo_request",
+    }).catch(() => {});
+
+    // 1d. Sync to Jira (Parent Task + 8 Subtasks)
+    createJiraLeadWithSubtasks({
+      name: name.trim(),
+      phone: contact.trim().includes("@") ? undefined : contact.trim(),
+      email: contact.trim().includes("@") ? contact.trim() : undefined,
+      organization: segment,
+      interest: segment,
+      lead_type: "demo_request",
+      subject: `Demo request for ${segment}`,
     }).catch(() => {});
 
     // 2. Supabase
