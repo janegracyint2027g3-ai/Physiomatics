@@ -22,10 +22,10 @@ export const Route = createFileRoute("/")({
 });
 
 const audiences = [
-  { icon: Stethoscope, title: "Physiotherapists", text: "Video-assisted movement analysis and structured progress summaries for professional review.", cta: "Explore Professional Solutions", link: "/solutions" },
-  { icon: HeartHandshake, title: "Elderly Care", text: "Accessible exercise guidance and easy-to-understand progress monitoring.", cta: "Explore Elderly Care", link: "/solutions" },
-  { icon: Bandage, title: "Injury Rehab", text: "Guided prescribed exercises, video observations, and longitudinal progress charts.", cta: "Explore Rehabilitation", link: "/solutions" },
-  { icon: GraduationCap, title: "Students", text: "Physiotherapy training resources, exercise demonstrations, and visual movement-analysis.", cta: "Explore Training", link: "/platform" },
+  { icon: Stethoscope, title: "Physiotherapists & Clinics", text: "Objective home compliance, video kinematic telemetry, and practice retention.", cta: "Explore Clinic & PT Solutions", link: "/icp/clinics" },
+  { icon: HeartHandshake, title: "Elderly Care & Fall Prevention", text: "Accessible high-contrast exercise guidance, seated routines, and mobility protection.", cta: "Explore Senior Care", link: "/icp/elderly-care" },
+  { icon: Bandage, title: "Rehabilitation Patients", text: "Real-time visual joint angle biofeedback and confident recovery at home.", cta: "Explore Patient Recovery", link: "/icp/rehab-patients" },
+  { icon: GraduationCap, title: "Athletes & Sports Academies", text: "Bilateral kinematic symmetry analysis and quantifiable return-to-play benchmarks.", cta: "Explore Sports Solutions", link: "/icp/sports-academies" },
 ];
 
 const steps = [

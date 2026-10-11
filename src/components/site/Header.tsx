@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Menu, X, Activity, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { platformMenu, solutionsMenu, resourcesMenu, howItWorksMenu, aboutMenu, contactMenu } from "@/lib/site";
+import { platformMenu, icpMenu, solutionsMenu, resourcesMenu, howItWorksMenu, aboutMenu, contactMenu } from "@/lib/site";
 
 function Dropdown({ label, to, items }: { label: string; to: string; items: readonly { to: string; label: string; desc: string }[] }) {
   const [open, setOpen] = useState(false);
@@ -46,6 +46,7 @@ export function Header() {
           Physiomatics
         </Link>
         <nav className="hidden items-center lg:flex" aria-label="Main">
+          <Dropdown label="ICP Profiles" to="/icp" items={icpMenu} />
           <Dropdown label="Platform" to="/platform" items={platformMenu} />
           <Dropdown label="Solutions" to="/solutions" items={solutionsMenu} />
           <Dropdown label="How It Works" to="/how-it-works" items={howItWorksMenu} />
@@ -63,7 +64,7 @@ export function Header() {
       </div>
       {mobile && (
         <nav className="container-page grid gap-1 border-t py-4 lg:hidden" aria-label="Mobile">
-          {[{ to: "/platform", label: "Platform" }, { to: "/solutions", label: "Solutions" }, { to: "/how-it-works", label: "How It Works" }, { to: "/resources", label: "Resources" }, { to: "/about", label: "About" }, { to: "/contact", label: "Contact" }].map((l) => (
+          {[{ to: "/icp", label: "Target ICPs" }, { to: "/platform", label: "Platform" }, { to: "/solutions", label: "Solutions" }, { to: "/how-it-works", label: "How It Works" }, { to: "/resources", label: "Resources" }, { to: "/about", label: "About" }, { to: "/contact", label: "Contact" }].map((l) => (
             <Link key={l.to} to={l.to as any} onClick={() => setMobile(false)} className="rounded-xl px-3 py-3 text-base font-medium hover:bg-accent">{l.label}</Link>
           ))}
           <Button asChild className="mt-2"><Link to="/contact" onClick={() => setMobile(false)}>Book a Demo</Link></Button>

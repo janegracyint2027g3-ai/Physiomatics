@@ -23,6 +23,15 @@ export const platformMenu = [
   { to: "/platform/dashboard", label: "Physiotherapist Dashboard", desc: "Oversight of shared recordings and metrics." },
 ] as const;
 
+export const icpMenu = [
+  { to: "/icp/clinics", label: "Physiotherapy Clinics & Practices", desc: "For practice owners & clinical directors seeking remote patient adherence." },
+  { to: "/icp/physiotherapists", label: "Independent Physiotherapists", desc: "For private practitioners wanting objective bio-angle validation." },
+  { to: "/icp/rehab-patients", label: "Post-Operative & Rehab Patients", desc: "For recovering individuals needing real-time visual form guidance." },
+  { to: "/icp/elderly-care", label: "Elderly Care & Fall Prevention", desc: "For seniors & geriatric physical therapists focusing on safe mobility." },
+  { to: "/icp/caregivers", label: "Family & Professional Caregivers", desc: "For dedicated caregivers managing home recovery routines." },
+  { to: "/icp/sports-academies", label: "Athletic & Sports Academies", desc: "For trainers & athletes optimizing kinematic performance & recovery." },
+] as const;
+
 export const solutionsMenu = [
   { to: "/solutions/elderly", label: "Elderly Care", desc: "Large controls, seated exercises, caregiver support." },
   { to: "/solutions/rehab", label: "Injury Rehabilitation", desc: "Structured home programs between visits." },

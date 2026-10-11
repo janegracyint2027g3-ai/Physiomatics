@@ -17,6 +17,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as IcpRouteImport } from './routes/icp'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ResourcesRouteImport } from './routes/resources'
@@ -35,6 +36,12 @@ import { Route as ContactEnquiryRouteImport } from './routes/contact_.enquiry'
 import { Route as HowItWorksPrivacyRouteImport } from './routes/how-it-works_.privacy'
 import { Route as HowItWorksVisionRouteImport } from './routes/how-it-works_.vision'
 import { Route as HowItWorksWorkflowRouteImport } from './routes/how-it-works_.workflow'
+import { Route as IcpCaregiversRouteImport } from './routes/icp_.caregivers'
+import { Route as IcpClinicsRouteImport } from './routes/icp_.clinics'
+import { Route as IcpElderlyCareRouteImport } from './routes/icp_.elderly-care'
+import { Route as IcpPhysiotherapistsRouteImport } from './routes/icp_.physiotherapists'
+import { Route as IcpRehabPatientsRouteImport } from './routes/icp_.rehab-patients'
+import { Route as IcpSportsAcademiesRouteImport } from './routes/icp_.sports-academies'
 import { Route as PlatformDashboardRouteImport } from './routes/platform_.dashboard'
 import { Route as PlatformMovementRouteImport } from './routes/platform_.movement'
 import { Route as PlatformProgressRouteImport } from './routes/platform_.progress'
@@ -86,6 +93,11 @@ const FeedbackRoute = FeedbackRouteImport.update({
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
   path: '/how-it-works',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IcpRoute = IcpRouteImport.update({
+  id: '/icp',
+  path: '/icp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlatformRoute = PlatformRouteImport.update({
@@ -178,6 +190,36 @@ const HowItWorksWorkflowRoute = HowItWorksWorkflowRouteImport.update({
   path: '/how-it-works/workflow',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IcpCaregiversRoute = IcpCaregiversRouteImport.update({
+  id: '/icp_/caregivers',
+  path: '/icp/caregivers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IcpClinicsRoute = IcpClinicsRouteImport.update({
+  id: '/icp_/clinics',
+  path: '/icp/clinics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IcpElderlyCareRoute = IcpElderlyCareRouteImport.update({
+  id: '/icp_/elderly-care',
+  path: '/icp/elderly-care',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IcpPhysiotherapistsRoute = IcpPhysiotherapistsRouteImport.update({
+  id: '/icp_/physiotherapists',
+  path: '/icp/physiotherapists',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IcpRehabPatientsRoute = IcpRehabPatientsRouteImport.update({
+  id: '/icp_/rehab-patients',
+  path: '/icp/rehab-patients',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IcpSportsAcademiesRoute = IcpSportsAcademiesRouteImport.update({
+  id: '/icp_/sports-academies',
+  path: '/icp/sports-academies',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlatformDashboardRoute = PlatformDashboardRouteImport.update({
   id: '/platform_/dashboard',
   path: '/platform/dashboard',
@@ -252,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/feedback': typeof FeedbackRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/icp': typeof IcpRoute
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
   '/resources': typeof ResourcesRoute
@@ -269,6 +312,12 @@ export interface FileRoutesByFullPath {
   '/how-it-works/privacy': typeof HowItWorksPrivacyRoute
   '/how-it-works/vision': typeof HowItWorksVisionRoute
   '/how-it-works/workflow': typeof HowItWorksWorkflowRoute
+  '/icp/caregivers': typeof IcpCaregiversRoute
+  '/icp/clinics': typeof IcpClinicsRoute
+  '/icp/elderly-care': typeof IcpElderlyCareRoute
+  '/icp/physiotherapists': typeof IcpPhysiotherapistsRoute
+  '/icp/rehab-patients': typeof IcpRehabPatientsRoute
+  '/icp/sports-academies': typeof IcpSportsAcademiesRoute
   '/platform/dashboard': typeof PlatformDashboardRoute
   '/platform/movement': typeof PlatformMovementRoute
   '/platform/progress': typeof PlatformProgressRoute
@@ -292,6 +341,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/feedback': typeof FeedbackRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/icp': typeof IcpRoute
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
   '/resources': typeof ResourcesRoute
@@ -309,6 +359,12 @@ export interface FileRoutesByTo {
   '/how-it-works/privacy': typeof HowItWorksPrivacyRoute
   '/how-it-works/vision': typeof HowItWorksVisionRoute
   '/how-it-works/workflow': typeof HowItWorksWorkflowRoute
+  '/icp/caregivers': typeof IcpCaregiversRoute
+  '/icp/clinics': typeof IcpClinicsRoute
+  '/icp/elderly-care': typeof IcpElderlyCareRoute
+  '/icp/physiotherapists': typeof IcpPhysiotherapistsRoute
+  '/icp/rehab-patients': typeof IcpRehabPatientsRoute
+  '/icp/sports-academies': typeof IcpSportsAcademiesRoute
   '/platform/dashboard': typeof PlatformDashboardRoute
   '/platform/movement': typeof PlatformMovementRoute
   '/platform/progress': typeof PlatformProgressRoute
@@ -334,6 +390,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/feedback': typeof FeedbackRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/icp': typeof IcpRoute
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
   '/resources': typeof ResourcesRoute
@@ -351,6 +408,12 @@ export interface FileRoutesById {
   '/how-it-works_/privacy': typeof HowItWorksPrivacyRoute
   '/how-it-works_/vision': typeof HowItWorksVisionRoute
   '/how-it-works_/workflow': typeof HowItWorksWorkflowRoute
+  '/icp_/caregivers': typeof IcpCaregiversRoute
+  '/icp_/clinics': typeof IcpClinicsRoute
+  '/icp_/elderly-care': typeof IcpElderlyCareRoute
+  '/icp_/physiotherapists': typeof IcpPhysiotherapistsRoute
+  '/icp_/rehab-patients': typeof IcpRehabPatientsRoute
+  '/icp_/sports-academies': typeof IcpSportsAcademiesRoute
   '/platform_/dashboard': typeof PlatformDashboardRoute
   '/platform_/movement': typeof PlatformMovementRoute
   '/platform_/progress': typeof PlatformProgressRoute
@@ -376,6 +439,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/feedback'
     | '/how-it-works'
+    | '/icp'
     | '/platform'
     | '/privacy'
     | '/resources'
@@ -393,6 +457,12 @@ export interface FileRouteTypes {
     | '/how-it-works/privacy'
     | '/how-it-works/vision'
     | '/how-it-works/workflow'
+    | '/icp/caregivers'
+    | '/icp/clinics'
+    | '/icp/elderly-care'
+    | '/icp/physiotherapists'
+    | '/icp/rehab-patients'
+    | '/icp/sports-academies'
     | '/platform/dashboard'
     | '/platform/movement'
     | '/platform/progress'
@@ -416,6 +486,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/feedback'
     | '/how-it-works'
+    | '/icp'
     | '/platform'
     | '/privacy'
     | '/resources'
@@ -433,6 +504,12 @@ export interface FileRouteTypes {
     | '/how-it-works/privacy'
     | '/how-it-works/vision'
     | '/how-it-works/workflow'
+    | '/icp/caregivers'
+    | '/icp/clinics'
+    | '/icp/elderly-care'
+    | '/icp/physiotherapists'
+    | '/icp/rehab-patients'
+    | '/icp/sports-academies'
     | '/platform/dashboard'
     | '/platform/movement'
     | '/platform/progress'
@@ -457,6 +534,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/feedback'
     | '/how-it-works'
+    | '/icp'
     | '/platform'
     | '/privacy'
     | '/resources'
@@ -474,6 +552,12 @@ export interface FileRouteTypes {
     | '/how-it-works_/privacy'
     | '/how-it-works_/vision'
     | '/how-it-works_/workflow'
+    | '/icp_/caregivers'
+    | '/icp_/clinics'
+    | '/icp_/elderly-care'
+    | '/icp_/physiotherapists'
+    | '/icp_/rehab-patients'
+    | '/icp_/sports-academies'
     | '/platform_/dashboard'
     | '/platform_/movement'
     | '/platform_/progress'
@@ -499,6 +583,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   FeedbackRoute: typeof FeedbackRoute
   HowItWorksRoute: typeof HowItWorksRoute
+  IcpRoute: typeof IcpRoute
   PlatformRoute: typeof PlatformRoute
   PrivacyRoute: typeof PrivacyRoute
   ResourcesRoute: typeof ResourcesRoute
@@ -515,6 +600,12 @@ export interface RootRouteChildren {
   HowItWorksPrivacyRoute: typeof HowItWorksPrivacyRoute
   HowItWorksVisionRoute: typeof HowItWorksVisionRoute
   HowItWorksWorkflowRoute: typeof HowItWorksWorkflowRoute
+  IcpCaregiversRoute: typeof IcpCaregiversRoute
+  IcpClinicsRoute: typeof IcpClinicsRoute
+  IcpElderlyCareRoute: typeof IcpElderlyCareRoute
+  IcpPhysiotherapistsRoute: typeof IcpPhysiotherapistsRoute
+  IcpRehabPatientsRoute: typeof IcpRehabPatientsRoute
+  IcpSportsAcademiesRoute: typeof IcpSportsAcademiesRoute
   PlatformDashboardRoute: typeof PlatformDashboardRoute
   PlatformMovementRoute: typeof PlatformMovementRoute
   PlatformProgressRoute: typeof PlatformProgressRoute
@@ -587,6 +678,13 @@ declare module '@tanstack/react-router' {
       path: '/how-it-works'
       fullPath: '/how-it-works'
       preLoaderRoute: typeof HowItWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/icp': {
+      id: '/icp'
+      path: '/icp'
+      fullPath: '/icp'
+      preLoaderRoute: typeof IcpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/platform': {
@@ -715,6 +813,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HowItWorksWorkflowRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/icp_/caregivers': {
+      id: '/icp_/caregivers'
+      path: '/icp/caregivers'
+      fullPath: '/icp/caregivers'
+      preLoaderRoute: typeof IcpCaregiversRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/icp_/clinics': {
+      id: '/icp_/clinics'
+      path: '/icp/clinics'
+      fullPath: '/icp/clinics'
+      preLoaderRoute: typeof IcpClinicsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/icp_/elderly-care': {
+      id: '/icp_/elderly-care'
+      path: '/icp/elderly-care'
+      fullPath: '/icp/elderly-care'
+      preLoaderRoute: typeof IcpElderlyCareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/icp_/physiotherapists': {
+      id: '/icp_/physiotherapists'
+      path: '/icp/physiotherapists'
+      fullPath: '/icp/physiotherapists'
+      preLoaderRoute: typeof IcpPhysiotherapistsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/icp_/rehab-patients': {
+      id: '/icp_/rehab-patients'
+      path: '/icp/rehab-patients'
+      fullPath: '/icp/rehab-patients'
+      preLoaderRoute: typeof IcpRehabPatientsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/icp_/sports-academies': {
+      id: '/icp_/sports-academies'
+      path: '/icp/sports-academies'
+      fullPath: '/icp/sports-academies'
+      preLoaderRoute: typeof IcpSportsAcademiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/platform_/dashboard': {
       id: '/platform_/dashboard'
       path: '/platform/dashboard'
@@ -829,6 +969,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   FeedbackRoute: FeedbackRoute,
   HowItWorksRoute: HowItWorksRoute,
+  IcpRoute: IcpRoute,
   PlatformRoute: PlatformRoute,
   PrivacyRoute: PrivacyRoute,
   ResourcesRoute: ResourcesRoute,
@@ -845,6 +986,12 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksPrivacyRoute: HowItWorksPrivacyRoute,
   HowItWorksVisionRoute: HowItWorksVisionRoute,
   HowItWorksWorkflowRoute: HowItWorksWorkflowRoute,
+  IcpCaregiversRoute: IcpCaregiversRoute,
+  IcpClinicsRoute: IcpClinicsRoute,
+  IcpElderlyCareRoute: IcpElderlyCareRoute,
+  IcpPhysiotherapistsRoute: IcpPhysiotherapistsRoute,
+  IcpRehabPatientsRoute: IcpRehabPatientsRoute,
+  IcpSportsAcademiesRoute: IcpSportsAcademiesRoute,
   PlatformDashboardRoute: PlatformDashboardRoute,
   PlatformMovementRoute: PlatformMovementRoute,
   PlatformProgressRoute: PlatformProgressRoute,
