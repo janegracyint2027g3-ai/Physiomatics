@@ -6,6 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Link } from '@tanstack/react-router';
 import hero from '@/assets/hero.jpg';
 import rehab from '@/assets/rehab.jpg';
+import elderlyExercise from '@/assets/elderly_exercise.jpg';
+import clinicInterior from '@/assets/clinic_interior.jpg';
+import sportsBio from '@/assets/sports_biomechanics.jpg';
+import rehabMirror from '@/assets/rehab_patient_mirror.jpg';
 
 const slides = [
   {
@@ -13,28 +17,28 @@ const slides = [
     description: 'Explore AI-assisted physiotherapy training and video-based movement monitoring designed to support rehabilitation.',
     cta: 'Explore the Platform',
     link: '/platform',
-    image: hero,
+    image: rehabMirror,
   },
   {
     title: 'Supporting Movement at Every Age',
     description: 'Accessible exercise guidance and structured progress monitoring to support elderly individuals following appropriate rehabilitation programs.',
     cta: 'Explore Elderly Care',
-    link: '/solutions',
-    image: rehab,
+    link: '/icp/elderly-care',
+    image: elderlyExercise,
   },
   {
-    title: 'Make Every Rehabilitation Session Count',
-    description: 'Record supported exercise sessions, analyze movement patterns, and track progress over time with physiotherapist oversight.',
-    cta: 'Discover Rehabilitation',
-    link: '/solutions',
-    image: hero,
+    title: 'Precision Kinematic AI for Athletes',
+    description: 'Real-time joint symmetry tracking, valgus angles, and return-to-sport clearance metrics on any device camera.',
+    cta: 'Discover Sports Performance',
+    link: '/icp/sports-academies',
+    image: sportsBio,
   },
   {
     title: 'Bring Movement Insights Into Your Practice',
-    description: 'Explore video-assisted exercise monitoring, session history, and progress visualization for physiotherapy workflows.',
-    cta: 'Request a Demo',
-    link: '/contact',
-    image: rehab,
+    description: 'Explore video-assisted exercise monitoring, session history, and practice retention for modern physiotherapy clinics.',
+    cta: 'Request Clinic Demo',
+    link: '/icp/clinics',
+    image: clinicInterior,
   },
 ];
 

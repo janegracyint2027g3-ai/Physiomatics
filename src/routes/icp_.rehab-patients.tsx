@@ -14,6 +14,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
+import rehabMirror from "@/assets/rehab_patient_mirror.jpg";
 
 export const Route = createFileRoute("/icp_/rehab-patients")({
   head: () => ({
@@ -36,7 +37,24 @@ function RehabPatientsICPPage() {
         Doing your home physical therapy can feel lonely and confusing. Physiomatics acts like a virtual mirror, giving you real-time visual confirmation on every repetition.
       </PageHero>
 
-      <section className="container-page py-16 grid lg:grid-cols-[1fr_360px] gap-12 items-start">
+      <div className="container-page -mt-8 mb-8">
+        <div className="relative h-72 md:h-96 w-full overflow-hidden rounded-[2.5rem] shadow-2xl border">
+          <img 
+            src={rehabMirror} 
+            alt="Virtual Mirror Joint Tracking and Home Rehabilitation Feedback" 
+            className="h-full w-full object-cover" 
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute bottom-6 left-8 right-8 text-white">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-2">
+              <UserCheck className="size-3.5" /> Virtual Biofeedback Mirror
+            </span>
+            <h3 className="text-xl md:text-2xl font-bold">Real-Time Joint Angle Guidance From the Comfort of Home</h3>
+          </div>
+        </div>
+      </div>
+
+      <section className="container-page py-12 grid lg:grid-cols-[1fr_360px] gap-12 items-start">
         <div className="space-y-12">
           {/* Patient Perspective */}
           <div className="rounded-3xl border bg-card p-8 shadow-sm">

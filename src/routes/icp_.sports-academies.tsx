@@ -14,6 +14,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
+import sportsBio from "@/assets/sports_biomechanics.jpg";
 
 export const Route = createFileRoute("/icp_/sports-academies")({
   head: () => ({
@@ -36,7 +37,24 @@ function SportsAcademiesICPPage() {
         Bridging high-performance sports training and sports medicine. Track bilateral knee valgus, depth angles, and explosive tempo dynamics without bulky equipment.
       </PageHero>
 
-      <section className="container-page py-16 grid lg:grid-cols-[1fr_360px] gap-12 items-start">
+      <div className="container-page -mt-8 mb-8">
+        <div className="relative h-72 md:h-96 w-full overflow-hidden rounded-[2.5rem] shadow-2xl border">
+          <img 
+            src={sportsBio} 
+            alt="Advanced Athletic Kinematic Motion Capture and Symmetry Analysis" 
+            className="h-full w-full object-cover" 
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute bottom-6 left-8 right-8 text-white">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-2">
+              <Trophy className="size-3.5" /> High-Speed Motion Telemetry
+            </span>
+            <h3 className="text-xl md:text-2xl font-bold">Dynamic Biomechanical Analysis On Any Field or Track</h3>
+          </div>
+        </div>
+      </div>
+
+      <section className="container-page py-12 grid lg:grid-cols-[1fr_360px] gap-12 items-start">
         <div className="space-y-12">
           {/* Athletic Profile */}
           <div className="rounded-3xl border bg-card p-8 shadow-sm">

@@ -27,6 +27,13 @@ export const Route = createFileRoute("/icp")({
   component: ICPHubPage,
 });
 
+import clinicInterior from '@/assets/clinic_interior.jpg';
+import rehab from '@/assets/rehab.jpg';
+import rehabMirror from '@/assets/rehab_patient_mirror.jpg';
+import elderlyExercise from '@/assets/elderly_exercise.jpg';
+import caregiverHome from '@/assets/caregiver_home.jpg';
+import sportsBio from '@/assets/sports_biomechanics.jpg';
+
 const icpCards = [
   {
     slug: "/icp/clinics",
@@ -34,6 +41,7 @@ const icpCards = [
     subtitle: "For Practice Owners, Clinic Directors & Lead PTs",
     icon: Building2,
     badge: "Enterprise & Clinics",
+    image: clinicInterior,
     painPoint: "High patient drop-off between visits, zero visibility into at-home exercise compliance, and manual documentation bottlenecks.",
     solution: "Browser-based video movement tracking with objective adherence telemetry and automated progress reporting.",
     roi: "+42% Treatment plan completion rate; 3.5 hrs saved per therapist/week on review notes.",
@@ -45,6 +53,7 @@ const icpCards = [
     subtitle: "For Solo Practitioners, Mobile Therapists & Consultants",
     icon: Stethoscope,
     badge: "Solo Practitioners",
+    image: rehab,
     painPoint: "Relying on subjective patient recall during follow-ups and lacking proof of form correctness during home routines.",
     solution: "Sub-degree angular kinematic tracking directly in the client's browser, giving objective proof of extension and reps.",
     roi: "Dramatically faster discharge with verified functional goals and higher client retention.",
@@ -56,6 +65,7 @@ const icpCards = [
     subtitle: "For Individuals Recovering from Surgery or Joint Injury",
     icon: UserCheck,
     badge: "Patient Recovery",
+    image: rehabMirror,
     painPoint: "Fear of moving incorrectly, anxiety over causing re-injury, and losing motivation when exercising alone at home.",
     solution: "Live bio-feedback that visually guides joints into correct angular zones and celebrates completed sets.",
     roi: "Safe, guided recovery from the comfort of home with total confidence in form.",
@@ -67,6 +77,7 @@ const icpCards = [
     subtitle: "For Senior Living Communities & Geriatric Specialists",
     icon: HeartHandshake,
     badge: "Geriatric & Assisted Living",
+    image: elderlyExercise,
     painPoint: "High fall risk, low tech literacy among seniors, and difficulty tracking gradual mobility deterioration.",
     solution: "High-contrast, one-click interface for chair stands, knee extensions, and balance exercises with automated fall-risk indices.",
     roi: "Significant reduction in mobility-loss incidents and clearer evidence of functional independence.",
@@ -78,6 +89,7 @@ const icpCards = [
     subtitle: "For Loved Ones & Home Health Aides Assisting Recovery",
     icon: Users,
     badge: "Caregiver Support",
+    image: caregiverHome,
     painPoint: "Uncertainty whether the patient is performing the prescribed exercise safely, leading to constant anxiety.",
     solution: "Interactive coaching companion that indicates 'Good Rep' or 'Needs Adjustment' in plain, non-clinical language.",
     roi: "Confidence that your loved one is safely progressing through rehabilitation every single day.",
@@ -89,6 +101,7 @@ const icpCards = [
     subtitle: "For Strength & Conditioning Coaches, Trainers & Academies",
     icon: Trophy,
     badge: "Sports Performance",
+    image: sportsBio,
     painPoint: "Overuse injuries, asymmetric loading between limbs, and slow return-to-play clearance protocols.",
     solution: "High-speed kinematic symmetry analysis, tracking knee valgus, squat depth, and explosive tempo dynamics.",
     roi: "Faster, safer return-to-sport clearance and quantifiable injury-prevention benchmarks.",
@@ -113,16 +126,23 @@ function ICPHubPage() {
             return (
               <div 
                 key={card.slug} 
-                className="group relative flex flex-col justify-between rounded-3xl border bg-card/70 p-8 shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl"
+                className="group relative flex flex-col justify-between overflow-hidden rounded-[2.5rem] border bg-card/70 p-7 shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-4 mb-4">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                      <Sparkles className="size-3.5" />
-                      {card.badge}
-                    </span>
-                    <div className="rounded-2xl bg-muted p-2.5 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                      <Icon className="size-6" />
+                  {/* Card Featured Image */}
+                  <div className="relative mb-6 h-48 w-full overflow-hidden rounded-2xl">
+                    <img 
+                      src={card.image} 
+                      alt={card.title} 
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-primary shadow-sm backdrop-blur">
+                        <Sparkles className="size-3.5" />
+                        {card.badge}
+                      </span>
                     </div>
                   </div>
 

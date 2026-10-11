@@ -13,6 +13,7 @@ import {
   PhoneCall
 } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
+import elderlyExercise from "@/assets/elderly_exercise.jpg";
 
 export const Route = createFileRoute("/icp_/elderly-care")({
   head: () => ({
@@ -35,7 +36,24 @@ function ElderlyCareICPPage() {
         Preserve balance, maintain lower-body strength, and prevent accidental falls. Designed with large high-contrast controls and seated exercise safety protocols.
       </PageHero>
 
-      <section className="container-page py-16 grid lg:grid-cols-[1fr_360px] gap-12 items-start">
+      <div className="container-page -mt-8 mb-8">
+        <div className="relative h-72 md:h-96 w-full overflow-hidden rounded-[2.5rem] shadow-2xl border">
+          <img 
+            src={elderlyExercise} 
+            alt="Gentle Senior Exercise and Fall Prevention Training" 
+            className="h-full w-full object-cover" 
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="absolute bottom-6 left-8 right-8 text-white">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-2">
+              <HeartHandshake className="size-3.5" /> Mobility & Fall Prevention
+            </span>
+            <h3 className="text-xl md:text-2xl font-bold">Empowering Older Adults With Safe, Supervised Movement</h3>
+          </div>
+        </div>
+      </div>
+
+      <section className="container-page py-12 grid lg:grid-cols-[1fr_360px] gap-12 items-start">
         <div className="space-y-12">
           {/* Senior Profile */}
           <div className="rounded-3xl border bg-card p-8 shadow-sm">
