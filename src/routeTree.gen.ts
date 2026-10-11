@@ -15,6 +15,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AnalyzeRouteImport } from './routes/analyze'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -23,8 +24,30 @@ import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AboutCareersRouteImport } from './routes/about_.careers'
+import { Route as AboutMissionRouteImport } from './routes/about_.mission'
+import { Route as AboutTeamRouteImport } from './routes/about_.team'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as ContactConsultationRouteImport } from './routes/contact_.consultation'
+import { Route as ContactDemoRouteImport } from './routes/contact_.demo'
+import { Route as ContactEnquiryRouteImport } from './routes/contact_.enquiry'
+import { Route as HowItWorksPrivacyRouteImport } from './routes/how-it-works_.privacy'
+import { Route as HowItWorksVisionRouteImport } from './routes/how-it-works_.vision'
+import { Route as HowItWorksWorkflowRouteImport } from './routes/how-it-works_.workflow'
+import { Route as PlatformDashboardRouteImport } from './routes/platform_.dashboard'
+import { Route as PlatformMovementRouteImport } from './routes/platform_.movement'
+import { Route as PlatformProgressRouteImport } from './routes/platform_.progress'
+import { Route as PlatformTrainingRouteImport } from './routes/platform_.training'
+import { Route as ResourcesAnatomyRouteImport } from './routes/resources_.anatomy'
+import { Route as ResourcesFaqsRouteImport } from './routes/resources_.faqs'
+import { Route as ResourcesLibraryRouteImport } from './routes/resources_.library'
+import { Route as ResourcesRehabRouteImport } from './routes/resources_.rehab'
+import { Route as SolutionsCaregiverRouteImport } from './routes/solutions_.caregiver'
+import { Route as SolutionsClinicsRouteImport } from './routes/solutions_.clinics'
+import { Route as SolutionsEducationRouteImport } from './routes/solutions_.education'
+import { Route as SolutionsElderlyRouteImport } from './routes/solutions_.elderly'
+import { Route as SolutionsRehabRouteImport } from './routes/solutions_.rehab'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -53,6 +76,11 @@ const AuthRoute = AuthRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -95,6 +123,21 @@ const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   path: '/inbox',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AboutCareersRoute = AboutCareersRouteImport.update({
+  id: '/about_/careers',
+  path: '/about/careers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutMissionRoute = AboutMissionRouteImport.update({
+  id: '/about_/mission',
+  path: '/about/mission',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutTeamRoute = AboutTeamRouteImport.update({
+  id: '/about_/team',
+  path: '/about/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
@@ -105,6 +148,101 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContactConsultationRoute = ContactConsultationRouteImport.update({
+  id: '/contact_/consultation',
+  path: '/contact/consultation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactDemoRoute = ContactDemoRouteImport.update({
+  id: '/contact_/demo',
+  path: '/contact/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactEnquiryRoute = ContactEnquiryRouteImport.update({
+  id: '/contact_/enquiry',
+  path: '/contact/enquiry',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksPrivacyRoute = HowItWorksPrivacyRouteImport.update({
+  id: '/how-it-works_/privacy',
+  path: '/how-it-works/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksVisionRoute = HowItWorksVisionRouteImport.update({
+  id: '/how-it-works_/vision',
+  path: '/how-it-works/vision',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksWorkflowRoute = HowItWorksWorkflowRouteImport.update({
+  id: '/how-it-works_/workflow',
+  path: '/how-it-works/workflow',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformDashboardRoute = PlatformDashboardRouteImport.update({
+  id: '/platform_/dashboard',
+  path: '/platform/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformMovementRoute = PlatformMovementRouteImport.update({
+  id: '/platform_/movement',
+  path: '/platform/movement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformProgressRoute = PlatformProgressRouteImport.update({
+  id: '/platform_/progress',
+  path: '/platform/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformTrainingRoute = PlatformTrainingRouteImport.update({
+  id: '/platform_/training',
+  path: '/platform/training',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesAnatomyRoute = ResourcesAnatomyRouteImport.update({
+  id: '/resources_/anatomy',
+  path: '/resources/anatomy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesFaqsRoute = ResourcesFaqsRouteImport.update({
+  id: '/resources_/faqs',
+  path: '/resources/faqs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesLibraryRoute = ResourcesLibraryRouteImport.update({
+  id: '/resources_/library',
+  path: '/resources/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesRehabRoute = ResourcesRehabRouteImport.update({
+  id: '/resources_/rehab',
+  path: '/resources/rehab',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsCaregiverRoute = SolutionsCaregiverRouteImport.update({
+  id: '/solutions_/caregiver',
+  path: '/solutions/caregiver',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsClinicsRoute = SolutionsClinicsRouteImport.update({
+  id: '/solutions_/clinics',
+  path: '/solutions/clinics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsEducationRoute = SolutionsEducationRouteImport.update({
+  id: '/solutions_/education',
+  path: '/solutions/education',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsElderlyRoute = SolutionsElderlyRouteImport.update({
+  id: '/solutions_/elderly',
+  path: '/solutions/elderly',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SolutionsRehabRoute = SolutionsRehabRouteImport.update({
+  id: '/solutions_/rehab',
+  path: '/solutions/rehab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -112,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/analyze': typeof AnalyzeRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/feedback': typeof FeedbackRoute
   '/how-it-works': typeof HowItWorksRoute
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
@@ -120,7 +259,29 @@ export interface FileRoutesByFullPath {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/about/careers': typeof AboutCareersRoute
+  '/about/mission': typeof AboutMissionRoute
+  '/about/team': typeof AboutTeamRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/contact/consultation': typeof ContactConsultationRoute
+  '/contact/demo': typeof ContactDemoRoute
+  '/contact/enquiry': typeof ContactEnquiryRoute
+  '/how-it-works/privacy': typeof HowItWorksPrivacyRoute
+  '/how-it-works/vision': typeof HowItWorksVisionRoute
+  '/how-it-works/workflow': typeof HowItWorksWorkflowRoute
+  '/platform/dashboard': typeof PlatformDashboardRoute
+  '/platform/movement': typeof PlatformMovementRoute
+  '/platform/progress': typeof PlatformProgressRoute
+  '/platform/training': typeof PlatformTrainingRoute
+  '/resources/anatomy': typeof ResourcesAnatomyRoute
+  '/resources/faqs': typeof ResourcesFaqsRoute
+  '/resources/library': typeof ResourcesLibraryRoute
+  '/resources/rehab': typeof ResourcesRehabRoute
+  '/solutions/caregiver': typeof SolutionsCaregiverRoute
+  '/solutions/clinics': typeof SolutionsClinicsRoute
+  '/solutions/education': typeof SolutionsEducationRoute
+  '/solutions/elderly': typeof SolutionsElderlyRoute
+  '/solutions/rehab': typeof SolutionsRehabRoute
   '/blog/': typeof BlogIndexRoute
 }
 export interface FileRoutesByTo {
@@ -129,6 +290,7 @@ export interface FileRoutesByTo {
   '/analyze': typeof AnalyzeRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/feedback': typeof FeedbackRoute
   '/how-it-works': typeof HowItWorksRoute
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
@@ -137,7 +299,29 @@ export interface FileRoutesByTo {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/about/careers': typeof AboutCareersRoute
+  '/about/mission': typeof AboutMissionRoute
+  '/about/team': typeof AboutTeamRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/contact/consultation': typeof ContactConsultationRoute
+  '/contact/demo': typeof ContactDemoRoute
+  '/contact/enquiry': typeof ContactEnquiryRoute
+  '/how-it-works/privacy': typeof HowItWorksPrivacyRoute
+  '/how-it-works/vision': typeof HowItWorksVisionRoute
+  '/how-it-works/workflow': typeof HowItWorksWorkflowRoute
+  '/platform/dashboard': typeof PlatformDashboardRoute
+  '/platform/movement': typeof PlatformMovementRoute
+  '/platform/progress': typeof PlatformProgressRoute
+  '/platform/training': typeof PlatformTrainingRoute
+  '/resources/anatomy': typeof ResourcesAnatomyRoute
+  '/resources/faqs': typeof ResourcesFaqsRoute
+  '/resources/library': typeof ResourcesLibraryRoute
+  '/resources/rehab': typeof ResourcesRehabRoute
+  '/solutions/caregiver': typeof SolutionsCaregiverRoute
+  '/solutions/clinics': typeof SolutionsClinicsRoute
+  '/solutions/education': typeof SolutionsEducationRoute
+  '/solutions/elderly': typeof SolutionsElderlyRoute
+  '/solutions/rehab': typeof SolutionsRehabRoute
   '/blog': typeof BlogIndexRoute
 }
 export interface FileRoutesById {
@@ -148,6 +332,7 @@ export interface FileRoutesById {
   '/analyze': typeof AnalyzeRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/feedback': typeof FeedbackRoute
   '/how-it-works': typeof HowItWorksRoute
   '/platform': typeof PlatformRoute
   '/privacy': typeof PrivacyRoute
@@ -156,7 +341,29 @@ export interface FileRoutesById {
   '/solutions': typeof SolutionsRoute
   '/terms': typeof TermsRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/about_/careers': typeof AboutCareersRoute
+  '/about_/mission': typeof AboutMissionRoute
+  '/about_/team': typeof AboutTeamRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/contact_/consultation': typeof ContactConsultationRoute
+  '/contact_/demo': typeof ContactDemoRoute
+  '/contact_/enquiry': typeof ContactEnquiryRoute
+  '/how-it-works_/privacy': typeof HowItWorksPrivacyRoute
+  '/how-it-works_/vision': typeof HowItWorksVisionRoute
+  '/how-it-works_/workflow': typeof HowItWorksWorkflowRoute
+  '/platform_/dashboard': typeof PlatformDashboardRoute
+  '/platform_/movement': typeof PlatformMovementRoute
+  '/platform_/progress': typeof PlatformProgressRoute
+  '/platform_/training': typeof PlatformTrainingRoute
+  '/resources_/anatomy': typeof ResourcesAnatomyRoute
+  '/resources_/faqs': typeof ResourcesFaqsRoute
+  '/resources_/library': typeof ResourcesLibraryRoute
+  '/resources_/rehab': typeof ResourcesRehabRoute
+  '/solutions_/caregiver': typeof SolutionsCaregiverRoute
+  '/solutions_/clinics': typeof SolutionsClinicsRoute
+  '/solutions_/education': typeof SolutionsEducationRoute
+  '/solutions_/elderly': typeof SolutionsElderlyRoute
+  '/solutions_/rehab': typeof SolutionsRehabRoute
   '/blog/': typeof BlogIndexRoute
 }
 export interface FileRouteTypes {
@@ -167,6 +374,7 @@ export interface FileRouteTypes {
     | '/analyze'
     | '/auth'
     | '/contact'
+    | '/feedback'
     | '/how-it-works'
     | '/platform'
     | '/privacy'
@@ -175,7 +383,29 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/inbox'
+    | '/about/careers'
+    | '/about/mission'
+    | '/about/team'
     | '/blog/$slug'
+    | '/contact/consultation'
+    | '/contact/demo'
+    | '/contact/enquiry'
+    | '/how-it-works/privacy'
+    | '/how-it-works/vision'
+    | '/how-it-works/workflow'
+    | '/platform/dashboard'
+    | '/platform/movement'
+    | '/platform/progress'
+    | '/platform/training'
+    | '/resources/anatomy'
+    | '/resources/faqs'
+    | '/resources/library'
+    | '/resources/rehab'
+    | '/solutions/caregiver'
+    | '/solutions/clinics'
+    | '/solutions/education'
+    | '/solutions/elderly'
+    | '/solutions/rehab'
     | '/blog/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -184,6 +414,7 @@ export interface FileRouteTypes {
     | '/analyze'
     | '/auth'
     | '/contact'
+    | '/feedback'
     | '/how-it-works'
     | '/platform'
     | '/privacy'
@@ -192,7 +423,29 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/inbox'
+    | '/about/careers'
+    | '/about/mission'
+    | '/about/team'
     | '/blog/$slug'
+    | '/contact/consultation'
+    | '/contact/demo'
+    | '/contact/enquiry'
+    | '/how-it-works/privacy'
+    | '/how-it-works/vision'
+    | '/how-it-works/workflow'
+    | '/platform/dashboard'
+    | '/platform/movement'
+    | '/platform/progress'
+    | '/platform/training'
+    | '/resources/anatomy'
+    | '/resources/faqs'
+    | '/resources/library'
+    | '/resources/rehab'
+    | '/solutions/caregiver'
+    | '/solutions/clinics'
+    | '/solutions/education'
+    | '/solutions/elderly'
+    | '/solutions/rehab'
     | '/blog'
   id:
     | '__root__'
@@ -202,6 +455,7 @@ export interface FileRouteTypes {
     | '/analyze'
     | '/auth'
     | '/contact'
+    | '/feedback'
     | '/how-it-works'
     | '/platform'
     | '/privacy'
@@ -210,7 +464,29 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/_authenticated/inbox'
+    | '/about_/careers'
+    | '/about_/mission'
+    | '/about_/team'
     | '/blog/$slug'
+    | '/contact_/consultation'
+    | '/contact_/demo'
+    | '/contact_/enquiry'
+    | '/how-it-works_/privacy'
+    | '/how-it-works_/vision'
+    | '/how-it-works_/workflow'
+    | '/platform_/dashboard'
+    | '/platform_/movement'
+    | '/platform_/progress'
+    | '/platform_/training'
+    | '/resources_/anatomy'
+    | '/resources_/faqs'
+    | '/resources_/library'
+    | '/resources_/rehab'
+    | '/solutions_/caregiver'
+    | '/solutions_/clinics'
+    | '/solutions_/education'
+    | '/solutions_/elderly'
+    | '/solutions_/rehab'
     | '/blog/'
   fileRoutesById: FileRoutesById
 }
@@ -221,6 +497,7 @@ export interface RootRouteChildren {
   AnalyzeRoute: typeof AnalyzeRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
+  FeedbackRoute: typeof FeedbackRoute
   HowItWorksRoute: typeof HowItWorksRoute
   PlatformRoute: typeof PlatformRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -228,7 +505,29 @@ export interface RootRouteChildren {
   SafetyRoute: typeof SafetyRoute
   SolutionsRoute: typeof SolutionsRoute
   TermsRoute: typeof TermsRoute
+  AboutCareersRoute: typeof AboutCareersRoute
+  AboutMissionRoute: typeof AboutMissionRoute
+  AboutTeamRoute: typeof AboutTeamRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  ContactConsultationRoute: typeof ContactConsultationRoute
+  ContactDemoRoute: typeof ContactDemoRoute
+  ContactEnquiryRoute: typeof ContactEnquiryRoute
+  HowItWorksPrivacyRoute: typeof HowItWorksPrivacyRoute
+  HowItWorksVisionRoute: typeof HowItWorksVisionRoute
+  HowItWorksWorkflowRoute: typeof HowItWorksWorkflowRoute
+  PlatformDashboardRoute: typeof PlatformDashboardRoute
+  PlatformMovementRoute: typeof PlatformMovementRoute
+  PlatformProgressRoute: typeof PlatformProgressRoute
+  PlatformTrainingRoute: typeof PlatformTrainingRoute
+  ResourcesAnatomyRoute: typeof ResourcesAnatomyRoute
+  ResourcesFaqsRoute: typeof ResourcesFaqsRoute
+  ResourcesLibraryRoute: typeof ResourcesLibraryRoute
+  ResourcesRehabRoute: typeof ResourcesRehabRoute
+  SolutionsCaregiverRoute: typeof SolutionsCaregiverRoute
+  SolutionsClinicsRoute: typeof SolutionsClinicsRoute
+  SolutionsEducationRoute: typeof SolutionsEducationRoute
+  SolutionsElderlyRoute: typeof SolutionsElderlyRoute
+  SolutionsRehabRoute: typeof SolutionsRehabRoute
   BlogIndexRoute: typeof BlogIndexRoute
 }
 
@@ -274,6 +573,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works': {
@@ -332,6 +638,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInboxRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/about_/careers': {
+      id: '/about_/careers'
+      path: '/about/careers'
+      fullPath: '/about/careers'
+      preLoaderRoute: typeof AboutCareersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/mission': {
+      id: '/about_/mission'
+      path: '/about/mission'
+      fullPath: '/about/mission'
+      preLoaderRoute: typeof AboutMissionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about_/team': {
+      id: '/about_/team'
+      path: '/about/team'
+      fullPath: '/about/team'
+      preLoaderRoute: typeof AboutTeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/': {
       id: '/blog/'
       path: '/blog'
@@ -344,6 +671,139 @@ declare module '@tanstack/react-router' {
       path: '/blog/$slug'
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact_/consultation': {
+      id: '/contact_/consultation'
+      path: '/contact/consultation'
+      fullPath: '/contact/consultation'
+      preLoaderRoute: typeof ContactConsultationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact_/demo': {
+      id: '/contact_/demo'
+      path: '/contact/demo'
+      fullPath: '/contact/demo'
+      preLoaderRoute: typeof ContactDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact_/enquiry': {
+      id: '/contact_/enquiry'
+      path: '/contact/enquiry'
+      fullPath: '/contact/enquiry'
+      preLoaderRoute: typeof ContactEnquiryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works_/privacy': {
+      id: '/how-it-works_/privacy'
+      path: '/how-it-works/privacy'
+      fullPath: '/how-it-works/privacy'
+      preLoaderRoute: typeof HowItWorksPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works_/vision': {
+      id: '/how-it-works_/vision'
+      path: '/how-it-works/vision'
+      fullPath: '/how-it-works/vision'
+      preLoaderRoute: typeof HowItWorksVisionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works_/workflow': {
+      id: '/how-it-works_/workflow'
+      path: '/how-it-works/workflow'
+      fullPath: '/how-it-works/workflow'
+      preLoaderRoute: typeof HowItWorksWorkflowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/platform_/dashboard': {
+      id: '/platform_/dashboard'
+      path: '/platform/dashboard'
+      fullPath: '/platform/dashboard'
+      preLoaderRoute: typeof PlatformDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/platform_/movement': {
+      id: '/platform_/movement'
+      path: '/platform/movement'
+      fullPath: '/platform/movement'
+      preLoaderRoute: typeof PlatformMovementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/platform_/progress': {
+      id: '/platform_/progress'
+      path: '/platform/progress'
+      fullPath: '/platform/progress'
+      preLoaderRoute: typeof PlatformProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/platform_/training': {
+      id: '/platform_/training'
+      path: '/platform/training'
+      fullPath: '/platform/training'
+      preLoaderRoute: typeof PlatformTrainingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources_/anatomy': {
+      id: '/resources_/anatomy'
+      path: '/resources/anatomy'
+      fullPath: '/resources/anatomy'
+      preLoaderRoute: typeof ResourcesAnatomyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources_/faqs': {
+      id: '/resources_/faqs'
+      path: '/resources/faqs'
+      fullPath: '/resources/faqs'
+      preLoaderRoute: typeof ResourcesFaqsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources_/library': {
+      id: '/resources_/library'
+      path: '/resources/library'
+      fullPath: '/resources/library'
+      preLoaderRoute: typeof ResourcesLibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources_/rehab': {
+      id: '/resources_/rehab'
+      path: '/resources/rehab'
+      fullPath: '/resources/rehab'
+      preLoaderRoute: typeof ResourcesRehabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/caregiver': {
+      id: '/solutions_/caregiver'
+      path: '/solutions/caregiver'
+      fullPath: '/solutions/caregiver'
+      preLoaderRoute: typeof SolutionsCaregiverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/clinics': {
+      id: '/solutions_/clinics'
+      path: '/solutions/clinics'
+      fullPath: '/solutions/clinics'
+      preLoaderRoute: typeof SolutionsClinicsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/education': {
+      id: '/solutions_/education'
+      path: '/solutions/education'
+      fullPath: '/solutions/education'
+      preLoaderRoute: typeof SolutionsEducationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/elderly': {
+      id: '/solutions_/elderly'
+      path: '/solutions/elderly'
+      fullPath: '/solutions/elderly'
+      preLoaderRoute: typeof SolutionsElderlyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/rehab': {
+      id: '/solutions_/rehab'
+      path: '/solutions/rehab'
+      fullPath: '/solutions/rehab'
+      preLoaderRoute: typeof SolutionsRehabRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -367,6 +827,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyzeRoute: AnalyzeRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
+  FeedbackRoute: FeedbackRoute,
   HowItWorksRoute: HowItWorksRoute,
   PlatformRoute: PlatformRoute,
   PrivacyRoute: PrivacyRoute,
@@ -374,7 +835,29 @@ const rootRouteChildren: RootRouteChildren = {
   SafetyRoute: SafetyRoute,
   SolutionsRoute: SolutionsRoute,
   TermsRoute: TermsRoute,
+  AboutCareersRoute: AboutCareersRoute,
+  AboutMissionRoute: AboutMissionRoute,
+  AboutTeamRoute: AboutTeamRoute,
   BlogSlugRoute: BlogSlugRoute,
+  ContactConsultationRoute: ContactConsultationRoute,
+  ContactDemoRoute: ContactDemoRoute,
+  ContactEnquiryRoute: ContactEnquiryRoute,
+  HowItWorksPrivacyRoute: HowItWorksPrivacyRoute,
+  HowItWorksVisionRoute: HowItWorksVisionRoute,
+  HowItWorksWorkflowRoute: HowItWorksWorkflowRoute,
+  PlatformDashboardRoute: PlatformDashboardRoute,
+  PlatformMovementRoute: PlatformMovementRoute,
+  PlatformProgressRoute: PlatformProgressRoute,
+  PlatformTrainingRoute: PlatformTrainingRoute,
+  ResourcesAnatomyRoute: ResourcesAnatomyRoute,
+  ResourcesFaqsRoute: ResourcesFaqsRoute,
+  ResourcesLibraryRoute: ResourcesLibraryRoute,
+  ResourcesRehabRoute: ResourcesRehabRoute,
+  SolutionsCaregiverRoute: SolutionsCaregiverRoute,
+  SolutionsClinicsRoute: SolutionsClinicsRoute,
+  SolutionsEducationRoute: SolutionsEducationRoute,
+  SolutionsElderlyRoute: SolutionsElderlyRoute,
+  SolutionsRehabRoute: SolutionsRehabRoute,
   BlogIndexRoute: BlogIndexRoute,
 }
 export const routeTree = rootRouteImport

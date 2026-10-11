@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ChangeEvent } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PageHero } from "@/components/site/PageHero";
 import { whatsappLink } from "@/lib/site";
+import { CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -25,7 +26,6 @@ const roles = ["Physiotherapist / clinic", "Elderly individual / caregiver", "In
 
 function leadRow(formType: string, data: FormData) {
   const get = (k: string) => String(data.get(k) ?? "").trim();
-  // field names below match each input's name attribute
   return {
     form_type: formType,
     full_name: get("Full name"),
@@ -54,44 +54,88 @@ function sendViaWhatsApp(title: string, data: FormData) {
   window.open(whatsappLink(lines.join("\n")), "_blank", "noopener");
 }
 
-function Field({ name, label, type = "text", required }: { name: string; label: string; type?: string; required?: boolean }) {
+function Field({ name, label, type = "text", required, value, onChange }: { name: string; label: string; type?: string; required?: boolean; value?: string; onChange?: (e: ChangeEvent<HTMLInputElement>) => void }) {
   return (
-    <div className="grid gap-1.5">
+    <div className="grid gap-1.5 w-full">
       <Label htmlFor={name}>{label}{required && " *"}</Label>
-      <Input id={name} name={label} type={type} required={required} className="h-11 rounded-xl bg-background" />
+      <Input id={name} name={label} type={type} required={required} value={value} onChange={onChange} className="h-11 rounded-xl bg-background" />
     </div>
   );
 }
 
 function Contact() {
   const [mode, setMode] = useState<"quick" | "long">("quick");
-  const submit = (formType: string, title: string) => async (e: FormEvent<HTMLFormElement>) => {
+  const [step, setStep] = useState(1);
+  const [submitted, setSubmitted] = useState(false);
+  const [formData, setFormData] = useState<Record<string, string>>({});
+
+  const totalSteps = 4; // Grouped the 7 steps into 4 for better UX
+
+  const updateField = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const nextStep = () => {
+    // Basic validation could be added here
+    setStep(s => Math.min(s + 1, totalSteps));
+  };
+
+  const prevStep = () => setStep(s => Math.max(s - 1, 1));
+
+  const submitQuick = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
-    const saved = await saveLead(formType, data);
-    sendViaWhatsApp(title, data);
+    const saved = await saveLead("quick_enquiry", data);
+    sendViaWhatsApp("Physiomatics — Quick enquiry", data);
     form.reset();
-    if (saved) toast.success("Your enquiry is saved — and ready in WhatsApp. Press send to deliver it.");
-    else toast.warning("We couldn't save your enquiry right now, but WhatsApp is open — press send to deliver it.");
+    setSubmitted(true);
+    if (!saved) toast.warning("We couldn't save your enquiry right now, but WhatsApp is open — press send to deliver it.");
   };
+
+  const submitLong = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const data = new FormData();
+    Object.entries(formData).forEach(([k, v]) => data.append(k, v));
+    
+    const saved = await saveLead("consultation", data);
+    sendViaWhatsApp("Physiomatics — Consultation request", data);
+    setFormData({});
+    setStep(1);
+    setSubmitted(true);
+    if (!saved) toast.warning("We couldn't save your enquiry right now, but WhatsApp is open — press send to deliver it.");
+  };
+
+  if (submitted) {
+    return (
+      <div className="container-page py-24 text-center max-w-lg">
+        <CheckCircle2 className="size-16 text-primary mx-auto" />
+        <h2 className="mt-6 text-3xl font-bold">Request Received</h2>
+        <p className="mt-4 text-muted-foreground">Thank you for your interest in Physiomatics. Your request has been saved and your WhatsApp draft is ready.</p>
+        <Button className="mt-8" onClick={() => setSubmitted(false)}>Submit another request</Button>
+      </div>
+    );
+  }
+
   return (
     <>
       <PageHero eyebrow="Contact" title="Book a demo or ask a question">
         Choose a quick enquiry or a detailed consultation. Your message opens in WhatsApp so you can review it before sending.
       </PageHero>
       <section className="container-page max-w-3xl py-12">
-        <div className="mb-6 inline-flex rounded-full border bg-card p-1" role="tablist">
-          {(["quick", "long"] as const).map((m) => (
-            <button key={m} role="tab" aria-selected={mode === m} onClick={() => setMode(m)}
-              className={`rounded-full px-5 py-2 text-sm font-semibold ${mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-              {m === "quick" ? "Quick enquiry" : "Consultation request"}
-            </button>
-          ))}
+        <div className="mb-8 flex justify-center">
+          <div className="inline-flex rounded-full border bg-card p-1" role="tablist">
+            {(["quick", "long"] as const).map((m) => (
+              <button key={m} role="tab" aria-selected={mode === m} onClick={() => { setMode(m); setStep(1); }}
+                className={`rounded-full px-5 py-2 text-sm font-semibold ${mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+                {m === "quick" ? "Quick enquiry" : "Consultation request"}
+              </button>
+            ))}
+          </div>
         </div>
 
         {mode === "quick" ? (
-          <form onSubmit={submit("quick_enquiry", "Physiomatics — Quick enquiry")} className="grid gap-4 rounded-3xl border bg-card p-8 shadow-soft">
+          <form onSubmit={submitQuick} className="grid gap-4 rounded-3xl border bg-card p-8 shadow-soft">
             <Field name="name" label="Full name" required />
             <Field name="contact" label="Email or phone" required />
             <div className="grid gap-1.5">
@@ -106,31 +150,88 @@ function Contact() {
             <Button type="submit" variant="hero" size="lg">Send enquiry</Button>
           </form>
         ) : (
-          <form onSubmit={submit("consultation", "Physiomatics — Consultation request")} className="grid gap-8 rounded-3xl border bg-card p-8 shadow-soft">
-            <fieldset className="grid gap-4 md:grid-cols-2">
-              <legend className="mb-3 font-display text-xl">Contact details</legend>
-              <Field name="lname" label="Full name" required />
-              <Field name="email" label="Work email" type="email" required />
-              <Field name="phone" label="Phone" type="tel" />
-              <Field name="jobtitle" label="Role / job title" />
-            </fieldset>
-            <fieldset className="grid gap-4 md:grid-cols-2">
-              <legend className="mb-3 font-display text-xl">Organization</legend>
-              <Field name="org" label="Organization name" />
-              <Field name="country" label="Country" />
-              <div className="grid gap-1.5">
-                <Label htmlFor="type">Organization type</Label>
-                <select id="type" name="Organization type" className="h-11 rounded-xl border bg-background px-3">{roles.map((r) => <option key={r}>{r}</option>)}</select>
+          <form onSubmit={submitLong} className="rounded-3xl border bg-card p-8 shadow-soft">
+            <div className="mb-8 flex items-center justify-between">
+              <div className="text-sm font-medium text-muted-foreground">Step {step} of {totalSteps}</div>
+              <div className="flex gap-1">
+                {Array.from({ length: totalSteps }).map((_, i) => (
+                  <div key={i} className={`h-2 w-2 rounded-full ${step > i ? 'bg-primary' : 'bg-muted'}`} />
+                ))}
               </div>
-              <Field name="size" label="Number of patients / students" />
-            </fieldset>
-            <fieldset className="grid gap-4">
-              <legend className="mb-3 font-display text-xl">Your needs</legend>
-              <div className="grid gap-1.5"><Label htmlFor="challenge">Main challenge</Label><Textarea id="challenge" name="Main challenge" rows={3} className="rounded-xl bg-background" /></div>
-              <div className="grid gap-1.5"><Label htmlFor="req">Requirements & timeline</Label><Textarea id="req" name="Requirements and timeline" rows={3} className="rounded-xl bg-background" /></div>
-            </fieldset>
-            <label className="flex gap-3 text-sm"><input type="checkbox" required className="mt-1 size-4 accent-primary" /> I agree to be contacted about my request.</label>
-            <Button type="submit" variant="hero" size="lg">Request consultation</Button>
+            </div>
+
+            {step === 1 && (
+              <fieldset className="grid gap-5 animate-in fade-in slide-in-from-right-4">
+                <legend className="mb-4 font-display text-2xl">Contact & Role</legend>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field name="lname" label="Full name" required value={formData["Full name"] || ""} onChange={(e) => updateField("Full name", e.target.value)} />
+                  <Field name="email" label="Work email" type="email" required value={formData["Work email"] || ""} onChange={(e) => updateField("Work email", e.target.value)} />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field name="phone" label="Phone" type="tel" value={formData["Phone"] || ""} onChange={(e) => updateField("Phone", e.target.value)} />
+                  <Field name="jobtitle" label="Role / job title" value={formData["Role / job title"] || ""} onChange={(e) => updateField("Role / job title", e.target.value)} />
+                </div>
+              </fieldset>
+            )}
+
+            {step === 2 && (
+              <fieldset className="grid gap-5 animate-in fade-in slide-in-from-right-4">
+                <legend className="mb-4 font-display text-2xl">Organization</legend>
+                <Field name="org" label="Organization name" value={formData["Organization name"] || ""} onChange={(e) => updateField("Organization name", e.target.value)} />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field name="country" label="Country" value={formData["Country"] || ""} onChange={(e) => updateField("Country", e.target.value)} />
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="type">Organization type</Label>
+                    <select id="type" className="h-11 rounded-xl border bg-background px-3" value={formData["Organization type"] || ""} onChange={(e) => updateField("Organization type", e.target.value)}>
+                      <option value="">Select...</option>
+                      {roles.map((r) => <option key={r}>{r}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <Field name="size" label="Number of patients / students" value={formData["Number of patients / students"] || ""} onChange={(e) => updateField("Number of patients / students", e.target.value)} />
+              </fieldset>
+            )}
+
+            {step === 3 && (
+              <fieldset className="grid gap-5 animate-in fade-in slide-in-from-right-4">
+                <legend className="mb-4 font-display text-2xl">Your Needs</legend>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="challenge">Current challenges</Label>
+                  <Textarea id="challenge" rows={3} className="rounded-xl bg-background" value={formData["Main challenge"] || ""} onChange={(e) => updateField("Main challenge", e.target.value)} />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="req">Required features & timeline</Label>
+                  <Textarea id="req" rows={3} className="rounded-xl bg-background" value={formData["Requirements and timeline"] || ""} onChange={(e) => updateField("Requirements and timeline", e.target.value)} />
+                </div>
+              </fieldset>
+            )}
+
+            {step === 4 && (
+              <fieldset className="grid gap-5 animate-in fade-in slide-in-from-right-4">
+                <legend className="mb-4 font-display text-2xl">Review & Submit</legend>
+                <div className="rounded-xl bg-muted p-4 text-sm mb-4">
+                  <p><strong>Name:</strong> {formData["Full name"]}</p>
+                  <p><strong>Email:</strong> {formData["Work email"]}</p>
+                  <p><strong>Organization:</strong> {formData["Organization name"]}</p>
+                </div>
+                <label className="flex gap-3 text-sm">
+                  <input type="checkbox" required className="mt-1 size-4 accent-primary" /> 
+                  <span>I agree to be contacted about my request and confirm that I have not included sensitive patient medical records.</span>
+                </label>
+              </fieldset>
+            )}
+
+            <div className="mt-8 flex justify-between pt-4 border-t">
+              {step > 1 ? (
+                <Button type="button" variant="outline" onClick={prevStep}><ChevronLeft className="mr-2 size-4"/> Back</Button>
+              ) : <div></div>}
+              
+              {step < totalSteps ? (
+                <Button type="button" onClick={nextStep}>Next <ChevronRight className="ml-2 size-4"/></Button>
+              ) : (
+                <Button type="submit" variant="hero">Submit Request</Button>
+              )}
+            </div>
           </form>
         )}
       </section>

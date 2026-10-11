@@ -23,6 +23,7 @@ export function Footer() {
           <Link to="/contact" className="opacity-75 hover:opacity-100">Book a demo</Link>
           <a href={whatsappLink(WA_MESSAGES.general)} target="_blank" rel="noreferrer" className="opacity-75 hover:opacity-100">Chat on WhatsApp</a>
           <Link to="/about" className="opacity-75 hover:opacity-100">About</Link>
+          <Link to="/feedback" className="opacity-75 hover:opacity-100">Submit feedback</Link>
           <Link to="/safety" className="opacity-75 hover:opacity-100">Safety & responsible AI</Link>
           <Link to="/privacy" className="opacity-75 hover:opacity-100">Privacy policy</Link>
           <Link to="/terms" className="opacity-75 hover:opacity-100">Terms of use</Link>

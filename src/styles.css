@@ -59,53 +59,71 @@
 }
 
 :root {
-  --radius: 0.875rem;
-  --background: oklch(0.977 0.008 85);
-  --foreground: oklch(0.24 0.03 210);
-  --card: oklch(0.995 0.004 85);
-  --card-foreground: oklch(0.24 0.03 210);
-  --popover: oklch(0.995 0.004 85);
-  --popover-foreground: oklch(0.24 0.03 210);
-  --primary: oklch(0.45 0.08 200);
-  --primary-foreground: oklch(0.98 0.01 90);
-  --primary-soft: oklch(0.93 0.035 195);
-  --secondary: oklch(0.94 0.018 85);
-  --secondary-foreground: oklch(0.28 0.03 210);
-  --muted: oklch(0.95 0.012 85);
-  --muted-foreground: oklch(0.5 0.025 210);
-  --accent: oklch(0.93 0.035 195);
-  --accent-foreground: oklch(0.3 0.06 200);
-  --coral: oklch(0.7 0.14 40);
-  --coral-foreground: oklch(0.99 0.01 80);
-  --ink: oklch(0.24 0.035 210);
-  --ink-foreground: oklch(0.96 0.012 85);
+  --radius: 1.5rem; /* More rounded to match reference buttons */
+  --background: oklch(0.995 0 0); /* Crisp white */
+  --foreground: oklch(0.15 0.01 280); /* Almost black */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.01 280);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.01 280);
+  
+  /* Reference Purple: #592787 */
+  --primary: oklch(0.40 0.16 300);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-soft: oklch(0.96 0.02 300);
+  
+  --secondary: oklch(0.97 0.01 215);
+  --secondary-foreground: oklch(0.25 0.02 300);
+  
+  --muted: oklch(0.97 0.01 215);
+  --muted-foreground: oklch(0.45 0.02 215);
+  
+  --accent: oklch(0.96 0.02 300);
+  --accent-foreground: oklch(0.40 0.16 300);
+  
+  /* Reference Teal: #5AA9AC */
+  --coral: oklch(0.66 0.10 215);
+  --coral-foreground: oklch(0.99 0 0);
+  
+  --ink: oklch(0.15 0.01 280);
+  --ink-foreground: oklch(0.99 0 0);
+  
   --whatsapp: oklch(0.62 0.15 150);
   --whatsapp-foreground: oklch(0.99 0 0);
+  
   --success: oklch(0.6 0.13 155);
   --warning: oklch(0.75 0.14 75);
   --destructive: oklch(0.577 0.2 27);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.89 0.015 85);
-  --input: oklch(0.88 0.015 85);
-  --ring: oklch(0.45 0.08 200);
-  --chart-1: oklch(0.45 0.08 200);
-  --chart-2: oklch(0.7 0.14 40);
-  --chart-3: oklch(0.62 0.15 150);
-  --chart-4: oklch(0.75 0.14 75);
-  --chart-5: oklch(0.5 0.025 210);
-  --sidebar: oklch(0.977 0.008 85);
-  --sidebar-foreground: oklch(0.24 0.03 210);
-  --sidebar-primary: oklch(0.45 0.08 200);
-  --sidebar-primary-foreground: oklch(0.98 0.01 90);
-  --sidebar-accent: oklch(0.93 0.035 195);
-  --sidebar-accent-foreground: oklch(0.3 0.06 200);
-  --sidebar-border: oklch(0.89 0.015 85);
-  --sidebar-ring: oklch(0.45 0.08 200);
+  
+  --border: oklch(0.92 0.01 215);
+  --input: oklch(0.92 0.01 215);
+  --ring: oklch(0.40 0.16 300);
+  
+  --chart-1: oklch(0.40 0.16 300); /* Purple */
+  --chart-2: oklch(0.66 0.10 215); /* Teal */
+  --chart-3: oklch(0.50 0.10 250); /* Blue-purple */
+  --chart-4: oklch(0.70 0.08 200); /* Light teal */
+  --chart-5: oklch(0.30 0.10 320); /* Dark purple */
+  
+  --sidebar: oklch(0.995 0 0);
+  --sidebar-foreground: oklch(0.15 0.01 280);
+  --sidebar-primary: oklch(0.40 0.16 300);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.96 0.02 300);
+  --sidebar-accent-foreground: oklch(0.40 0.16 300);
+  --sidebar-border: oklch(0.92 0.01 215);
+  --sidebar-ring: oklch(0.40 0.16 300);
 
-  --gradient-hero: radial-gradient(ellipse at 15% 0%, oklch(0.93 0.035 195) 0%, transparent 55%),
-    radial-gradient(ellipse at 90% 30%, oklch(0.94 0.04 50) 0%, transparent 50%);
-  --shadow-soft: 0 1px 2px oklch(0.24 0.03 210 / 0.04), 0 12px 32px -12px oklch(0.24 0.03 210 / 0.14);
-  --shadow-lift: 0 24px 60px -20px oklch(0.45 0.08 200 / 0.35);
+  /* New Reference Gradient: Purple to Teal (Used for text and buttons) */
+  --gradient-primary: linear-gradient(135deg, oklch(0.40 0.16 300) 0%, oklch(0.50 0.10 250) 50%, oklch(0.66 0.10 215) 100%);
+  
+  /* Very light mesh gradient for hero background to keep black text readable */
+  --gradient-hero: radial-gradient(ellipse at 15% 0%, oklch(0.96 0.02 300) 0%, transparent 55%),
+    radial-gradient(ellipse at 90% 30%, oklch(0.95 0.04 215) 0%, transparent 50%);
+  
+  --shadow-soft: 0 4px 20px -2px rgba(89, 39, 135, 0.08);
+  --shadow-lift: 0 10px 40px -10px rgba(89, 39, 135, 0.2);
 }
 
 @layer base {
@@ -117,17 +135,18 @@
   }
   body {
     background-color: var(--color-background);
+    background-image: radial-gradient(oklch(0.92 0.01 215) 1px, transparent 1px);
+    background-size: 32px 32px;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-size: 1.0625rem;
     -webkit-font-smoothing: antialiased;
   }
-  h1,
-  h2,
-  h3 {
+  h1, h2, h3 {
     font-family: var(--font-display);
-    letter-spacing: -0.02em;
-    font-weight: 500;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+    color: var(--color-primary);
   }
   :focus-visible {
     outline: 3px solid var(--color-ring);
