@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { PageHero } from "@/components/site/PageHero";
+import { IcpLeadForm } from "@/components/site/IcpLeadForm";
 import { 
   Trophy, 
   Gauge, 
@@ -138,20 +139,15 @@ function SportsAcademiesICPPage() {
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-2">
               <Sparkles className="size-4" /> Sports Performance
             </div>
-            <h3 className="text-xl font-bold mb-2">Empower Your Athletic Roster</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Connect with our sports science specialists to pilot Physiomatics across your team or performance facility.
+            <h3 className="text-xl font-bold mb-1">Request Your Academy Demo</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              Takes 30 seconds. Our sports science team will contact you to pilot the platform.
             </p>
-            <div className="space-y-3">
-              <Button asChild className="w-full justify-between" variant="hero">
-                <Link to="/contact">Request Team Demo <ArrowRight className="size-4" /></Link>
-              </Button>
-              <Button asChild className="w-full justify-between" variant="outline">
-                <a href={whatsappLink("Hello Physiomatics, I coach athletes and want to discuss using the platform for performance tracking.")} target="_blank" rel="noreferrer">
-                  Sports Specialist WhatsApp <Trophy className="size-4" />
-                </a>
-              </Button>
-            </div>
+            <IcpLeadForm
+              segment="Sports Academy"
+              ctaLabel="Get Sports Academy Demo"
+              whatsappMessage="Hi Physiomatics! I coach athletes at a sports academy and want to pilot the platform for performance tracking."
+            />
           </div>
 
           <div className="rounded-3xl border bg-card p-6">

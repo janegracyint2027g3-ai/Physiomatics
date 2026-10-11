@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { PageHero } from "@/components/site/PageHero";
+import { IcpLeadForm } from "@/components/site/IcpLeadForm";
 import { 
   Building2, 
   TrendingUp, 
@@ -142,20 +143,15 @@ function ClinicsICPPage() {
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-2">
               <Sparkles className="size-4" /> Clinic Deployment
             </div>
-            <h3 className="text-xl font-bold mb-2">Transform Your Practice Today</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Schedule a personalized walkthrough designed for clinic owners and therapy directors.
+            <h3 className="text-xl font-bold mb-1">Request Your Clinic Demo</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              Takes 30 seconds. We'll reach you on WhatsApp to schedule a walkthrough for clinic owners.
             </p>
-            <div className="space-y-3">
-              <Button asChild className="w-full justify-between" variant="hero">
-                <Link to="/contact">Book Clinic Demo <ArrowRight className="size-4" /></Link>
-              </Button>
-              <Button asChild className="w-full justify-between" variant="outline">
-                <a href={whatsappLink("Hello, I am interested in deploying Physiomatics across our physiotherapy clinic.")} target="_blank" rel="noreferrer">
-                  Chat With Team <Activity className="size-4" />
-                </a>
-              </Button>
-            </div>
+            <IcpLeadForm
+              segment="Physiotherapy Clinic"
+              ctaLabel="Book Clinic Demo"
+              whatsappMessage="Hi Physiomatics! I manage a physiotherapy clinic and would like a demo of the platform."
+            />
           </div>
 
           <div className="rounded-3xl border bg-card p-6">

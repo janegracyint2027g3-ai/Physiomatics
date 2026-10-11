@@ -125,6 +125,19 @@ export function PoseAnalyzer() {
     if (r.reliable) {
       const next = [...history, r].slice(-30);
       setHistory(next); localStorage.setItem(STORE, JSON.stringify(next));
+
+      // Sync completed movement telemetry to Google Sheet
+      sendToGoogleSheet({
+        action: "exercise_analysis",
+        form_type: "movement_session",
+        exercise: r.exercise,
+        reps: r.reps,
+        rangeDeg: r.rangeDeg,
+        confidencePct: Math.round(r.confidence * 100),
+        durationSec: Math.round(r.durationSec),
+        peakAngleDeg: r.peakAngleDeg,
+        reliable: r.reliable,
+      }).catch(err => console.error("Google Sheets exercise sync error:", err));
     }
   }
 

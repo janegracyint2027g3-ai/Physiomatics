@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { PageHero } from "@/components/site/PageHero";
+import { IcpLeadForm } from "@/components/site/IcpLeadForm";
 import { 
   UserCheck, 
   ShieldCheck, 
@@ -135,22 +136,19 @@ function RehabPatientsICPPage() {
 
         {/* Sidebar */}
         <aside className="space-y-6 sticky top-24">
-          <div className="rounded-3xl bg-card border p-6 shadow-sm">
+          <div className="rounded-3xl bg-primary-soft p-6 border shadow-soft">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-2">
               <Sparkles className="size-4" /> Start Moving Today
             </div>
-            <h3 className="text-xl font-bold mb-2">Ready to try your first session?</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Launch the live demo now and see your joint angles tracked in real-time.
+            <h3 className="text-xl font-bold mb-1">Begin Your Recovery Journey</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              Register and we'll connect you with a guided Physiomatics rehab session.
             </p>
-            <div className="space-y-3">
-              <Button asChild className="w-full justify-between" variant="hero">
-                <Link to="/analyze">Start Interactive Session <ArrowRight className="size-4" /></Link>
-              </Button>
-              <Button asChild className="w-full justify-between" variant="outline">
-                <Link to="/resources/library">View Exercise Library <PlayCircle className="size-4" /></Link>
-              </Button>
-            </div>
+            <IcpLeadForm
+              segment="Rehab Patient"
+              ctaLabel="Start My Recovery Plan"
+              whatsappMessage="Hi Physiomatics! I'm recovering from an injury and would like to use the platform for guided rehab."
+            />
           </div>
 
           <div className="rounded-3xl border bg-muted/40 p-6">

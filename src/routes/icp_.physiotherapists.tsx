@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { PageHero } from "@/components/site/PageHero";
+import { IcpLeadForm } from "@/components/site/IcpLeadForm";
 import { 
   Stethoscope, 
   Eye, 
@@ -9,7 +10,6 @@ import {
   Smartphone, 
   CheckCircle, 
   ArrowRight,
-  ShieldAlert,
   Sparkles
 } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
@@ -107,18 +107,15 @@ function PhysiotherapistsICPPage() {
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-2">
               <Sparkles className="size-4" /> Practitioner Access
             </div>
-            <h3 className="text-xl font-bold mb-2">Try The Clinical Tool Free</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Test pose estimation and repetition tracking right now on your webcam.
+            <h3 className="text-xl font-bold mb-1">Request Your Free Demo</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              Takes 30 seconds. We'll reach you on WhatsApp to schedule a walkthrough.
             </p>
-            <div className="space-y-3">
-              <Button asChild className="w-full justify-between" variant="hero">
-                <Link to="/analyze">Test Live In Browser <ArrowRight className="size-4" /></Link>
-              </Button>
-              <Button asChild className="w-full justify-between" variant="outline">
-                <Link to="/contact">Request Practitioner Pack <Stethoscope className="size-4" /></Link>
-              </Button>
-            </div>
+            <IcpLeadForm
+              segment="Physiotherapist"
+              ctaLabel="Get Practitioner Demo"
+              whatsappMessage="Hi Physiomatics! I'm a physiotherapist and would like a free demo of the platform."
+            />
           </div>
 
           <div className="rounded-3xl border bg-card p-6">
@@ -128,6 +125,15 @@ function PhysiotherapistsICPPage() {
               <li className="flex items-center gap-2"><CheckCircle className="size-4 text-emerald-500" /> Increased client engagement</li>
               <li className="flex items-center gap-2"><CheckCircle className="size-4 text-emerald-500" /> No vendor lock-in or proprietary sensors</li>
             </ul>
+          </div>
+
+          <div className="rounded-3xl border bg-card p-4 flex gap-3">
+            <Button asChild size="sm" variant="outline" className="flex-1 text-xs">
+              <Link to="/analyze">Try Live Analysis</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="flex-1 text-xs">
+              <Link to="/contact">Full Consultation</Link>
+            </Button>
           </div>
         </aside>
       </section>

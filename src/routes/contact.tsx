@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { PageHero } from "@/components/site/PageHero";
 import { whatsappLink } from "@/lib/site";
 import { CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
+import { sendToGoogleSheet } from "@/lib/googleSheets";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -44,8 +45,17 @@ function leadRow(formType: string, data: FormData) {
 }
 
 async function saveLead(formType: string, data: FormData) {
-  const { error } = await supabase.from("leads").insert(leadRow(formType, data));
-  if (error) console.error("Failed to save enquiry:", error.message);
+  const row = leadRow(formType, data);
+  
+  // 1. Sync to Google Sheets
+  sendToGoogleSheet({
+    action: "lead_submission",
+    ...row,
+  }).catch((err) => console.error("Google Sheets sync warning:", err));
+
+  // 2. Save to Supabase leads table
+  const { error } = await supabase.from("leads").insert(row);
+  if (error) console.error("Failed to save enquiry to Supabase:", error.message);
   return !error;
 }
 

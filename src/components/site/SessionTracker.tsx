@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { sendToGoogleSheet } from "@/lib/googleSheets";
 
 export function SessionTracker() {
   useEffect(() => {
@@ -14,6 +15,14 @@ export function SessionTracker() {
     if (!lastVisit || now - parseInt(lastVisit) > 1800000) {
       visits += 1;
       localStorage.setItem("physiomatics_visit_count", visits.toString());
+
+      // Log session start to Google Sheets
+      sendToGoogleSheet({
+        action: "session_start",
+        form_type: "analytics",
+        visit_number: visits,
+        referrer: typeof document !== "undefined" ? document.referrer : "",
+      }).catch((err) => console.error("SessionTracker Google Sheet error:", err));
       
       if (visits > 1) {
         setTimeout(() => {

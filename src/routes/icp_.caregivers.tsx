@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { PageHero } from "@/components/site/PageHero";
+import { IcpLeadForm } from "@/components/site/IcpLeadForm";
 import { 
   Users, 
   Heart, 
@@ -139,18 +140,15 @@ function CaregiversICPPage() {
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-2">
               <Sparkles className="size-4" /> Caregiver Resource
             </div>
-            <h3 className="text-xl font-bold mb-2">Start a Guided Session</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Launch our movement assistant and support your family member with confidence today.
+            <h3 className="text-xl font-bold mb-1">Register for Caregiver Support</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              Leave your details and we'll walk you through how to use Physiomatics with your family member.
             </p>
-            <div className="space-y-3">
-              <Button asChild className="w-full justify-between" variant="hero">
-                <Link to="/analyze">Open AI Movement Tool <ArrowRight className="size-4" /></Link>
-              </Button>
-              <Button asChild className="w-full justify-between" variant="outline">
-                <Link to="/solutions/caregiver">Caregiver Guides <Users className="size-4" /></Link>
-              </Button>
-            </div>
+            <IcpLeadForm
+              segment="Family Caregiver"
+              ctaLabel="Get Caregiver Guide"
+              whatsappMessage="Hi Physiomatics! I'm a family caregiver and would like help using the platform for a loved one."
+            />
           </div>
 
           <div className="rounded-3xl border bg-card p-6">

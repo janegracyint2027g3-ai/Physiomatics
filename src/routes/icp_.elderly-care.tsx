@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { PageHero } from "@/components/site/PageHero";
+import { IcpLeadForm } from "@/components/site/IcpLeadForm";
 import { 
   HeartHandshake, 
   ShieldCheck, 
@@ -140,20 +141,15 @@ function ElderlyCareICPPage() {
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-2">
               <Sparkles className="size-4" /> Senior Wellness
             </div>
-            <h3 className="text-xl font-bold mb-2">Support Your Loved One</h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              Learn how family members and assisted living facilities deploy Physiomatics for senior residents.
+            <h3 className="text-xl font-bold mb-1">Get a Senior Care Walkthrough</h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              Share your details and we'll guide you through the platform for elderly & senior care.
             </p>
-            <div className="space-y-3">
-              <Button asChild className="w-full justify-between" variant="hero">
-                <Link to="/solutions/elderly">Explore Senior Protocols <ArrowRight className="size-4" /></Link>
-              </Button>
-              <Button asChild className="w-full justify-between" variant="outline">
-                <a href={whatsappLink("Hello, I am looking for gentle movement guidance for an elderly family member.")} target="_blank" rel="noreferrer">
-                  Speak on WhatsApp <PhoneCall className="size-4" />
-                </a>
-              </Button>
-            </div>
+            <IcpLeadForm
+              segment="Elderly Care / Senior Facility"
+              ctaLabel="Request Senior Care Demo"
+              whatsappMessage="Hi Physiomatics! I'm looking for gentle movement guidance for elderly residents / family members. Please contact me."
+            />
           </div>
 
           <div className="rounded-3xl border bg-card p-6">

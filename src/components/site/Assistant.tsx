@@ -4,6 +4,7 @@ import { MessageCircle, X, Bot, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { whatsappLink, WA_MESSAGES } from "@/lib/site";
+import { sendToGoogleSheet } from "@/lib/googleSheets";
 
 type Node = { text: string; options: { label: string; next?: string; to?: string; wa?: keyof typeof WA_MESSAGES }[] };
 
@@ -68,6 +69,15 @@ export function Assistant() {
     if (!inputValue.trim()) return;
     
     setMessages(prev => [...prev, { type: 'user', text: inputValue }]);
+    
+    // Sync chatbot inquiry to Google Sheet
+    sendToGoogleSheet({
+      action: "chatbot_inquiry",
+      form_type: "assistant_chat",
+      message: inputValue.trim(),
+      context_node: node,
+    }).catch(err => console.error("Assistant Google Sheet sync error:", err));
+
     setInputValue("");
     
     // Simulate a simple bot reply

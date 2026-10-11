@@ -16,6 +16,9 @@ export const Route = createFileRoute("/feedback")({
   component: FeedbackPage,
 });
 
+import { sendToGoogleSheet } from "@/lib/googleSheets";
+import { supabase } from "@/integrations/supabase/client";
+
 function FeedbackPage() {
   const [feedback, setFeedback] = useState("");
   const [category, setCategory] = useState("general");
@@ -26,14 +29,30 @@ function FeedbackPage() {
     if (!feedback.trim()) return;
 
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setFeedback("");
-      toast.success("Feedback submitted", {
-        description: "Thank you for sharing your thoughts with us!",
-      });
-    }, 1000);
+    
+    // 1. Sync to Google Sheet
+    sendToGoogleSheet({
+      action: "user_feedback",
+      form_type: "feedback",
+      category,
+      message: feedback.trim(),
+    }).catch((err) => console.error("Google Sheets feedback sync error:", err));
+
+    // 2. Sync to Supabase feedback table if available
+    try {
+      await supabase.from("feedback").insert({
+        category,
+        message: feedback.trim(),
+      } as any);
+    } catch (e) {
+      // ignore table if RLS or schema doesn't exist
+    }
+
+    setIsSubmitting(false);
+    setFeedback("");
+    toast.success("Feedback submitted", {
+      description: "Thank you for sharing your thoughts with us!",
+    });
   };
 
   return (
