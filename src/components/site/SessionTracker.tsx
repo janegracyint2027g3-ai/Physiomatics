@@ -220,9 +220,18 @@ export function SessionTracker() {
   }, []);
 
   useEffect(() => {
-    // Guard: localStorage only available in browser
+    // Guard: only runs in browser
     if (typeof window === "undefined" || typeof localStorage === "undefined") return;
 
+    // ── sessionStorage gate ─────────────────────────────────────────────────
+    // sessionStorage is cleared when the browser tab is closed/reopened.
+    // This ensures the banner shows ONCE per tab, not on every page navigation.
+    const SHOWN_KEY = "pm_banner_shown";
+    const alreadyShownThisTab = sessionStorage.getItem(SHOWN_KEY) === "1";
+    if (alreadyShownThisTab) return; // same tab navigation/refresh — skip
+    sessionStorage.setItem(SHOWN_KEY, "1");   // mark shown for this tab
+
+    // ── Resolve visitor / session ──────────────────────────────────────────
     let session: ReturnType<typeof resolveVisitorSession>;
     try {
       session = resolveVisitorSession();
@@ -231,8 +240,8 @@ export function SessionTracker() {
       return;
     }
 
+    // ── Google Sheets: only fire when 30-min rule says new session ─────────
     if (session.isNewSession) {
-      /* ── Send to Google Sheets ── */
       sendToGoogleSheet({
         action:       "session_start",
         form_type:    "analytics",
@@ -253,19 +262,21 @@ export function SessionTracker() {
         language: navigator.language,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       }).catch(() => {});
-
-      /* ── Show banner after 900 ms ── */
-      const t = setTimeout(() => {
-        setBanner({
-          show:        true,
-          visitCount:  session.visitCount,
-          visitorType: session.visitorType,
-        });
-      }, 900);
-
-      return () => clearTimeout(t);
     }
-  }, []); // ← empty deps = once per browser tab load
+
+    // ── Show banner on every new tab/window open ───────────────────────────
+    // Banner always shows when tab is freshly opened (sessionStorage was empty).
+    // It does NOT show on in-page navigation or refresh (sessionStorage persists).
+    const t = setTimeout(() => {
+      setBanner({
+        show:        true,
+        visitCount:  session.visitCount,
+        visitorType: session.visitorType,
+      });
+    }, 900);
+
+    return () => clearTimeout(t);
+  }, []); // once per component mount (= once per tab load)
 
   if (!banner?.show) return null;
 
