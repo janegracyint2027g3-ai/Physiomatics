@@ -78,6 +78,7 @@ function renderIcon(name?: string, className: string = "size-5") {
 
 /* 
   Contrasting Luxury Megamenu:
+  - Supports 'align': "left" | "center" | "right" so items near the viewport edges don't overflow!
   - Left Panel: Deep black (#0a0a0c) with warm gold/purple subtle accents and selected tab styling
   - Right Panel: Clean off-white/cream luxury background with purple borders and badge tags
   - Bottom Bar: Contrasting call-to-action strip with direct action button
@@ -90,7 +91,8 @@ function ContrastMegamenu({
   categories,
   ctaText = "Need help identifying the right solution?",
   ctaButtonText = "Talk to a Specialist →",
-  ctaLink = "/contact"
+  ctaLink = "/contact",
+  align = "center"
 }: {
   label: string;
   to: string;
@@ -100,11 +102,19 @@ function ContrastMegamenu({
   ctaText?: string;
   ctaButtonText?: string;
   ctaLink?: string;
+  align?: "left" | "center" | "right";
 }) {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
 
   const activeCategory = categories[activeTab] || categories[0];
+
+  const positionClasses = 
+    align === "left" 
+      ? "left-0 translate-x-0" 
+      : align === "right" 
+      ? "right-0 translate-x-0" 
+      : "left-1/2 -translate-x-1/2";
 
   return (
     <div 
@@ -123,10 +133,10 @@ function ContrastMegamenu({
       </button>
 
       {open && (
-        <div className="absolute left-1/2 top-full z-50 w-[58rem] -translate-x-1/2 pt-3 animate-in fade-in-0 slide-in-from-top-2 duration-200">
+        <div className={`absolute ${positionClasses} top-full z-50 w-[54rem] max-w-[calc(100vw-2rem)] pt-3 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
           <div className="overflow-hidden rounded-[2rem] border border-border/80 bg-[#fbfaf8] text-foreground shadow-2xl ring-1 ring-black/10">
             {/* Top Grid: Contrast Split */}
-            <div className="grid grid-cols-[260px_1fr] min-h-[380px]">
+            <div className="grid grid-cols-[240px_1fr] min-h-[360px]">
               
               {/* LEFT COLUMN: Premium Black & Purple Velvet Panel */}
               <div className="bg-[#0f0b15] p-6 text-white flex flex-col justify-between border-r border-[#261d33]">
@@ -260,7 +270,8 @@ function CompactMegamenu({
   items,
   ctaText = "Ready to explore live?",
   ctaButtonText = "Try Free Live Demo →",
-  ctaLink = "/analyze"
+  ctaLink = "/analyze",
+  align = "center"
 }: {
   label: string;
   to: string;
@@ -269,8 +280,17 @@ function CompactMegamenu({
   ctaText?: string;
   ctaButtonText?: string;
   ctaLink?: string;
+  align?: "left" | "center" | "right";
 }) {
   const [open, setOpen] = useState(false);
+
+  // When align is "left", align directly under button or left edge of navbar
+  const positionClasses = 
+    align === "left" 
+      ? "left-0 translate-x-0" 
+      : align === "right" 
+      ? "right-0 translate-x-0" 
+      : "left-1/2 -translate-x-1/2";
 
   return (
     <div 
@@ -289,10 +309,10 @@ function CompactMegamenu({
       </button>
 
       {open && (
-        <div className="absolute left-1/2 top-full z-50 w-[54rem] -translate-x-1/2 pt-3 animate-in fade-in-0 slide-in-from-top-2 duration-200">
+        <div className={`absolute ${positionClasses} top-full z-50 w-[50rem] max-w-[calc(100vw-2rem)] pt-3 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
           <div className="overflow-hidden rounded-[2rem] border border-border/80 bg-[#fbfaf8] text-foreground shadow-2xl ring-1 ring-black/10">
             {/* Top Grid: Split Panel */}
-            <div className="grid grid-cols-[240px_1fr] min-h-[340px]">
+            <div className="grid grid-cols-[220px_1fr] min-h-[320px]">
               {/* Left Dark Purple / Black Panel */}
               <div className="bg-[#0f0b15] p-6 text-white flex flex-col justify-between border-r border-[#261d33]">
                 <div>
@@ -397,27 +417,28 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
       <div className="container-page flex h-16 items-center justify-between gap-4">
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold tracking-tight">
+        <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold tracking-tight shrink-0">
           <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm">
             <Activity className="size-4" />
           </span>
           Physiomatics
         </Link>
 
-        {/* Desktop Navigation with Contrasting Black & Purple Megamenu */}
+        {/* Desktop Navigation with Proper Alignments to stay in frame */}
         <nav className="hidden items-center lg:flex" aria-label="Main">
-          {/* About Menu right after Physiomatics */}
+          {/* About Menu: Align "left" so it stays neatly within the screen and doesn't get clipped on the left! */}
           <CompactMegamenu 
             label="About" 
             to="/about" 
             sidebarEyebrow="WHO WE ARE" 
             items={aboutMenu}
-            ctaText="Interested in our research and mission?"
+            ctaText="Interested in our clinical research and mission?"
             ctaButtonText="Read Mission →"
             ctaLink="/about/mission"
+            align="left"
           />
 
-          {/* Platform Menu */}
+          {/* Platform Menu: Align "left" */}
           <CompactMegamenu 
             label="Platform" 
             to="/platform" 
@@ -426,9 +447,10 @@ export function Header() {
             ctaText="Try our browser-based AI video analysis instantly."
             ctaButtonText="Test in Browser →"
             ctaLink="/analyze"
+            align="left"
           />
 
-          {/* Solutions Menu with Contrasting Megamenu Structure */}
+          {/* Solutions Menu: Center */}
           <ContrastMegamenu 
             label="Solutions" 
             to="/solutions" 
@@ -438,9 +460,10 @@ export function Header() {
             ctaText="Need guidance designing your clinic's remote rehabilitation program?"
             ctaButtonText="Talk to a Specialist →"
             ctaLink="/contact"
+            align="center"
           />
 
-          {/* How It Works Menu */}
+          {/* How It Works Menu: Center */}
           <CompactMegamenu 
             label="How It Works" 
             to="/how-it-works" 
@@ -449,9 +472,10 @@ export function Header() {
             ctaText="Learn how on-device AI safeguards patient privacy."
             ctaButtonText="View Security Whitepaper →"
             ctaLink="/how-it-works/privacy"
+            align="center"
           />
 
-          {/* Resources Menu */}
+          {/* Resources Menu: Center / Right */}
           <CompactMegamenu 
             label="Resources" 
             to="/resources" 
@@ -460,9 +484,10 @@ export function Header() {
             ctaText="Explore our verified clinical exercises and goniometric angles."
             ctaButtonText="Browse Library →"
             ctaLink="/resources/library"
+            align="center"
           />
 
-          {/* ICP Profiles Menu right after Resources with Contrasting Structure */}
+          {/* ICP Profiles Menu: Align "right" so it never overflows off the right edge */}
           <ContrastMegamenu 
             label="ICP Profiles" 
             to="/icp" 
@@ -472,9 +497,10 @@ export function Header() {
             ctaText="Looking for a custom plan tailored to your specific organization?"
             ctaButtonText="Book Custom Demo →"
             ctaLink="/contact/demo"
+            align="right"
           />
 
-          {/* Contact Menu */}
+          {/* Contact Menu: Align "right" */}
           <CompactMegamenu 
             label="Contact" 
             to="/contact" 
@@ -483,11 +509,12 @@ export function Header() {
             ctaText="Want an immediate response on WhatsApp?"
             ctaButtonText="Chat on WhatsApp →"
             ctaLink="/contact/enquiry"
+            align="right"
           />
         </nav>
 
         {/* Desktop Quick Actions */}
-        <div className="hidden items-center gap-2 lg:flex">
+        <div className="hidden items-center gap-2 lg:flex shrink-0">
           <Button asChild variant="ghost" size="sm" className="rounded-full text-xs">
             <Link to="/analyze">Try analysis</Link>
           </Button>
