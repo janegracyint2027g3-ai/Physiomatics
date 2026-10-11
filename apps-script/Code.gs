@@ -26,7 +26,7 @@
  */
 
 var CONFIG = {
-  SPREADSHEET_ID: "PASTE_YOUR_PHYSIOMATICS_GOOGLE_SHEET_ID_HERE",
+  SPREADSHEET_ID: "1FZW3gVn8122ufMPScamNRhTQUYSIqjl7ApP_f_VA8mQ",
   SYSTEM_NAME: "Physiomatics Website Intelligence",
   DEFAULT_ENVIRONMENT: "production",
   TIMEZONE: "Asia/Kolkata",
@@ -46,10 +46,41 @@ var EMAIL_CONFIG = {
 
 var AIRTABLE_CONFIG = {
   ENABLED: true,
-  TOKEN: "PASTE_YOUR_AIRTABLE_TOKEN_HERE", // Personal Access Token (pats...)
+  TOKEN: "", // Paste your Airtable Personal Access Token (pats...) directly in Apps Script editor
   BASE_ID: "apptNJUsbdqh4dxvS",
   TABLE_NAME: "Leads"
 };
+
+function getAirtableToken_() {
+  return (AIRTABLE_CONFIG.TOKEN && AIRTABLE_CONFIG.TOKEN.indexOf("PASTE_") !== 0)
+    ? AIRTABLE_CONFIG.TOKEN
+    : (PropertiesService.getScriptProperties().getProperty("AIRTABLE_TOKEN") || "");
+}
+
+var JIRA_CONFIG = {
+  ENABLED: true,
+  API_TOKEN: "ATATT3xFfGF0wfbVHeCXal_VlksIorx-GYRmq-isgjLe0qaJeCb-_9lcRBq1QwDGfrKfHGmjOWZT-eOrH6aRV5wgMTWoiXnslT9hPJd0aHd0f5ZRSDoR5TMiav2HISdBZX1QAiIP5yxCk1tkjdCNnoEoZa6lYDyPGnXVg9HIzPnUxwl3UhCj5Fg=53C71864",
+  EMAIL: "janegracy.int2027g3@gmail.com",
+  HOST: "trustworkz.atlassian.net",
+  PROJECT_KEY: "PHY",
+  TASK_ISSUE_TYPE: "Task",
+  SUBTASK_ISSUE_TYPE: "Sub-task"
+};
+
+function getJiraApiToken_() {
+  return (JIRA_CONFIG.API_TOKEN && JIRA_CONFIG.API_TOKEN.indexOf("PASTE_") !== 0)
+    ? JIRA_CONFIG.API_TOKEN
+    : (PropertiesService.getScriptProperties().getProperty("JIRA_API_TOKEN") || "");
+}
+
+function getJiraHost_() {
+  var host = JIRA_CONFIG.HOST || PropertiesService.getScriptProperties().getProperty("JIRA_HOST") || "";
+  return host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
+}
+
+function getJiraProjectKey_() {
+  return JIRA_CONFIG.PROJECT_KEY || PropertiesService.getScriptProperties().getProperty("JIRA_PROJECT_KEY") || "";
+}
 
 var TAB_HEADERS = {
   Live_Traffic_Events: [
@@ -598,6 +629,8 @@ function saveMasterLead_(ss, p) {
   ]);
   // Forward lead to Airtable
   syncLeadToAirtable_(p);
+  // Forward lead to Jira (Parent Task + 8 Subtasks)
+  createJiraLeadTaskWithSubtasks_(p);
 }
 
 /* --------------------------- TELEMETRY ROUTING ----------------------------- */
@@ -1023,6 +1056,26 @@ function sendPeriodicExecutiveDigest(intervalName) {
       });
     } catch (err) { log_("sendPeriodicExecutiveDigest", "ERROR", String(err)); }
   });
+
+  // Forward digest metrics to Jira as a performance record
+  try {
+    createJiraReportTask_({
+      interval: intervalName,
+      period: dateStr,
+      visitors: visitors,
+      pageViews: pageViews,
+      leads: leads,
+      conversionRate: convRate,
+      avgEngagementSec: avgDuration,
+      demos: demos,
+      consultations: consults,
+      quickEnquiries: quick,
+      chatbotMessages: chatbot,
+      sheetUrl: ssUrl
+    });
+  } catch (jErr) {
+    log_("sendPeriodicExecutiveDigest", "WARNING", "Jira report creation: " + String(jErr));
+  }
 }
 
 function dailyReport()   { sendPeriodicExecutiveDigest("Daily"); }
@@ -1283,6 +1336,7 @@ function onOpen() {
     .addItem("Rebuild daily/weekly/monthly summaries",   "BUILD_AGGREGATED_INTERVAL_SUMMARIES")
     .addSeparator()
     .addItem("Sync Google Sheet leads to Airtable",      "SYNC_ALL_SHEET_DATA_TO_AIRTABLE")
+    .addItem("Sync Google Sheet leads to Jira",          "SYNC_ALL_SHEET_LEADS_TO_JIRA")
     .addSeparator()
     .addItem("Test: ICP demo request",                   "TEST_ICPDemoRequest")
     .addItem("Test: Quick enquiry",                      "TEST_QuickEnquiry")
@@ -1292,6 +1346,10 @@ function onOpen() {
     .addItem("Test: Session start",                      "TEST_SessionStart")
     .addItem("Test: Send daily report email",            "TEST_SendDailyReport")
     .addSeparator()
+    .addItem("Test: Jira Lead Task + 8 Subtasks",        "TEST_JiraLeadWithSubtasks")
+    .addItem("Test: Jira Daily Report Task",             "TEST_JiraDailyReportTask")
+    .addItem("Test: Jira Connection",                    "TEST_JIRA_CONNECTION")
+    .addSeparator()
     .addItem("Enable scheduled reports",                 "setupPhysiomaticsTriggers")
     .addToUi();
 }
@@ -1300,6 +1358,8 @@ function onOpen() {
 
 function syncLeadToAirtable_(p) {
   if (!AIRTABLE_CONFIG.ENABLED) return;
+  var token = getAirtableToken_();
+  if (!token) return;
   var baseId = String(AIRTABLE_CONFIG.BASE_ID || "").trim();
   if (!baseId || baseId.indexOf("PASTE_") === 0) return;
 
@@ -1331,7 +1391,7 @@ function syncLeadToAirtable_(p) {
     var options = {
       method: "post",
       headers: {
-        "Authorization": "Bearer " + AIRTABLE_CONFIG.TOKEN,
+        "Authorization": "Bearer " + token,
         "Content-Type": "application/json"
       },
       payload: JSON.stringify({ records: [{ fields: fields }], typecast: true }),
@@ -1346,6 +1406,10 @@ function syncLeadToAirtable_(p) {
 }
 
 function SYNC_ALL_SHEET_DATA_TO_AIRTABLE() {
+  var token = getAirtableToken_();
+  if (!token) {
+    throw new Error("Missing Airtable Personal Access Token. Set AIRTABLE_CONFIG.TOKEN in Code.gs or AIRTABLE_TOKEN in Script properties.");
+  }
   var baseId = String(AIRTABLE_CONFIG.BASE_ID || "").trim();
   if (!baseId || baseId.indexOf("PASTE_") === 0) {
     throw new Error("Please set AIRTABLE_CONFIG.BASE_ID to your Airtable Base ID (appXXXXXXXXXXXXXX) at the top of Code.gs");
@@ -1378,7 +1442,7 @@ function SYNC_ALL_SHEET_DATA_TO_AIRTABLE() {
     var options = {
       method: "post",
       headers: {
-        "Authorization": "Bearer " + AIRTABLE_CONFIG.TOKEN,
+        "Authorization": "Bearer " + token,
         "Content-Type": "application/json"
       },
       payload: JSON.stringify({ records: records, typecast: true }),
@@ -1395,3 +1459,330 @@ function SYNC_ALL_SHEET_DATA_TO_AIRTABLE() {
   log_("SYNC_ALL_SHEET_DATA_TO_AIRTABLE", "SUCCESS", "Synced " + syncedCount + " records.");
   return "Successfully synced " + syncedCount + " leads from Google Sheet to Airtable!";
 }
+
+function TEST_AIRTABLE_CONNECTION() {
+  var token = getAirtableToken_();
+  if (!token) throw new Error("Airtable token not found. Please provide token.");
+  var baseId = String(AIRTABLE_CONFIG.BASE_ID || "").trim();
+  var url = "https://api.airtable.com/v0/" + baseId + "/" + encodeURIComponent(AIRTABLE_CONFIG.TABLE_NAME) + "?maxRecords=1";
+  var res = UrlFetchApp.fetch(url, {
+    method: "get",
+    headers: { "Authorization": "Bearer " + token },
+    muteHttpExceptions: true
+  });
+  var code = res.getResponseCode();
+  if (code < 200 || code >= 300) {
+    throw new Error("Airtable connection failed (HTTP " + code + "): " + res.getContentText());
+  }
+  log_("TEST_AIRTABLE_CONNECTION", "SUCCESS", "Airtable connection verified.");
+  return "Airtable connection successful!";
+}
+
+/* ----------------------------- JIRA INTEGRATION ---------------------------- */
+
+/**
+ * 8 Standard Operating Subtasks for Lead Pipeline Qualification & Delivery
+ */
+var JIRA_LEAD_SUBTASKS = [
+  {
+    summary: "1. Initial Contact & Identity Verification",
+    description: "Verify lead contact channels (Email & WhatsApp/Phone), confirm identity and acknowledge receipt within 15 minutes."
+  },
+  {
+    summary: "2. Clinical & Organizational Assessment",
+    description: "Assess clinical requirements, clinic/hospital capacity, patient volume, and biomechanics specialization needs."
+  },
+  {
+    summary: "3. Schedule Discovery & Live Demo Session",
+    description: "Coordinate calendar invite with senior consultant and prepare tailored Physiomatics platform demo."
+  },
+  {
+    summary: "4. Conduct Live Platform Walkthrough",
+    description: "Demonstrate AI posture tracking, patient dashboard, exercise compliance monitoring, and reporting suite."
+  },
+  {
+    summary: "5. Technical Integration & EHR/EMR Feasibility Check",
+    description: "Review clinic workflows, EHR/EMR compatibility, hardware setup (cameras/sensors), and HIPAA/GDPR readiness."
+  },
+  {
+    summary: "6. Commercial Proposal & Pilot Licensing Setup",
+    description: "Generate customized quotation, software tier pricing, pilot period terms, and send clinical SLA contract."
+  },
+  {
+    summary: "7. Clinical Onboarding & Staff Training Session",
+    description: "Schedule training workshop for physiotherapists, assign clinic admin credentials, and conduct trial run."
+  },
+  {
+    summary: "8. Post-Onboarding Review & Satisfaction Check",
+    description: "Review 14-day patient compliance data, collect feedback, address clinical questions, and ensure full operational adoption."
+  }
+];
+
+function jiraBasicAuth_() {
+  var token = getJiraApiToken_();
+  var email = JIRA_CONFIG.EMAIL || "janegracy.int2027g3@gmail.com";
+  if (!token) return "";
+  return "Basic " + Utilities.base64Encode(email + ":" + token);
+}
+
+/**
+ * Sends request to Jira Cloud REST API v3
+ */
+function jiraFetch_(path, method, payload) {
+  var host = getJiraHost_();
+  var auth = jiraBasicAuth_();
+  if (!host) throw new Error("Missing JIRA_HOST. Set JIRA_CONFIG.HOST in Code.gs or Script Properties.");
+  if (!auth) throw new Error("Missing JIRA_API_TOKEN. Set JIRA_CONFIG.API_TOKEN in Code.gs or Script Properties.");
+
+  var url = "https://" + host + path;
+  var options = {
+    method: method || "get",
+    headers: {
+      "Authorization": auth,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    muteHttpExceptions: true
+  };
+  if (payload) options.payload = JSON.stringify(payload);
+
+  var res = UrlFetchApp.fetch(url, options);
+  var code = res.getResponseCode();
+  var body = res.getContentText();
+  if (code < 200 || code >= 300) {
+    throw new Error("Jira API error (HTTP " + code + "): " + body);
+  }
+  return JSON.parse(body || "{}");
+}
+
+/**
+ * Creates parent Task in Jira for an incoming lead, followed by 8 operational Subtasks
+ */
+function createJiraLeadTaskWithSubtasks_(p) {
+  if (!JIRA_CONFIG.ENABLED) return null;
+  var host = getJiraHost_();
+  var projectKey = getJiraProjectKey_();
+  if (!host || !projectKey) {
+    log_("createJiraLeadTaskWithSubtasks_", "SKIPPED", "Jira HOST or PROJECT_KEY not configured yet.");
+    return null;
+  }
+
+  try {
+    var leadKind = String(p.lead_type || "lead").toUpperCase();
+    var summary = "[" + leadKind + "] " + (p.name || "New Visitor") + " — " + (p.organization || "Direct Patient");
+
+    var descText = [
+      "Lead Details:",
+      "• Name: " + (p.name || "N/A"),
+      "• Email: " + (p.email || "N/A"),
+      "• Phone: " + (p.phone || "N/A"),
+      "• Organization: " + (p.organization || "N/A"),
+      "• Role: " + (p.role || "N/A"),
+      "• Interest / Segment: " + (p.interest || "N/A"),
+      "• Subject / Challenge: " + (p.subject || "N/A"),
+      "• Location: " + [p.geo_city, p.geo_region, p.geo_country].filter(Boolean).join(", "),
+      "• Source Page: " + (p.page_path || "N/A"),
+      "• Received: " + (p.received_at || formatDate_(new Date())),
+      "",
+      "Enquiry / Message:",
+      p.message || "No message provided."
+    ].join("\n");
+
+    var parentPayload = {
+      fields: {
+        project: { key: projectKey },
+        summary: summary,
+        description: {
+          type: "doc",
+          version: 1,
+          content: [{
+            type: "paragraph",
+            content: [{ type: "text", text: descText }]
+          }]
+        },
+        issuetype: { name: JIRA_CONFIG.TASK_ISSUE_TYPE || "Task" },
+        labels: ["physiomatics-lead", norm_(p.lead_type || "web_lead")]
+      }
+    };
+
+    var parentResult = jiraFetch_("/rest/api/3/issue", "post", parentPayload);
+    var parentKey = parentResult.key;
+    log_("createJiraLeadTaskWithSubtasks_", "SUCCESS", "Created Jira Parent Task: " + parentKey);
+
+    // Create the 8 Subtasks linked to parentKey
+    var createdSubCount = 0;
+    JIRA_LEAD_SUBTASKS.forEach(function(sub) {
+      try {
+        var subPayload = {
+          fields: {
+            project: { key: projectKey },
+            parent: { key: parentKey },
+            summary: sub.summary,
+            description: {
+              type: "doc",
+              version: 1,
+              content: [{
+                type: "paragraph",
+                content: [{ type: "text", text: sub.description }]
+              }]
+            },
+            issuetype: { name: JIRA_CONFIG.SUBTASK_ISSUE_TYPE || "Subtask" }
+          }
+        };
+        jiraFetch_("/rest/api/3/issue", "post", subPayload);
+        createdSubCount++;
+      } catch (subErr) {
+        log_("createJiraLeadTaskWithSubtasks_", "WARNING", "Subtask creation failed (" + sub.summary + "): " + String(subErr));
+      }
+    });
+
+    log_("createJiraLeadTaskWithSubtasks_", "SUCCESS", "Parent " + parentKey + " with " + createdSubCount + "/8 subtasks created.");
+    return { parentKey: parentKey, subtasksCount: createdSubCount };
+  } catch (err) {
+    log_("createJiraLeadTaskWithSubtasks_", "ERROR", String(err));
+    return null;
+  }
+}
+
+/**
+ * Creates scheduled Report Task in Jira for Daily, Weekly, or Monthly trigger digests
+ */
+function createJiraReportTask_(r) {
+  if (!JIRA_CONFIG.ENABLED) return null;
+  var host = getJiraHost_();
+  var projectKey = getJiraProjectKey_();
+  if (!host || !projectKey) return null;
+
+  try {
+    var summary = "📊 [Physiomatics " + r.interval + " Digest] " + r.period + " — " + r.visitors + " Visitors, " + r.leads + " Leads (" + r.conversionRate + ")";
+    var descText = [
+      "Physiomatics " + r.interval + " Performance Digest",
+      "Period: " + r.period,
+      "Unique Visitors: " + r.visitors,
+      "Total Page Views: " + r.pageViews,
+      "Total Leads: " + r.leads + " (" + r.conversionRate + ")",
+      "Demo / ICP Requests: " + r.demos,
+      "Consultation Requests: " + r.consultations,
+      "Quick Enquiries: " + r.quickEnquiries,
+      "AI Chatbot Inquiries: " + r.chatbotMessages,
+      "Avg Engagement Duration: " + r.avgEngagementSec + "s",
+      "Live Google Sheet: " + (r.sheetUrl || CONFIG.WEBSITE)
+    ].join("\n");
+
+    var payload = {
+      fields: {
+        project: { key: projectKey },
+        summary: summary,
+        description: {
+          type: "doc",
+          version: 1,
+          content: [{
+            type: "paragraph",
+            content: [{ type: "text", text: descText }]
+          }]
+        },
+        issuetype: { name: JIRA_CONFIG.TASK_ISSUE_TYPE || "Task" },
+        labels: ["physiomatics-report", r.interval.toLowerCase() + "-digest"]
+      }
+    };
+
+    var result = jiraFetch_("/rest/api/3/issue", "post", payload);
+    log_("createJiraReportTask_", "SUCCESS", "Created Jira Report Task: " + result.key);
+    return result.key;
+  } catch (err) {
+    log_("createJiraReportTask_", "ERROR", String(err));
+    return null;
+  }
+}
+
+/**
+ * Sync existing leads from Lead_Management sheet to Jira
+ */
+function SYNC_ALL_SHEET_LEADS_TO_JIRA() {
+  if (!JIRA_CONFIG.ENABLED) throw new Error("Jira integration is disabled in JIRA_CONFIG.");
+  var ss = getSpreadsheet();
+  var sheet = ss.getSheetByName("Lead_Management");
+  if (!sheet || sheet.getLastRow() < 2) return "No leads found in Lead_Management to sync.";
+
+  var data = sheet.getDataRange().getDisplayValues();
+  var header = data[0];
+  var index = {};
+  header.forEach(function(name, i) { index[String(name).trim()] = i; });
+  function cell(row, key) { var i = index[key]; return i === undefined ? "" : row[i]; }
+
+  var rows = data.slice(1);
+  var count = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var p = {
+      received_at: cell(row, "received_at"),
+      lead_id: cell(row, "lead_id"),
+      lead_type: cell(row, "lead_type"),
+      name: cell(row, "name"),
+      email: cell(row, "email"),
+      phone: cell(row, "phone"),
+      organization: cell(row, "organization"),
+      role: cell(row, "role"),
+      interest: cell(row, "interest"),
+      subject: cell(row, "subject"),
+      message: cell(row, "message"),
+      page_path: cell(row, "page_path")
+    };
+    var res = createJiraLeadTaskWithSubtasks_(p);
+    if (res && res.parentKey) count++;
+    Utilities.sleep(400);
+  }
+
+  log_("SYNC_ALL_SHEET_LEADS_TO_JIRA", "SUCCESS", "Created " + count + " Jira parent lead tasks with subtasks.");
+  return "Successfully created " + count + " Jira lead tasks (each with 8 subtasks) from Google Sheet!";
+}
+
+function TEST_JIRA_CONNECTION() {
+  var user = jiraFetch_("/rest/api/3/myself", "get");
+  log_("TEST_JIRA_CONNECTION", "SUCCESS", "Connected as: " + (user.displayName || user.emailAddress));
+  return "Jira connection successful! Connected as: " + (user.displayName || user.emailAddress);
+}
+
+function TEST_JiraLeadWithSubtasks() {
+  var testLead = {
+    name: "Dr. Anita Roy (Jira Pipeline Test)",
+    email: "anita.roy.test@example.com",
+    phone: "+91 98765 43210",
+    organization: "Apex Physiotherapy & Sports Care",
+    role: "Clinical Director",
+    interest: "Sports Biomechanics & Patient Monitoring",
+    subject: "Automated Gait & Rehabilitation Tracking",
+    message: "Interested in Physiomatics pilot for 4 clinics. Evaluating AI range-of-motion sensor suite.",
+    lead_type: "consultation_request",
+    page_path: "/contact",
+    city: "Bengaluru",
+    country: "India",
+    received_at: formatDate_(new Date())
+  };
+  var res = createJiraLeadTaskWithSubtasks_(testLead);
+  if (!res || !res.parentKey) {
+    throw new Error("Failed to create Jira lead task. Check JIRA_HOST and JIRA_PROJECT_KEY.");
+  }
+  return "Successfully created Jira task " + res.parentKey + " with " + res.subtasksCount + "/8 subtasks!";
+}
+
+function TEST_JiraDailyReportTask() {
+  var reportKey = createJiraReportTask_({
+    interval: "Daily",
+    period: Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "yyyy-MM-dd"),
+    visitors: 48,
+    pageViews: 142,
+    leads: 6,
+    conversionRate: "12.5%",
+    avgEngagementSec: 74,
+    demos: 2,
+    consultations: 3,
+    quickEnquiries: 1,
+    chatbotMessages: 8,
+    sheetUrl: getSpreadsheet().getUrl()
+  });
+  if (!reportKey) throw new Error("Failed to create Jira daily report task. Check JIRA_HOST and JIRA_PROJECT_KEY.");
+  return "Successfully created Jira Daily Report task: " + reportKey;
+}
+
+

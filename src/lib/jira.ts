@@ -162,7 +162,7 @@ export async function createJiraLeadWithSubtasks(
           ]
         },
         issuetype: { name: "Task" },
-        labels: ["physiomatics-lead", lead.lead_type || "web-lead"].filter(Boolean)
+        labels: ["physiomatics-lead", (lead.lead_type || "web-lead").replace(/_/g, "-")].filter(Boolean)
       }
     };
 
@@ -204,7 +204,7 @@ export async function createJiraLeadWithSubtasks(
                 }
               ]
             },
-            issuetype: { name: "Subtask" }
+            issuetype: { name: "Sub-task" }
           }
         };
 
