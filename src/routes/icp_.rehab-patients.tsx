@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
 import rehabMirror from "@/assets/rehab_patient_mirror.jpg";
+import patientPhone from "@/assets/patient_phone_tracking.jpg";
+import caregiverAssisted from "@/assets/caregiver_assisted_session.jpg";
 
 export const Route = createFileRoute("/icp_/rehab-patients")({
   head: () => ({
@@ -106,6 +108,32 @@ function RehabPatientsICPPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 You don't need sensors strapped to your limbs, specialized watches, or costly smart mats. Just your standard phone or computer camera.
               </p>
+            </div>
+          </div>
+
+          {/* Visual Showcase: Smartphone Biofeedback Mirror */}
+          <div className="rounded-3xl border bg-card overflow-hidden shadow-md">
+            <div className="relative h-64 md:h-80 w-full overflow-hidden">
+              <img src={patientPhone} alt="Patient exercising with smartphone tripod tracking angles in real time" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+              <div className="absolute bottom-5 left-6 right-6 text-white">
+                <span className="text-xs font-bold uppercase tracking-wider bg-blue-600 px-3 py-1 rounded-full">Patient Virtual Mirror</span>
+                <h3 className="text-xl md:text-2xl font-bold mt-2">Live Angle Node Guidance & Automated Rep Counter</h3>
+              </div>
+            </div>
+            <div className="p-6 md:p-8 grid sm:grid-cols-2 gap-6 items-center">
+              <div>
+                <h4 className="text-lg font-bold mb-2">Instant Visual Affirmation ("GOOD FORM")</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Never worry if your knee is flexing enough or if your posture is sagging. Green skeletal lines guide your joints to exact clinical thresholds (105° Knee Flexion, 92° Hip Extension), locking in safe muscle memory.
+                </p>
+              </div>
+              <div className="rounded-2xl overflow-hidden border">
+                <img src={caregiverAssisted} alt="Family assisted extension therapy" className="h-44 w-full object-cover" />
+                <div className="p-3 bg-muted/40 text-xs font-medium text-muted-foreground text-center">
+                  Share Your Verified Repetitions Directly With Your Physical Therapist
+                </div>
+              </div>
             </div>
           </div>
 

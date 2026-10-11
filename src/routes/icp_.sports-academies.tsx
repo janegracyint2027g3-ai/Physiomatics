@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
 import sportsBio from "@/assets/sports_biomechanics.jpg";
+import athleteKinematics from "@/assets/athlete_sports_kinematics.jpg";
+import patientPhone from "@/assets/patient_phone_tracking.jpg";
 
 export const Route = createFileRoute("/icp_/sports-academies")({
   head: () => ({
@@ -131,9 +133,52 @@ function SportsAcademiesICPPage() {
               </div>
             </div>
           </div>
+
+          {/* Visual Showcase: Athlete Kinematics Lab */}
+          <div className="rounded-3xl border bg-card overflow-hidden shadow-md">
+            <div className="relative h-64 md:h-80 w-full overflow-hidden">
+              <img src={athleteKinematics} alt="Athlete performing squat with AI skeletal overlay showing joint angles" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div className="absolute bottom-5 left-6 right-6 text-white">
+                <span className="text-xs font-bold uppercase tracking-wider bg-primary px-2.5 py-0.5 rounded-full">Live Bilateral Symmetry Analysis</span>
+                <h3 className="text-xl font-bold mt-2">Sub-Degree Joint Angle Telemetry for Every Athlete on Your Roster</h3>
+              </div>
+            </div>
+            <div className="p-6 grid sm:grid-cols-3 gap-4 text-center">
+              <div className="rounded-2xl bg-muted/50 p-3">
+                <div className="text-2xl font-bold text-primary">&lt; 2°</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Bilateral Asymmetry Detection</div>
+              </div>
+              <div className="rounded-2xl bg-muted/50 p-3">
+                <div className="text-2xl font-bold text-emerald-600">20+</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Athletes Screened Per Hour</div>
+              </div>
+              <div className="rounded-2xl bg-muted/50 p-3">
+                <div className="text-2xl font-bold text-blue-600">0</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Sensors or Markers Needed</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Return-to-Play Data Sharing */}
+          <div className="rounded-3xl bg-muted/40 border overflow-hidden">
+            <div className="grid md:grid-cols-[220px_1fr] items-center">
+              <div className="h-full min-h-[180px] w-full overflow-hidden">
+                <img src={patientPhone} alt="Coach reviewing athlete return-to-play clearance data on phone" className="h-full w-full object-cover" />
+              </div>
+              <div className="p-6 md:p-8">
+                <h3 className="text-xl font-bold mb-2">Objective Return-to-Play Clearance Data</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  "Before we cleared our striker post-ACL, we had six weeks of Physiomatics symmetry data from his home sessions. The surgeon could see the exact flexion trajectory week-over-week. No guesswork — just objective biomechanical evidence."
+                </p>
+                <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-primary">
+                  <ShieldCheck className="size-4" /> Accepted by Sports Medicine Physicians & Athletic Directors
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Sidebar */}
         <aside className="space-y-6 sticky top-24">
           <div className="rounded-3xl bg-primary-soft p-6 border shadow-soft">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary mb-2">

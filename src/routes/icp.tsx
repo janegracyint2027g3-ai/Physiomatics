@@ -28,11 +28,16 @@ export const Route = createFileRoute("/icp")({
 });
 
 import clinicInterior from '@/assets/clinic_interior.jpg';
-import rehab from '@/assets/rehab.jpg';
+import clinicAnalytics from '@/assets/clinic_analytics_monitor.jpg';
+import ptTablet from '@/assets/pt_assessment_tablet.jpg';
 import rehabMirror from '@/assets/rehab_patient_mirror.jpg';
+import patientPhone from '@/assets/patient_phone_tracking.jpg';
 import elderlyExercise from '@/assets/elderly_exercise.jpg';
+import seniorMobility from '@/assets/senior_mobility_balance.jpg';
 import caregiverHome from '@/assets/caregiver_home.jpg';
+import caregiverAssisted from '@/assets/caregiver_assisted_session.jpg';
 import sportsBio from '@/assets/sports_biomechanics.jpg';
+import athleteKinematics from '@/assets/athlete_sports_kinematics.jpg';
 
 const icpCards = [
   {
@@ -42,6 +47,7 @@ const icpCards = [
     icon: Building2,
     badge: "Enterprise & Clinics",
     image: clinicInterior,
+    secondaryImage: clinicAnalytics,
     painPoint: "High patient drop-off between visits, zero visibility into at-home exercise compliance, and manual documentation bottlenecks.",
     solution: "Browser-based video movement tracking with objective adherence telemetry and automated progress reporting.",
     roi: "+42% Treatment plan completion rate; 3.5 hrs saved per therapist/week on review notes.",
@@ -53,7 +59,8 @@ const icpCards = [
     subtitle: "For Solo Practitioners, Mobile Therapists & Consultants",
     icon: Stethoscope,
     badge: "Solo Practitioners",
-    image: rehab,
+    image: ptTablet,
+    secondaryImage: clinicAnalytics,
     painPoint: "Relying on subjective patient recall during follow-ups and lacking proof of form correctness during home routines.",
     solution: "Sub-degree angular kinematic tracking directly in the client's browser, giving objective proof of extension and reps.",
     roi: "Dramatically faster discharge with verified functional goals and higher client retention.",
@@ -65,7 +72,8 @@ const icpCards = [
     subtitle: "For Individuals Recovering from Surgery or Joint Injury",
     icon: UserCheck,
     badge: "Patient Recovery",
-    image: rehabMirror,
+    image: patientPhone,
+    secondaryImage: rehabMirror,
     painPoint: "Fear of moving incorrectly, anxiety over causing re-injury, and losing motivation when exercising alone at home.",
     solution: "Live bio-feedback that visually guides joints into correct angular zones and celebrates completed sets.",
     roi: "Safe, guided recovery from the comfort of home with total confidence in form.",
@@ -77,7 +85,8 @@ const icpCards = [
     subtitle: "For Senior Living Communities & Geriatric Specialists",
     icon: HeartHandshake,
     badge: "Geriatric & Assisted Living",
-    image: elderlyExercise,
+    image: seniorMobility,
+    secondaryImage: elderlyExercise,
     painPoint: "High fall risk, low tech literacy among seniors, and difficulty tracking gradual mobility deterioration.",
     solution: "High-contrast, one-click interface for chair stands, knee extensions, and balance exercises with automated fall-risk indices.",
     roi: "Significant reduction in mobility-loss incidents and clearer evidence of functional independence.",
@@ -89,7 +98,8 @@ const icpCards = [
     subtitle: "For Loved Ones & Home Health Aides Assisting Recovery",
     icon: Users,
     badge: "Caregiver Support",
-    image: caregiverHome,
+    image: caregiverAssisted,
+    secondaryImage: caregiverHome,
     painPoint: "Uncertainty whether the patient is performing the prescribed exercise safely, leading to constant anxiety.",
     solution: "Interactive coaching companion that indicates 'Good Rep' or 'Needs Adjustment' in plain, non-clinical language.",
     roi: "Confidence that your loved one is safely progressing through rehabilitation every single day.",
@@ -101,7 +111,8 @@ const icpCards = [
     subtitle: "For Strength & Conditioning Coaches, Trainers & Academies",
     icon: Trophy,
     badge: "Sports Performance",
-    image: sportsBio,
+    image: athleteKinematics,
+    secondaryImage: sportsBio,
     painPoint: "Overuse injuries, asymmetric loading between limbs, and slow return-to-play clearance protocols.",
     solution: "High-speed kinematic symmetry analysis, tracking knee valgus, squat depth, and explosive tempo dynamics.",
     roi: "Faster, safer return-to-sport clearance and quantifiable injury-prevention benchmarks.",
@@ -192,6 +203,119 @@ function ICPHubPage() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* Visual Technology Showcase Across Profiles */}
+      <section className="container-page pb-20">
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1 text-xs font-semibold text-primary uppercase tracking-wider mb-3">
+            <Sparkles className="size-3.5" /> High-Resolution Clinical Intelligence
+          </span>
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+            See Physiomatics in Action Across Every Clinical Persona
+          </h2>
+          <p className="text-muted-foreground text-base">
+            From multi-therapist clinic monitors to in-home senior guidance and athletic kinetic vectoring — explore real-world deployment across all 6 specialized user segments.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="group overflow-hidden rounded-3xl border bg-card shadow-sm hover:shadow-xl transition-all">
+            <div className="relative h-56 w-full overflow-hidden">
+              <img src={clinicAnalytics} alt="Clinic Analytics Console" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 text-white">
+                <span className="text-[11px] font-bold uppercase tracking-wider bg-primary/90 px-2 py-0.5 rounded-full text-white">Clinics & Practices</span>
+                <h4 className="text-base font-bold mt-1">Multi-Monitor EMR Compliance Station</h4>
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Dual-screen triage setup displaying 3D skeletal posture, compliance curves, and pain level trends across all recovery rooms.
+              </p>
+            </div>
+          </div>
+
+          <div className="group overflow-hidden rounded-3xl border bg-card shadow-sm hover:shadow-xl transition-all">
+            <div className="relative h-56 w-full overflow-hidden">
+              <img src={ptTablet} alt="Physiotherapist Tablet Biofeedback" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 text-white">
+                <span className="text-[11px] font-bold uppercase tracking-wider bg-emerald-600 px-2 py-0.5 rounded-full text-white">Solo Practitioners</span>
+                <h4 className="text-base font-bold mt-1">Live In-Plane Goniometry & ROM Testing</h4>
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Shoulder abduction tracking with sub-degree angular vectors, target goals, and automated rep thresholds during 1-on-1 consultations.
+              </p>
+            </div>
+          </div>
+
+          <div className="group overflow-hidden rounded-3xl border bg-card shadow-sm hover:shadow-xl transition-all">
+            <div className="relative h-56 w-full overflow-hidden">
+              <img src={patientPhone} alt="Patient Smartphone Tracking" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 text-white">
+                <span className="text-[11px] font-bold uppercase tracking-wider bg-blue-600 px-2 py-0.5 rounded-full text-white">Rehab Patients</span>
+                <h4 className="text-base font-bold mt-1">Tripod Mobile Biofeedback Mirror</h4>
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                At-home lunge and squat verification: 105° knee flexion, 92° hip extension, and instant "GOOD FORM" feedback.
+              </p>
+            </div>
+          </div>
+
+          <div className="group overflow-hidden rounded-3xl border bg-card shadow-sm hover:shadow-xl transition-all">
+            <div className="relative h-56 w-full overflow-hidden">
+              <img src={seniorMobility} alt="Elderly Balance Guidance" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 text-white">
+                <span className="text-[11px] font-bold uppercase tracking-wider bg-amber-600 px-2 py-0.5 rounded-full text-white">Elderly Care</span>
+                <h4 className="text-base font-bold mt-1">High-Contrast Fall-Prevention Display</h4>
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Smart TV posture coach for single-leg stands, balance metrics, and gentle audio prompts designed for senior living.
+              </p>
+            </div>
+          </div>
+
+          <div className="group overflow-hidden rounded-3xl border bg-card shadow-sm hover:shadow-xl transition-all">
+            <div className="relative h-56 w-full overflow-hidden">
+              <img src={caregiverAssisted} alt="Caregiver Companion Mode" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 text-white">
+                <span className="text-[11px] font-bold uppercase tracking-wider bg-purple-600 px-2 py-0.5 rounded-full text-white">Caregiver Support</span>
+                <h4 className="text-base font-bold mt-1">Empathetic Family Companion Companion</h4>
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Clear 175° knee extension target goals and non-clinical status cues so caregivers know their loved one is recovering safely.
+              </p>
+            </div>
+          </div>
+
+          <div className="group overflow-hidden rounded-3xl border bg-card shadow-sm hover:shadow-xl transition-all">
+            <div className="relative h-56 w-full overflow-hidden">
+              <img src={athleteKinematics} alt="Athletic Sports Kinematics" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute bottom-4 left-4 right-4 text-white">
+                <span className="text-[11px] font-bold uppercase tracking-wider bg-rose-600 px-2 py-0.5 rounded-full text-white">Sports Academies</span>
+                <h4 className="text-base font-bold mt-1">High-Speed Kinetic Vector Alignment</h4>
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Tracking 112.4° knee flexion, valgus deviation, and bilateral symmetry during athletic return-to-play training protocols.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

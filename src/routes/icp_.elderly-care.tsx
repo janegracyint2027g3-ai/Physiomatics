@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
 import elderlyExercise from "@/assets/elderly_exercise.jpg";
+import seniorMobility from "@/assets/senior_mobility_balance.jpg";
+import caregiverAssisted from "@/assets/caregiver_assisted_session.jpg";
 
 export const Route = createFileRoute("/icp_/elderly-care")({
   head: () => ({
@@ -108,28 +110,61 @@ function ElderlyCareICPPage() {
             </div>
           </div>
 
-          {/* Fall Prevention Science */}
-          <div className="rounded-3xl bg-muted/40 border p-8">
-            <h3 className="text-xl font-bold mb-3">The Fall Prevention Framework</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-              Regular participation in targeted lower-limb resistance and balance routines reduces fall incidence by up to 34% among seniors living independently. Physiomatics helps maintain the consistency required to build enduring quad and hip strength.
-            </p>
-            <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <div className="flex items-center gap-2 text-foreground/80">
-                <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                <span>Quadriceps activation tracking</span>
+          {/* Visual Showcase: Senior Mobility */}
+          <div className="rounded-3xl border bg-card overflow-hidden shadow-md">
+            <div className="relative h-64 md:h-80 w-full overflow-hidden">
+              <img src={seniorMobility} alt="Senior performing balance exercises with motion tracking overlay" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <div className="absolute bottom-5 left-6 right-6 text-white">
+                <span className="text-xs font-bold uppercase tracking-wider bg-primary px-2.5 py-0.5 rounded-full">Balance & Mobility Monitoring</span>
+                <h3 className="text-xl font-bold mt-2">Real-Time Postural Stability Tracking for Older Adults</h3>
               </div>
-              <div className="flex items-center gap-2 text-foreground/80">
-                <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                <span>Sit-to-stand transition pacing</span>
+            </div>
+            <div className="p-6 grid sm:grid-cols-3 gap-4 text-center">
+              <div className="rounded-2xl bg-muted/50 p-3">
+                <div className="text-2xl font-bold text-primary">34%</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Reduction in Fall Incidence</div>
               </div>
-              <div className="flex items-center gap-2 text-foreground/80">
-                <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                <span>Range-of-motion preservation</span>
+              <div className="rounded-2xl bg-muted/50 p-3">
+                <div className="text-2xl font-bold text-emerald-600">2×</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Improved Daily Adherence</div>
               </div>
-              <div className="flex items-center gap-2 text-foreground/80">
-                <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                <span>Caregiver-assisted setup mode</span>
+              <div className="rounded-2xl bg-muted/50 p-3">
+                <div className="text-2xl font-bold text-blue-600">0</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Equipment Required</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Visual Showcase: Caregiver-Assisted Session */}
+          <div className="rounded-3xl bg-muted/40 border overflow-hidden">
+            <div className="grid md:grid-cols-[240px_1fr] items-center">
+              <div className="h-full min-h-[200px] w-full overflow-hidden">
+                <img src={caregiverAssisted} alt="Caregiver guiding senior through assisted rehabilitation session" className="h-full w-full object-cover" />
+              </div>
+              <div className="p-6 md:p-8">
+                <h3 className="text-xl font-bold mb-2">Family & Care Home Guided Sessions</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                  "We set up the tablet on mom's kitchen counter every morning. The big green/red indicators tell us immediately if she's rotating her hip too far during her exercises. It's taken all the guesswork out of home rehab."
+                </p>
+                <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2 text-foreground/80">
+                    <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                    <span>Quadriceps activation tracking</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-foreground/80">
+                    <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                    <span>Sit-to-stand transition pacing</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-foreground/80">
+                    <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                    <span>Range-of-motion preservation</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-foreground/80">
+                    <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                    <span>Caregiver-assisted setup mode</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

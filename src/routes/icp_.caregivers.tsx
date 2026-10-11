@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
 import caregiverHome from "@/assets/caregiver_home.jpg";
+import caregiverAssisted from "@/assets/caregiver_assisted_session.jpg";
+import patientPhone from "@/assets/patient_phone_tracking.jpg";
 
 export const Route = createFileRoute("/icp_/caregivers")({
   head: () => ({
@@ -105,6 +107,50 @@ function CaregiversICPPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Personal home videos are never recorded to the internet, keeping your home environment completely private and secure.
               </p>
+            </div>
+          </div>
+
+          {/* Visual Showcase: Progress Sharing */}
+          <div className="rounded-3xl border bg-card overflow-hidden shadow-md">
+            <div className="relative h-64 md:h-72 w-full overflow-hidden">
+              <img src={patientPhone} alt="Patient reviewing exercise progress data on mobile phone" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+              <div className="absolute bottom-5 left-6 right-6 text-white">
+                <span className="text-xs font-bold uppercase tracking-wider bg-emerald-600 px-2.5 py-0.5 rounded-full">Session Progress Reports</span>
+                <h3 className="text-xl font-bold mt-2">Share Verified Session Data With Your Loved One's Therapist</h3>
+              </div>
+            </div>
+            <div className="p-6 grid sm:grid-cols-3 gap-4 text-center">
+              <div className="rounded-2xl bg-muted/50 p-3">
+                <div className="text-2xl font-bold text-primary">100%</div>
+                <div className="text-xs text-muted-foreground mt-0.5">On-Device Processing</div>
+              </div>
+              <div className="rounded-2xl bg-muted/50 p-3">
+                <div className="text-2xl font-bold text-emerald-600">Real-time</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Visual Feedback Colors</div>
+              </div>
+              <div className="rounded-2xl bg-muted/50 p-3">
+                <div className="text-2xl font-bold text-blue-600">0</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Medical Jargon Required</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Testimonial with Caregiver Session Image */}
+          <div className="rounded-3xl bg-muted/40 border overflow-hidden">
+            <div className="grid md:grid-cols-[220px_1fr] items-center">
+              <div className="h-full min-h-[180px] w-full overflow-hidden">
+                <img src={caregiverAssisted} alt="Caregiver lovingly helping patient with rehabilitation exercises" className="h-full w-full object-cover" />
+              </div>
+              <div className="p-6 md:p-8">
+                <h3 className="text-xl font-bold mb-2">Peace of Mind, Every Single Day</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  "After my husband's hip replacement, I was terrified of helping him do the exercises wrong. Physiomatics gives me real-time color signals — green means he's safe, amber means slow down. It's like having a physio in the room with us."
+                </p>
+                <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-primary">
+                  <Heart className="size-4" /> Recommended for: Spousal Carers & Post-Surgical Home Care
+                </div>
+              </div>
             </div>
           </div>
 

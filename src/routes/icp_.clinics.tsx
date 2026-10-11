@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { whatsappLink } from "@/lib/site";
 import clinicInterior from "@/assets/clinic_interior.jpg";
+import clinicAnalytics from "@/assets/clinic_analytics_monitor.jpg";
+import ptTablet from "@/assets/pt_assessment_tablet.jpg";
 
 export const Route = createFileRoute("/icp_/clinics")({
   head: () => ({
@@ -107,6 +109,32 @@ function ClinicsICPPage() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 No app store downloads, hardware wearables, or account setup friction. Patients can run guided sessions directly from any smartphone, tablet, or laptop.
               </p>
+            </div>
+          </div>
+
+          {/* Visual Showcase: Practice Control Deck */}
+          <div className="rounded-3xl border bg-card overflow-hidden shadow-md">
+            <div className="relative h-64 md:h-80 w-full overflow-hidden">
+              <img src={clinicAnalytics} alt="Multi-room clinical monitoring console" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+              <div className="absolute bottom-5 left-6 right-6 text-white">
+                <span className="text-xs font-bold uppercase tracking-wider bg-primary px-3 py-1 rounded-full">Practice Operating System</span>
+                <h3 className="text-xl md:text-2xl font-bold mt-2">Centralized Patient Telemetry & Kinematic Dashboard</h3>
+              </div>
+            </div>
+            <div className="p-6 md:p-8 grid sm:grid-cols-2 gap-6 items-center">
+              <div>
+                <h4 className="text-lg font-bold mb-2">Multi-Therapist Adherence Telemetry</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Every patient session completed at home feeds directly into your clinic console. Lead physical therapists can review compliance percentages, range-of-motion improvement curves, and flags for improper movement vectors in seconds.
+                </p>
+              </div>
+              <div className="rounded-2xl overflow-hidden border">
+                <img src={ptTablet} alt="Therapist tablet intake evaluation" className="h-44 w-full object-cover" />
+                <div className="p-3 bg-muted/40 text-xs font-medium text-muted-foreground text-center">
+                  Live Joint Goniometry during In-Clinic Intake & Discharge Evaluation
+                </div>
+              </div>
             </div>
           </div>
 

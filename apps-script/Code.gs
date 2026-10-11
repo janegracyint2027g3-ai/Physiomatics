@@ -49,7 +49,9 @@ var EMAIL_CONFIG = {
 
 var AIRTABLE_CONFIG = {
   ENABLED: true,
-  TOKEN: "", // Paste your Airtable Personal Access Token (pats...) directly in Apps Script editor
+  // Store the real token in Apps Script → Project Settings → Script Properties
+  // Key: AIRTABLE_TOKEN  ← paste your pat token there (never commit secrets here)
+  TOKEN: "PASTE_YOUR_AIRTABLE_TOKEN_IN_SCRIPT_PROPERTIES",
   BASE_ID: "apptNJUsbdqh4dxvS",
   TABLE_NAME: "Leads"
 };
@@ -62,7 +64,9 @@ function getAirtableToken_() {
 
 var JIRA_CONFIG = {
   ENABLED: true,
-  API_TOKEN: "ATATT3xFfGF0wfbVHeCXal_VlksIorx-GYRmq-isgjLe0qaJeCb-_9lcRBq1QwDGfrKfHGmjOWZT-eOrH6aRV5wgMTWoiXnslT9hPJd0aHd0f5ZRSDoR5TMiav2HISdBZX1QAiIP5yxCk1tkjdCNnoEoZa6lYDyPGnXVg9HIzPnUxwl3UhCj5Fg=53C71864",
+  // Store the real token in Apps Script → Project Settings → Script Properties
+  // Key: JIRA_API_TOKEN  ← paste your Atlassian token there (never commit secrets here)
+  API_TOKEN: "PASTE_YOUR_JIRA_API_TOKEN_IN_SCRIPT_PROPERTIES",
   EMAIL: "janegracy.int2027g3@gmail.com",
   HOST: "trustworkz.atlassian.net",
   PROJECT_KEY: "PHY",
