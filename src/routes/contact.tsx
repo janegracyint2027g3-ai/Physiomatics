@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PageHero } from "@/components/site/PageHero";
 import { whatsappLink } from "@/lib/site";
-import { CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
+import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus } from "lucide-react";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
 
 export const Route = createFileRoute("/contact")({
@@ -70,6 +70,116 @@ function Field({ name, label, type = "text", required, value, onChange }: { name
       <Label htmlFor={name}>{label}{required && " *"}</Label>
       <Input id={name} name={label} type={type} required={required} value={value} onChange={onChange} className="h-11 rounded-xl bg-background" />
     </div>
+  );
+}
+
+const FEEDBACK_CATEGORIES = ["General", "Feature Request", "Bug Report", "Partnership", "Pricing", "Other"];
+
+function FeedbackSection() {
+  const [category, setCategory] = useState("General");
+  const [rating, setRating] = useState(0);
+  const [hovered, setHovered] = useState(0);
+  const [message, setMessage] = useState("");
+  const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    setLoading(true);
+
+    sendToGoogleSheet({
+      action: "user_feedback",
+      form_type: "feedback",
+      category,
+      rating,
+      message: message.trim(),
+    }).catch(() => {});
+
+    try {
+      await supabase.from("feedback").insert({ category, message: message.trim() } as any);
+    } catch (_) {}
+
+    setLoading(false);
+    setDone(true);
+    toast.success("Thank you for your feedback!", { description: "Our team reads every submission." });
+  };
+
+  if (done) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8 text-center">
+        <CheckCircle2 className="size-10 text-primary" />
+        <p className="font-semibold text-lg">Feedback received — thank you!</p>
+        <button className="text-xs underline text-muted-foreground hover:text-primary" onClick={() => { setDone(false); setMessage(""); setRating(0); }}>
+          Send another
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="grid gap-5">
+      {/* Category */}
+      <div className="grid gap-1.5">
+        <Label htmlFor="fb-category">Category</Label>
+        <select
+          id="fb-category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="h-11 rounded-xl border bg-background px-3 text-sm"
+        >
+          {FEEDBACK_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+        </select>
+      </div>
+
+      {/* Star rating */}
+      <div className="grid gap-1.5">
+        <Label>How would you rate Physiomatics?</Label>
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onMouseEnter={() => setHovered(star)}
+              onMouseLeave={() => setHovered(0)}
+              onClick={() => setRating(star)}
+              className="transition-transform hover:scale-110"
+              aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+            >
+              <Star
+                className={`size-7 ${
+                  (hovered || rating) >= star
+                    ? "fill-yellow-400 text-yellow-400"
+                    : "text-muted-foreground"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Message */}
+      <div className="grid gap-1.5">
+        <Label htmlFor="fb-msg">Your message *</Label>
+        <Textarea
+          id="fb-msg"
+          rows={4}
+          required
+          placeholder="Share your thoughts, suggestions or issues…"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          className="rounded-xl bg-background"
+        />
+      </div>
+
+      <Button type="submit" variant="hero" size="lg" disabled={loading}>
+        <MessageSquarePlus className="mr-2 size-4" />
+        {loading ? "Sending…" : "Send feedback"}
+      </Button>
+      <p className="text-xs text-muted-foreground text-center">
+        Your feedback is stored securely and only used to improve Physiomatics. No spam.
+      </p>
+    </form>
   );
 }
 
@@ -244,6 +354,22 @@ function Contact() {
             </div>
           </form>
         )}
+      </section>
+
+      {/* ── Feedback section ──────────────────────────────────────── */}
+      <section className="container-page max-w-3xl pb-20">
+        <div className="rounded-3xl border bg-card p-8 shadow-soft">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-xl bg-primary/10">
+              <MessageSquarePlus className="size-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-display text-2xl font-semibold">Share your feedback</h2>
+              <p className="text-sm text-muted-foreground">Help us make Physiomatics better for everyone.</p>
+            </div>
+          </div>
+          <FeedbackSection />
+        </div>
       </section>
     </>
   );
