@@ -11,7 +11,7 @@
 
 const GOOGLE_SHEETS_URL =
   import.meta.env.VITE_GOOGLE_SHEETS_URL ||
-  "https://script.google.com/macros/s/AKfycbxI1_azH8xgylaC16XYrkOLuEkwI92Tr_-LhFQ_FJaoymTU7nmN2dQ0ukfr2VWpYfVMbw/exec";
+  "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
 
 export interface SheetPayload {
   action?: string;
