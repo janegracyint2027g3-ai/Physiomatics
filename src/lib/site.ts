@@ -15,52 +15,117 @@ export const WA_MESSAGES = {
   education: "Hello Physiomatics, I'm interested in Physiomatics for physiotherapy education.",
 };
 
-export const platformMenu = [
-  { to: "/analyze", label: "AI Video Analytics", desc: "Pose detection, joint angles and repetitions from a video." },
-  { to: "/platform/training", label: "Physiotherapy Training", desc: "Guided, prescribed exercise programs." },
-  { to: "/platform/movement", label: "Movement Analysis", desc: "Detailed insights into your recovery." },
-  { to: "/platform/progress", label: "Progress Monitoring", desc: "Compare sessions over time." },
-  { to: "/platform/dashboard", label: "Physiotherapist Dashboard", desc: "Oversight of shared recordings and metrics." },
-] as const;
+export interface MenuItem {
+  to: string;
+  label: string;
+  desc: string;
+  tag?: string;
+  icon?: string;
+}
 
-export const icpMenu = [
-  { to: "/icp/clinics", label: "Physiotherapy Clinics & Practices", desc: "For practice owners & clinical directors seeking remote patient adherence." },
-  { to: "/icp/physiotherapists", label: "Independent Physiotherapists", desc: "For private practitioners wanting objective bio-angle validation." },
-  { to: "/icp/rehab-patients", label: "Post-Operative & Rehab Patients", desc: "For recovering individuals needing real-time visual form guidance." },
-  { to: "/icp/elderly-care", label: "Elderly Care & Fall Prevention", desc: "For seniors & geriatric physical therapists focusing on safe mobility." },
-  { to: "/icp/caregivers", label: "Family & Professional Caregivers", desc: "For dedicated caregivers managing home recovery routines." },
-  { to: "/icp/sports-academies", label: "Athletic & Sports Academies", desc: "For trainers & athletes optimizing kinematic performance & recovery." },
-] as const;
+export interface MenuCategory {
+  id: string;
+  label: string;
+  description?: string;
+  items: readonly MenuItem[];
+}
 
-export const solutionsMenu = [
-  { to: "/solutions/elderly", label: "Elderly Care", desc: "Large controls, seated exercises, caregiver support." },
-  { to: "/solutions/rehab", label: "Injury Rehabilitation", desc: "Structured home programs between visits." },
-  { to: "/solutions/clinics", label: "Physiotherapy Clinics", desc: "Visibility into home-exercise performance." },
-  { to: "/solutions/caregiver", label: "Caregiver Support", desc: "Resources and monitoring for family members." },
-  { to: "/solutions/education", label: "Physiotherapy Education", desc: "Movement analysis for teaching." },
-] as const;
+export const platformMenu: readonly MenuItem[] = [
+  { to: "/analyze", label: "AI Video Analytics", desc: "Pose detection, joint angles & real-time repetitions.", tag: "COMPUTER VISION", icon: "ScanLine" },
+  { to: "/platform/training", label: "Physiotherapy Training", desc: "Guided, prescribed exercise programs & form validation.", tag: "BIO-KINEMATICS", icon: "Activity" },
+  { to: "/platform/movement", label: "Movement Analysis", desc: "Detailed angular insights into functional recovery.", tag: "DIAGNOSTICS", icon: "Gauge" },
+  { to: "/platform/progress", label: "Progress Monitoring", desc: "Longitudinal recovery charts & compliance velocity.", tag: "TELEMETRY", icon: "LineChart" },
+  { to: "/platform/dashboard", label: "Physiotherapist Dashboard", desc: "Oversight of shared patient recordings and clinical metrics.", tag: "CLINICAL PORTAL", icon: "BarChart3" },
+];
 
-export const resourcesMenu = [
-  { to: "/resources/library", label: "Exercise Library", desc: "Browse prescribed movements." },
-  { to: "/resources/rehab", label: "Rehabilitation Guides", desc: "Step-by-step recovery plans." },
-  { to: "/resources/anatomy", label: "Anatomy & Learning", desc: "Understand your body better." },
-  { to: "/resources/faqs", label: "FAQs", desc: "Frequently asked questions." },
-] as const;
+export const icpCategories: readonly MenuCategory[] = [
+  {
+    id: "clinical",
+    label: "Clinical & Enterprise",
+    description: "Healthcare organizations, clinics and solo therapists",
+    items: [
+      { to: "/icp/clinics", label: "Physiotherapy Clinics", desc: "For practice owners & clinical directors seeking remote adherence.", tag: "PRACTICE SCALING", icon: "Building2" },
+      { to: "/icp/physiotherapists", label: "Solo & Private PTs", desc: "For private practitioners wanting objective bio-angle validation.", tag: "PRIVATE CONSULTING", icon: "Stethoscope" },
+    ],
+  },
+  {
+    id: "recovery",
+    label: "Patient & Recovery",
+    description: "Patients recovering from surgery and injuries",
+    items: [
+      { to: "/icp/rehab-patients", label: "Post-Op & Rehab Patients", desc: "For recovering individuals needing real-time visual form guidance.", tag: "GUIDED REHAB", icon: "UserCheck" },
+      { to: "/icp/elderly-care", label: "Elderly Care & Fall Prevention", desc: "For seniors & geriatric physical therapists focusing on mobility.", tag: "GERIATRIC SAFETY", icon: "HeartHandshake" },
+      { to: "/icp/caregivers", label: "Family & Professional Caregivers", desc: "For dedicated caregivers managing home recovery routines.", tag: "HOME SUPPORT", icon: "Users" },
+    ],
+  },
+  {
+    id: "athletic",
+    label: "Sports & Performance",
+    description: "Athletic teams, academies and training coaches",
+    items: [
+      { to: "/icp/sports-academies", label: "Athletic & Sports Academies", desc: "For coaches optimizing kinematic symmetry & return-to-play.", tag: "PERFORMANCE AI", icon: "Trophy" },
+    ],
+  },
+];
 
-export const howItWorksMenu = [
-  { to: "/how-it-works/workflow", label: "Workflow Overview", desc: "See the entire platform flow." },
-  { to: "/how-it-works/vision", label: "Computer Vision", desc: "How our AI works." },
-  { to: "/how-it-works/privacy", label: "Data Privacy", desc: "How we protect your data." },
-] as const;
+export const icpMenu: readonly MenuItem[] = [
+  { to: "/icp/clinics", label: "Physiotherapy Clinics & Practices", desc: "For practice owners & clinical directors seeking remote patient adherence.", tag: "PRACTICE SCALING", icon: "Building2" },
+  { to: "/icp/physiotherapists", label: "Independent Physiotherapists", desc: "For private practitioners wanting objective bio-angle validation.", tag: "PRIVATE CONSULTING", icon: "Stethoscope" },
+  { to: "/icp/rehab-patients", label: "Post-Operative & Rehab Patients", desc: "For recovering individuals needing real-time visual form guidance.", tag: "GUIDED REHAB", icon: "UserCheck" },
+  { to: "/icp/elderly-care", label: "Elderly Care & Fall Prevention", desc: "For seniors & geriatric physical therapists focusing on safe mobility.", tag: "GERIATRIC SAFETY", icon: "HeartHandshake" },
+  { to: "/icp/caregivers", label: "Family & Professional Caregivers", desc: "For dedicated caregivers managing home recovery routines.", tag: "HOME SUPPORT", icon: "Users" },
+  { to: "/icp/sports-academies", label: "Athletic & Sports Academies", desc: "For trainers & athletes optimizing kinematic performance & recovery.", tag: "PERFORMANCE AI", icon: "Trophy" },
+];
 
-export const aboutMenu = [
-  { to: "/about/mission", label: "Our Mission", desc: "Why we started Physiomatics." },
-  { to: "/about/team", label: "Team", desc: "Meet the experts." },
-  { to: "/about/careers", label: "Careers", desc: "Join our growing team." },
-] as const;
+export const solutionsCategories: readonly MenuCategory[] = [
+  {
+    id: "specialized",
+    label: "Target Populations",
+    items: [
+      { to: "/solutions/elderly", label: "Elderly Care", desc: "Large controls, seated exercises, and fall risk prevention.", tag: "SENIOR HEALTH", icon: "HeartHandshake" },
+      { to: "/solutions/rehab", label: "Injury Rehabilitation", desc: "Structured home programs between clinical visits.", tag: "ORTHOPEDIC", icon: "Bandage" },
+      { to: "/solutions/caregiver", label: "Caregiver Support", desc: "Resources and visual guidance for family members.", tag: "FAMILY AID", icon: "Users" },
+    ],
+  },
+  {
+    id: "institutional",
+    label: "Healthcare & Academic",
+    items: [
+      { to: "/solutions/clinics", label: "Physiotherapy Clinics", desc: "Visibility into home-exercise performance and adherence.", tag: "CLINICAL OPS", icon: "Building2" },
+      { to: "/solutions/education", label: "Physiotherapy Education", desc: "Movement analysis and anatomical mechanics for teaching.", tag: "ACADEMIC LAB", icon: "GraduationCap" },
+    ],
+  },
+];
 
-export const contactMenu = [
-  { to: "/contact/demo", label: "Book a Demo", desc: "Get a guided tour." },
-  { to: "/contact/enquiry", label: "Quick Enquiry", desc: "Send a fast message." },
-  { to: "/contact/consultation", label: "Consultation", desc: "Detailed discussion." },
-] as const;
+export const solutionsMenu: readonly MenuItem[] = [
+  { to: "/solutions/elderly", label: "Elderly Care", desc: "Large controls, seated exercises, caregiver support.", tag: "SENIOR HEALTH", icon: "HeartHandshake" },
+  { to: "/solutions/rehab", label: "Injury Rehabilitation", desc: "Structured home programs between visits.", tag: "ORTHOPEDIC", icon: "Bandage" },
+  { to: "/solutions/clinics", label: "Physiotherapy Clinics", desc: "Visibility into home-exercise performance.", tag: "CLINICAL OPS", icon: "Building2" },
+  { to: "/solutions/caregiver", label: "Caregiver Support", desc: "Resources and monitoring for family members.", tag: "FAMILY AID", icon: "Users" },
+  { to: "/solutions/education", label: "Physiotherapy Education", desc: "Movement analysis for teaching.", tag: "ACADEMIC LAB", icon: "GraduationCap" },
+];
+
+export const resourcesMenu: readonly MenuItem[] = [
+  { to: "/resources/library", label: "Exercise Library", desc: "Browse prescribed movements & video demos.", tag: "GUIDELINES", icon: "BookOpen" },
+  { to: "/resources/rehab", label: "Rehabilitation Guides", desc: "Step-by-step recovery plans & protocols.", tag: "PROTOCOLS", icon: "FileText" },
+  { to: "/resources/anatomy", label: "Anatomy & Biomechanics", desc: "Understand your joint mechanics and vectors.", tag: "EDUCATION", icon: "Layers" },
+  { to: "/resources/faqs", label: "Help Center & FAQs", desc: "Frequently asked technical & clinical questions.", tag: "SUPPORT", icon: "HelpCircle" },
+];
+
+export const howItWorksMenu: readonly MenuItem[] = [
+  { to: "/how-it-works/workflow", label: "Workflow Overview", desc: "See the end-to-end patient & clinician flow.", tag: "EXPERIENCE", icon: "Workflow" },
+  { to: "/how-it-works/vision", label: "Computer Vision", desc: "How on-device MediaPipe pose estimation works.", tag: "ALGORITHMS", icon: "Eye" },
+  { to: "/how-it-works/privacy", label: "Zero-Cloud Data Privacy", desc: "Why patient videos never touch our servers.", tag: "SECURITY", icon: "ShieldCheck" },
+];
+
+export const aboutMenu: readonly MenuItem[] = [
+  { to: "/about/mission", label: "Our Mission", desc: "Bridging the clinic-to-home recovery gap.", tag: "PURPOSE", icon: "Target" },
+  { to: "/about/team", label: "Clinical & AI Team", desc: "Physiotherapists & computer vision engineers.", tag: "LEADERSHIP", icon: "Users" },
+  { to: "/about/careers", label: "Careers", desc: "Join our team pioneering computer-vision health.", tag: "HIRING", icon: "Sparkles" },
+];
+
+export const contactMenu: readonly MenuItem[] = [
+  { to: "/contact/demo", label: "Book a Demo", desc: "Get an interactive guided tour with our specialists.", tag: "LIVE WALKTHROUGH", icon: "Calendar" },
+  { to: "/contact/enquiry", label: "Quick Enquiry", desc: "Send an instant inquiry to our product team.", tag: "DIRECT INQUIRY", icon: "Mail" },
+  { to: "/contact/consultation", label: "Clinical Consultation", desc: "Detailed integration & deployment discussion.", tag: "SPECIALIST REVIEW", icon: "Stethoscope" },
+];
