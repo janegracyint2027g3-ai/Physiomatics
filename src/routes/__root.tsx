@@ -121,9 +121,14 @@ function RootShell({ children }: { children: ReactNode }) {
 
 import { SessionTracker } from "@/components/site/SessionTracker";
 import { EngagementTracker } from "@/components/site/EngagementTracker";
+import { initClarity } from "@/lib/clarity";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    initClarity();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

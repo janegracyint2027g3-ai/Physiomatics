@@ -18,6 +18,7 @@ export const Route = createFileRoute("/feedback")({
 
 import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { supabase } from "@/integrations/supabase/client";
+import { trackClarityEvent, setClarityTag } from "@/lib/clarity";
 
 function FeedbackPage() {
   const [feedback, setFeedback] = useState("");
@@ -39,6 +40,11 @@ function FeedbackPage() {
       category,
       message: feedback.trim(),
     }).catch((err) => console.error("Google Sheets feedback sync error:", err));
+
+    try {
+      trackClarityEvent("feedback_submitted");
+      setClarityTag("feedback_category", category);
+    } catch (_) {}
 
     // 2. Sync to Supabase feedback table if available
     try {

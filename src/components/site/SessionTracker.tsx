@@ -17,6 +17,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { resolveVisitorSession } from "@/lib/visitorSession";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { getGeoIntelligence } from "@/lib/geoIntelligence";
+import { identifyClarityUser, setClarityTag } from "@/lib/clarity";
 import { X } from "lucide-react";
 
 /* ─── Time-aware greeting ─────────────────────────────────────────────────── */
@@ -239,6 +240,21 @@ export function SessionTracker() {
     } catch (err) {
       console.error("[SessionTracker] resolveVisitorSession failed:", err);
       return;
+    }
+
+    // ── Microsoft Clarity: identify user & set custom dimensions ──────────
+    try {
+      identifyClarityUser(
+        session.visitorId,
+        session.sessionId,
+        window.location.pathname,
+        `Visit #${session.visitCount}`
+      );
+      setClarityTag("visitor_type", session.visitorType);
+      setClarityTag("visit_count", String(session.visitCount));
+      setClarityTag("landing_page", window.location.pathname);
+    } catch {
+      // ignore
     }
 
     // ── Google Sheets: fire when 30-min rule says new session ─────────

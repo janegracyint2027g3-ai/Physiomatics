@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { whatsappLink, WA_MESSAGES } from "@/lib/site";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
+import { trackClarityEvent, setClarityTag } from "@/lib/clarity";
 
 // ─── Physiomatics knowledge base ────────────────────────────────────────────
 // All answers the chatbot can give without a live AI API.
@@ -418,6 +419,11 @@ export function Assistant() {
       message: text,
       context_node: node,
     }).catch(() => {});
+
+    try {
+      trackClarityEvent("chatbot_message");
+      setClarityTag("used_chatbot", "true");
+    } catch (_) {}
 
     // Resolve answer from KB
     setTimeout(() => {

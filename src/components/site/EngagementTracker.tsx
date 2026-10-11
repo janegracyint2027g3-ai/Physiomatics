@@ -13,6 +13,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { sendToGoogleSheet, trackClick, trackPageView } from "@/lib/googleSheets";
+import { trackClarityEvent, setClarityTag } from "@/lib/clarity";
 
 const SCROLL_THRESHOLDS = [25, 50, 75, 100];
 
@@ -27,8 +28,10 @@ export function EngagementTracker() {
     const startTime = Date.now();
     pageLoadRef.current = startTime;
 
-    // Track page view immediately for Page_Performance & Traffic_Sources
+    // Track page view immediately for Google Sheets & Microsoft Clarity
     trackPageView(location.pathname);
+    trackClarityEvent("page_view");
+    setClarityTag("page_path", location.pathname);
 
     return () => {
       const elapsed = Math.round((Date.now() - startTime) / 1000);
@@ -53,6 +56,7 @@ export function EngagementTracker() {
       for (const threshold of SCROLL_THRESHOLDS) {
         if (pct >= threshold && !sentDepths.current.has(threshold)) {
           sentDepths.current.add(threshold);
+          trackClarityEvent(`scroll_${threshold}`);
           sendToGoogleSheet({
             action: "scroll_depth",
             section: `${threshold}%`,
@@ -125,6 +129,8 @@ export function EngagementTracker() {
       if (skip.some((s) => label.toLowerCase() === s)) return;
 
       trackClick(label, { page: location.pathname });
+      trackClarityEvent("cta_click");
+      setClarityTag("last_cta_click", label.slice(0, 32));
     };
 
     document.addEventListener("click", onClick, { passive: true });

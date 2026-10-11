@@ -10,6 +10,7 @@ import { PageHero } from "@/components/site/PageHero";
 import { whatsappLink } from "@/lib/site";
 import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus } from "lucide-react";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
+import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -58,6 +59,14 @@ async function saveLead(formType: string, data: FormData) {
     ...row,
   }).catch((err) => console.error("Google Sheets sync warning:", err));
 
+  // 1b. Microsoft Clarity event & session recording priority upgrade
+  try {
+    trackClarityEvent("lead_submission");
+    trackClarityEvent(`lead_${formType}`);
+    setClarityTag("lead_type", formType);
+    upgradeClaritySession(`lead_${formType}`);
+  } catch (_) {}
+
   // 2. Save to Supabase leads table
   const { error } = await supabase.from("leads").insert(row);
   if (error) console.error("Failed to save enquiry to Supabase:", error.message);
@@ -100,6 +109,11 @@ function FeedbackSection() {
       rating,
       message: message.trim(),
     }).catch(() => {});
+
+    try {
+      trackClarityEvent("feedback_submitted");
+      setClarityTag("feedback_category", category);
+    } catch (_) {}
 
     try {
       await supabase.from("feedback").insert({ category, message: message.trim() } as any);

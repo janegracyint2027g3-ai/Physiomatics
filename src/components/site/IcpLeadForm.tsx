@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { whatsappLink } from "@/lib/site";
+import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
 
 interface IcpLeadFormProps {
   segment: string;           // e.g. "Physiotherapist", "Sports Academy"
@@ -50,6 +51,14 @@ export function IcpLeadForm({
       conversion_value: 1,
       ...payload,
     }).catch((err) => console.error("IcpLeadForm Sheets error:", err));
+
+    // 1b. Microsoft Clarity event & session recording priority upgrade
+    try {
+      trackClarityEvent("lead_submission");
+      trackClarityEvent("demo_request");
+      setClarityTag("lead_segment", segment);
+      upgradeClaritySession(`demo_${segment}`);
+    } catch (_) {}
 
     // 2. Supabase
     const { error } = await supabase.from("leads").insert(payload);
