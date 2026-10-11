@@ -129,6 +129,8 @@ function RootShell({ children }: { children: ReactNode }) {
 import { SessionTracker } from "@/components/site/SessionTracker";
 import { EngagementTracker } from "@/components/site/EngagementTracker";
 import { initClarity } from "@/lib/clarity";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -150,6 +152,8 @@ function RootComponent() {
       <Assistant />
       <ExitOffer />
       <Toaster />
+      <Analytics />
+      <SpeedInsights />
     </QueryClientProvider>
   );
 }

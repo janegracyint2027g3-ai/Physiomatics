@@ -13,6 +13,7 @@
 
 import { resolveVisitorSession } from "@/lib/visitorSession";
 import { getCachedGeoIntelligence, getGeoIntelligence } from "@/lib/geoIntelligence";
+import { captureVercelLead, trackVercelEvent } from "@/lib/vercelAnalytics";
 
 const GOOGLE_SHEETS_URL =
   import.meta.env.VITE_GOOGLE_SHEETS_URL ||
@@ -24,6 +25,15 @@ const GOOGLE_ANALYTICS_URL =
 export interface SheetPayload {
   action?: string;
   form_type?: string;
+  form_name?: string;
+  form_status?: string;
+  visitor_id?: string;
+  session_id?: string;
+  label?: string;
+  element_text?: string;
+  section?: string;
+  category?: string;
+  page_path?: string;
   [key: string]: string | number | boolean | undefined;
 }
 
@@ -123,15 +133,34 @@ export async function sendToGoogleSheet(payload: SheetPayload): Promise<boolean>
     console.error("[Sheets] ✗ primary failed:", err);
   }
 
-  // Also send to secondary analytics URL if provided in .env
-  if (GOOGLE_ANALYTICS_URL && GOOGLE_ANALYTICS_URL !== GOOGLE_SHEETS_URL) {
-    try {
-      const secondaryUrl = `${GOOGLE_ANALYTICS_URL}?${qs}`;
-      fetch(secondaryUrl, { method: "GET", mode: "no-cors" }).catch(() => {});
-    } catch {
-      // ignore secondary errors
+  // Also forward to Vercel Web Analytics & Vercel Lead Automation
+  try {
+    const isLead =
+      payload.form_status === "submitted" ||
+      payload.action === "lead_submission" ||
+      payload.action === "icp_lead" ||
+      payload.form_type === "icp_lead" ||
+      payload.form_type === "quick_enquiry" ||
+      payload.form_type === "consultation";
+
+    if (isLead) {
+      captureVercelLead(baseParams).catch(() => {});
+    } else if (payload.action === "click") {
+      trackVercelEvent("cta_click", {
+        label: String(payload.label || payload.element_text || "button"),
+        path: baseParams.page_path || "/",
+      });
+    } else if (payload.action === "scroll") {
+      trackVercelEvent("scroll_depth", {
+        depth: String(payload.section || "0%"),
+        path: baseParams.page_path || "/",
+      });
+    } else if (payload.action === "user_feedback") {
+      trackVercelEvent("user_feedback", {
+        category: String(payload.category || "general"),
+      });
     }
-  }
+  } catch (_) {}
 
   return success;
 }

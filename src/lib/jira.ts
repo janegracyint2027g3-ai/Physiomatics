@@ -39,25 +39,27 @@ export interface JiraReportPayload {
   sheetUrl?: string;
 }
 
+const env = import.meta.env as Record<string, string | undefined>;
+
 const JIRA_HOST = (
-  import.meta.env.VITE_JIRA_HOST ||
-  import.meta.env.JIRA_HOST ||
+  env["VITE_JIRA_HOST"] ||
+  env["JIRA_HOST"] ||
   ""
 ).replace(/^https?:\/\//, "").replace(/\/+$/, "");
 
 const JIRA_EMAIL =
-  import.meta.env.VITE_JIRA_EMAIL ||
-  import.meta.env.JIRA_EMAIL ||
+  env["VITE_JIRA_EMAIL"] ||
+  env["JIRA_EMAIL"] ||
   "janegracy.int2027g3@gmail.com";
 
 const JIRA_API_TOKEN =
-  import.meta.env.VITE_JIRA_API_TOKEN ||
-  import.meta.env.JIRA_API_TOKEN ||
+  env["VITE_JIRA_API_TOKEN"] ||
+  env["JIRA_API_TOKEN"] ||
   "";
 
 const JIRA_PROJECT_KEY =
-  import.meta.env.VITE_JIRA_PROJECT_KEY ||
-  import.meta.env.JIRA_PROJECT_KEY ||
+  env["VITE_JIRA_PROJECT_KEY"] ||
+  env["JIRA_PROJECT_KEY"] ||
   "";
 
 /**

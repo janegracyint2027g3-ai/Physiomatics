@@ -13,6 +13,7 @@ import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
 import { saveLeadToAirtable } from "@/lib/airtable";
 import { createJiraLeadWithSubtasks } from "@/lib/jira";
+import { captureVercelLead } from "@/lib/vercelAnalytics";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -53,7 +54,6 @@ async function saveLead(formType: string, data: FormData) {
   // 1. Sync to Google Sheets
   sendToGoogleSheet({
     action: "lead_submission",
-    form_type: formType,
     form_name: formType,
     form_status: "submitted",
     conversion_name: formType,
@@ -69,15 +69,22 @@ async function saveLead(formType: string, data: FormData) {
     upgradeClaritySession(`lead_${formType}`);
   } catch (_) {}
 
+  const leadName = row.full_name || "Anonymous";
+  const leadEmail = row.email || (row.contact && row.contact.includes("@") ? row.contact : "");
+  const leadPhone = row.phone || (row.contact && !row.contact.includes("@") ? row.contact : "");
+  const leadRole = row.job_title || row.organization_type || "";
+  const leadInterest = row.organization_type || "";
+  const leadSubject = row.challenge || "";
+
   // 1c. Sync to Airtable
   saveLeadToAirtable({
-    name: row.name,
-    email: row.email,
-    phone: row.phone,
+    name: leadName,
+    email: leadEmail,
+    phone: leadPhone,
     organization: row.organization,
-    role: row.role || row.job_title,
-    interest: row.interest,
-    subject: row.challenge || row.subject,
+    role: leadRole,
+    interest: leadInterest,
+    subject: leadSubject,
     message: row.message,
     lead_type: formType,
     country: row.country,
@@ -85,13 +92,27 @@ async function saveLead(formType: string, data: FormData) {
 
   // 1d. Sync to Jira (Parent Task + 8 Subtasks)
   createJiraLeadWithSubtasks({
-    name: row.name || row.full_name,
-    email: row.email || (row.contact && row.contact.includes("@") ? row.contact : ""),
-    phone: row.phone || (row.contact && !row.contact.includes("@") ? row.contact : ""),
+    name: leadName,
+    email: leadEmail,
+    phone: leadPhone,
     organization: row.organization,
-    role: row.role || row.job_title,
-    interest: row.interest || row.organization_type,
-    subject: row.challenge || row.subject,
+    role: leadRole,
+    interest: leadInterest,
+    subject: leadSubject,
+    message: row.message,
+    lead_type: formType,
+    country: row.country,
+  }).catch(() => {});
+
+  // 1e. Sync to Vercel (Web Analytics & Serverless Lead Engine)
+  captureVercelLead({
+    name: leadName,
+    email: leadEmail,
+    phone: leadPhone,
+    organization: row.organization,
+    role: leadRole,
+    interest: leadInterest,
+    subject: leadSubject,
     message: row.message,
     lead_type: formType,
     country: row.country,

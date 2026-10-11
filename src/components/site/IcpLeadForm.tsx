@@ -15,6 +15,7 @@ import { whatsappLink } from "@/lib/site";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
 import { saveLeadToAirtable } from "@/lib/airtable";
 import { createJiraLeadWithSubtasks } from "@/lib/jira";
+import { captureVercelLead } from "@/lib/vercelAnalytics";
 
 interface IcpLeadFormProps {
   segment: string;           // e.g. "Physiotherapist", "Sports Academy"
@@ -73,6 +74,17 @@ export function IcpLeadForm({
 
     // 1d. Sync to Jira (Parent Task + 8 Subtasks)
     createJiraLeadWithSubtasks({
+      name: name.trim(),
+      phone: contact.trim().includes("@") ? undefined : contact.trim(),
+      email: contact.trim().includes("@") ? contact.trim() : undefined,
+      organization: segment,
+      interest: segment,
+      lead_type: "demo_request",
+      subject: `Demo request for ${segment}`,
+    }).catch(() => {});
+
+    // 1e. Sync to Vercel (Web Analytics & Serverless Lead Engine)
+    captureVercelLead({
       name: name.trim(),
       phone: contact.trim().includes("@") ? undefined : contact.trim(),
       email: contact.trim().includes("@") ? contact.trim() : undefined,
