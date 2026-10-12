@@ -417,11 +417,14 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
       <div className="container-page flex h-16 items-center justify-between gap-4">
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold tracking-tight shrink-0">
-          <span className="grid size-8 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm">
-            <Activity className="size-4" />
-          </span>
-          Physiomatics
+        <Link to="/" className="flex items-center gap-2.5 font-display text-xl font-bold tracking-tight shrink-0" aria-label="Physiomatics home">
+          <img
+            src="/logo-64.png"
+            alt="Physiomatics"
+            className="size-8 rounded-full object-cover shadow-sm ring-1 ring-border/40"
+            loading="eager"
+          />
+          <span>Physiomatics</span>
         </Link>
 
         {/* Desktop Navigation with Proper Alignments to stay in frame */}
