@@ -122,7 +122,7 @@ async function saveLead(formType: string, data: FormData, attachedFile?: Attache
   }).catch(() => {});
 
   // 1d. Sync to Jira (Parent Task + 8 Subtasks + File Attachment uploaded to Jira)
-  createJiraLeadWithSubtasks({
+  const jiraPromise = createJiraLeadWithSubtasks({
     name: leadName,
     email: leadEmail,
     phone: leadPhone,
@@ -138,21 +138,24 @@ async function saveLead(formType: string, data: FormData, attachedFile?: Attache
     document_file: attachedFile?.file,
     document_base64: attachedFile?.base64,
     document_type: attachedFile?.type,
-  }).catch(() => {});
+  }).catch(() => null);
 
-  // 1e. Sync to Vercel (Web Analytics & Serverless Lead Engine)
-  captureVercelLead({
-    name: leadName,
-    email: leadEmail,
-    phone: leadPhone,
-    organization: row.organization,
-    role: leadRole,
-    interest: leadInterest,
-    subject: leadSubject,
-    message: row.message,
-    lead_type: formType,
-    country: row.country,
-  }).catch(() => {});
+  // 1e. Sync to Vercel (Web Analytics & Serverless Lead Engine + Telegram Alert)
+  jiraPromise.then((jiraResult) => {
+    captureVercelLead({
+      name: leadName,
+      email: leadEmail,
+      phone: leadPhone,
+      organization: row.organization,
+      role: leadRole,
+      interest: leadInterest,
+      subject: leadSubject,
+      message: row.message,
+      lead_type: formType,
+      country: row.country,
+      jira_issue_key: jiraResult?.issueKey || undefined,
+    }).catch(() => {});
+  });
 
   // 2. Save to Supabase leads table
   const { error } = await supabase.from("leads").insert(row);

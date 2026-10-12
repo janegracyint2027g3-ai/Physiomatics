@@ -73,7 +73,7 @@ export function IcpLeadForm({
     }).catch(() => {});
 
     // 1d. Sync to Jira (Parent Task + 8 Subtasks)
-    createJiraLeadWithSubtasks({
+    const jiraPromise = createJiraLeadWithSubtasks({
       name: name.trim(),
       phone: contact.trim().includes("@") ? undefined : contact.trim(),
       email: contact.trim().includes("@") ? contact.trim() : undefined,
@@ -81,18 +81,21 @@ export function IcpLeadForm({
       interest: segment,
       lead_type: "demo_request",
       subject: `Demo request for ${segment}`,
-    }).catch(() => {});
+    }).catch(() => null);
 
-    // 1e. Sync to Vercel (Web Analytics & Serverless Lead Engine)
-    captureVercelLead({
-      name: name.trim(),
-      phone: contact.trim().includes("@") ? undefined : contact.trim(),
-      email: contact.trim().includes("@") ? contact.trim() : undefined,
-      organization: segment,
-      interest: segment,
-      lead_type: "demo_request",
-      subject: `Demo request for ${segment}`,
-    }).catch(() => {});
+    // 1e. Sync to Vercel (Web Analytics & Serverless Lead Engine + Telegram Alert)
+    jiraPromise.then((jiraResult) => {
+      captureVercelLead({
+        name: name.trim(),
+        phone: contact.trim().includes("@") ? undefined : contact.trim(),
+        email: contact.trim().includes("@") ? contact.trim() : undefined,
+        organization: segment,
+        interest: segment,
+        lead_type: "demo_request",
+        subject: `Demo request for ${segment}`,
+        jira_issue_key: jiraResult?.issueKey || undefined,
+      }).catch(() => {});
+    });
 
     // 2. Supabase
     const { error } = await supabase.from("leads").insert(payload);
