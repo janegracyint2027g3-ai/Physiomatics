@@ -192,3 +192,198 @@ export async function getLatestYouTubeVideos(maxResults = 10): Promise<YouTubeVi
     return [];
   }
 }
+
+// ─── Comment Types & Helpers ───────────────────────────────────────────────────
+
+export interface YouTubeComment {
+  id: string;
+  authorDisplayName: string;
+  authorProfileImageUrl?: string;
+  authorChannelUrl?: string;
+  textDisplay: string;
+  textOriginal: string;
+  videoId?: string;
+  videoTitle?: string;
+  publishedAt: string;
+  likeCount: number;
+  totalReplyCount?: number;
+  isEnquiry?: boolean;
+}
+
+const ENQUIRY_PATTERNS = [
+  /\b(price|pricing|cost|fee|charge|how much|quote)\b/i,
+  /\b(demo|appointment|consultation|consult|book|booking|session|trial)\b/i,
+  /\b(contact|email|phone|whatsapp|reach out|call me|message me)\b/i,
+  /\b(clinic|hospital|physio|physiotherapist|patient|treatment|therapy|rehab)\b/i,
+  /\b(license|licensing|subscription|plan|software|features|integration)\b/i,
+  /\b(pain|injury|exercise|posture|biomechanics|assessment)\b/i,
+  /\b(help|interested|available|how to buy|where to get)\b/i,
+];
+
+/**
+ * Determines whether a YouTube comment text expresses potential commercial,
+ * clinical, or consultation enquiry intent.
+ */
+export function isPotentialEnquiry(text: string): boolean {
+  if (!text || text.trim().length === 0) return false;
+  return ENQUIRY_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/**
+ * Fetches comment threads for a specific YouTube video.
+ * Uses the minimal `https://www.googleapis.com/auth/youtube.readonly` OAuth scope.
+ */
+export async function getYouTubeVideoComments(
+  videoId: string,
+  maxResults = 20
+): Promise<YouTubeComment[]> {
+  const token = await getYouTubeAccessToken();
+  if (!token) return [];
+
+  try {
+    const url = new URL("https://www.googleapis.com/youtube/v3/commentThreads");
+    url.searchParams.set("part", "snippet");
+    url.searchParams.set("videoId", videoId);
+    url.searchParams.set("maxResults", String(Math.min(maxResults, 100)));
+    url.searchParams.set("textFormat", "plainText");
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      console.error("[YouTube] commentThreads error:", await res.text());
+      return [];
+    }
+
+    const data = await res.json();
+    return parseCommentThreads(data.items ?? [], videoId);
+  } catch (err) {
+    console.error("[YouTube] getYouTubeVideoComments error:", err);
+    return [];
+  }
+}
+
+/**
+ * Fetches all recent comment threads across the authenticated user's channel.
+ * Uses the minimal `https://www.googleapis.com/auth/youtube.readonly` OAuth scope.
+ */
+export async function getRecentChannelComments(
+  channelId?: string,
+  maxResults = 20
+): Promise<YouTubeComment[]> {
+  const token = await getYouTubeAccessToken();
+  if (!token) return [];
+
+  try {
+    let targetChannelId = channelId;
+    if (!targetChannelId) {
+      const channel = await getYouTubeChannelStats();
+      targetChannelId = channel?.id;
+    }
+
+    if (!targetChannelId) {
+      console.warn("[YouTube] No channel ID available to fetch channel comments.");
+      return [];
+    }
+
+    const url = new URL("https://www.googleapis.com/youtube/v3/commentThreads");
+    url.searchParams.set("part", "snippet");
+    url.searchParams.set("allThreadsRelatedToChannelId", targetChannelId);
+    url.searchParams.set("maxResults", String(Math.min(maxResults, 100)));
+    url.searchParams.set("textFormat", "plainText");
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      console.error("[YouTube] channel commentThreads error:", await res.text());
+      return [];
+    }
+
+    const data = await res.json();
+    return parseCommentThreads(data.items ?? []);
+  } catch (err) {
+    console.error("[YouTube] getRecentChannelComments error:", err);
+    return [];
+  }
+}
+
+function parseCommentThreads(items: any[], defaultVideoId?: string): YouTubeComment[] {
+  return items.map((item: any): YouTubeComment => {
+    const topSnippet = item.snippet?.topLevelComment?.snippet || {};
+    const textOriginal = topSnippet.textOriginal || topSnippet.textDisplay || "";
+    const videoId = item.snippet?.videoId || defaultVideoId;
+
+    return {
+      id: item.id || topSnippet.id || "",
+      authorDisplayName: topSnippet.authorDisplayName || "YouTube User",
+      authorProfileImageUrl: topSnippet.authorProfileImageUrl,
+      authorChannelUrl: topSnippet.authorChannelUrl?.value || topSnippet.authorChannelUrl,
+      textDisplay: topSnippet.textDisplay || "",
+      textOriginal,
+      videoId,
+      publishedAt: topSnippet.publishedAt || new Date().toISOString(),
+      likeCount: topSnippet.likeCount ?? 0,
+      totalReplyCount: item.snippet?.totalReplyCount ?? 0,
+      isEnquiry: isPotentialEnquiry(textOriginal),
+    };
+  });
+}
+
+// ─── Jira Integration Bridge ───────────────────────────────────────────────────
+
+import { createJiraLeadWithSubtasks, type JiraLeadPayload } from "./jira";
+
+/**
+ * Converts a YouTube comment into a structured JiraLeadPayload
+ * compatible with the Physiomatics Jira pipeline.
+ */
+export function convertCommentToJiraPayload(
+  comment: YouTubeComment,
+  videoTitle?: string
+): JiraLeadPayload {
+  const videoReference = videoTitle
+    ? `YouTube Video: "${videoTitle}"`
+    : comment.videoId
+    ? `YouTube Video ID: ${comment.videoId}`
+    : "Physiomatics YouTube Channel";
+
+  return {
+    name: comment.authorDisplayName || "YouTube Commenter",
+    email: "", // YouTube comments do not provide user emails
+    phone: "",
+    organization: "YouTube Community",
+    role: "Viewer / Prospective Client",
+    interest: videoReference,
+    subject: `[YouTube Enquiry] ${comment.authorDisplayName} on ${videoReference}`,
+    message: [
+      `Comment text: "${comment.textOriginal}"`,
+      ``,
+      `Comment ID: ${comment.id}`,
+      `Published at: ${comment.publishedAt}`,
+      comment.authorChannelUrl ? `Author Channel: ${comment.authorChannelUrl}` : "",
+      comment.videoId ? `Video URL: https://www.youtube.com/watch?v=${comment.videoId}` : "",
+    ].filter(Boolean).join("\n"),
+    lead_type: "youtube_enquiry",
+    page_path: comment.videoId
+      ? `https://www.youtube.com/watch?v=${comment.videoId}`
+      : "https://www.youtube.com",
+    received_at: comment.publishedAt,
+    lead_id: `yt_${comment.id}`,
+  };
+}
+
+/**
+ * Creates a parent Jira Task + 8 standard subtasks from a YouTube comment enquiry,
+ * using the project's existing Jira workflow.
+ */
+export async function createJiraTaskFromComment(
+  comment: YouTubeComment,
+  videoTitle?: string
+): Promise<{ success: boolean; issueKey?: string; issueKeys?: string[]; error?: string }> {
+  const payload = convertCommentToJiraPayload(comment, videoTitle);
+  return createJiraLeadWithSubtasks(payload);
+}
+
