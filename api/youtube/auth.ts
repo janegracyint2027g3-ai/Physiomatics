@@ -49,8 +49,8 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("scope", SCOPES);
   authUrl.searchParams.set("state", state);
-  authUrl.searchParams.set("access_type", "offline");   // request refresh token
-  authUrl.searchParams.set("prompt", "consent");         // always show consent to get refresh_token
+  authUrl.searchParams.set("access_type", "offline");            // request refresh token
+  authUrl.searchParams.set("prompt", "consent select_account");   // forces consent prompt & account selection
 
   return res.redirect(302, authUrl.toString());
 }
