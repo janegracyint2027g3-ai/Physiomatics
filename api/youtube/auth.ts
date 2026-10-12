@@ -19,8 +19,11 @@ import { randomBytes } from "crypto";
 
 export const config = { maxDuration: 10 };
 
-// Minimum OAuth scope required to read YouTube channel details, uploaded videos, and comments
-const SCOPES = "https://www.googleapis.com/auth/youtube.readonly";
+// Minimum OAuth scopes required: youtube.readonly (channels & videos) + youtube.force-ssl (required by Google for commentThreads.list)
+const SCOPES = [
+  "https://www.googleapis.com/auth/youtube.readonly",
+  "https://www.googleapis.com/auth/youtube.force-ssl",
+].join(" ");
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
