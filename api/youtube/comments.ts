@@ -204,7 +204,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
           const jql = `project = "${jiraProjectKey}" AND (labels = "yt-comment-${cleanCommentId}" OR text ~ "${cleanCommentId}")`;
           const searchRes = await fetch(
-            `https://${jiraHost}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=1&fields=key,summary`,
+            `https://${jiraHost}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1&fields=key,summary`,
             {
               headers: { Authorization: authHeader, Accept: "application/json" },
             }
