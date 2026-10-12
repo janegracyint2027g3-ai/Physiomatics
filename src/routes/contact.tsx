@@ -8,12 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PageHero } from "@/components/site/PageHero";
 import { whatsappLink } from "@/lib/site";
-import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus } from "lucide-react";
+import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus, CalendarCheck, Calendar } from "lucide-react";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
 import { saveLeadToAirtable } from "@/lib/airtable";
 import { createJiraLeadWithSubtasks } from "@/lib/jira";
 import { captureVercelLead } from "@/lib/vercelAnalytics";
+import { GoogleCalendarButton } from "@/components/site/GoogleCalendarButton";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -254,7 +255,7 @@ function FeedbackSection() {
 }
 
 function Contact() {
-  const [mode, setMode] = useState<"quick" | "long">("quick");
+  const [mode, setMode] = useState<"appointment" | "quick" | "long">("appointment");
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
@@ -309,22 +310,70 @@ function Contact() {
 
   return (
     <>
-      <PageHero eyebrow="Contact" title="Book a demo or ask a question">
-        Choose a quick enquiry or a detailed consultation. Your message opens in WhatsApp so you can review it before sending.
+      <PageHero eyebrow="Contact & Scheduling" title="Book an appointment or ask a question">
+        Select a date and time directly on our live Google Calendar, or send an enquiry.
       </PageHero>
       <section className="container-page max-w-3xl py-12">
         <div className="mb-8 flex justify-center">
-          <div className="inline-flex rounded-full border bg-card p-1" role="tablist">
-            {(["quick", "long"] as const).map((m) => (
-              <button key={m} role="tab" aria-selected={mode === m} onClick={() => { setMode(m); setStep(1); }}
-                className={`rounded-full px-5 py-2 text-sm font-semibold ${mode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-                {m === "quick" ? "Quick enquiry" : "Consultation request"}
+          <div className="inline-flex rounded-full border bg-card p-1 shadow-sm flex-wrap justify-center gap-1" role="tablist">
+            {(["appointment", "quick", "long"] as const).map((m) => (
+              <button
+                key={m}
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => { setMode(m); setStep(1); }}
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                  mode === m
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {m === "appointment" ? "📅 Book an appointment" : m === "quick" ? "Quick enquiry" : "Consultation request"}
               </button>
             ))}
           </div>
         </div>
 
-        {mode === "quick" ? (
+        {mode === "appointment" && (
+          <div className="rounded-3xl border bg-card p-8 md:p-10 shadow-soft text-center animate-in fade-in">
+            <div className="size-14 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center mb-4">
+              <CalendarCheck className="size-7" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Google Calendar Appointment Scheduling
+            </h2>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
+              Pick your preferred date and time from our live calendar. A Google Meet link and calendar invitation will be issued to you instantly.
+            </p>
+
+            <div className="py-4 flex justify-center">
+              <GoogleCalendarButton
+                label="Book an appointment"
+                source="contact_appointment_tab"
+                useNativeGoogleWidget={true}
+                size="lg"
+                className="px-8 py-6 text-base font-bold shadow-lg"
+              />
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t pt-6 text-left">
+              <div className="rounded-xl bg-muted/40 p-3">
+                <span className="font-semibold text-xs text-primary uppercase block mb-1">⏱ Duration</span>
+                <span className="text-sm text-foreground">30-minute tailored session</span>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-3">
+                <span className="font-semibold text-xs text-primary uppercase block mb-1">💻 Format</span>
+                <span className="text-sm text-foreground">Google Meet video call</span>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-3">
+                <span className="font-semibold text-xs text-primary uppercase block mb-1">⚡ Instant Sync</span>
+                <span className="text-sm text-foreground">Times allocated in calendar</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {mode === "quick" && (
           <form onSubmit={submitQuick} className="grid gap-4 rounded-3xl border bg-card p-8 shadow-soft">
             <Field name="name" label="Full name" required />
             <Field name="contact" label="Email or phone" required />
@@ -339,7 +388,9 @@ function Contact() {
             <p className="text-xs text-muted-foreground">Please don't include detailed medical history. This form is not for emergencies.</p>
             <Button type="submit" variant="hero" size="lg">Send enquiry</Button>
           </form>
-        ) : (
+        )}
+
+        {mode === "long" && (
           <form onSubmit={submitLong} className="rounded-3xl border bg-card p-8 shadow-soft">
             <div className="mb-8 flex items-center justify-between">
               <div className="text-sm font-medium text-muted-foreground">Step {step} of {totalSteps}</div>

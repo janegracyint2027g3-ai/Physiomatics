@@ -41,11 +41,24 @@ export interface JiraReportPayload {
 
 const env = import.meta.env as Record<string, string | undefined>;
 
-const JIRA_HOST = (
-  env["VITE_JIRA_HOST"] ||
-  env["JIRA_HOST"] ||
-  ""
-).replace(/^https?:\/\//, "").replace(/\/+$/, "");
+export function getJiraHosts(): string[] {
+  const primary = (
+    env["VITE_JIRA_HOST"] ||
+    env["JIRA_HOST"] ||
+    "janegracyint2027g3.atlassian.net"
+  );
+  const additional = (
+    env["VITE_JIRA_ADDITIONAL_HOSTS"] ||
+    env["JIRA_ADDITIONAL_HOSTS"] ||
+    "trustworkz.atlassian.net"
+  );
+  const raw = `${primary},${additional}`;
+  const hosts = raw
+    .split(",")
+    .map((h) => h.trim().replace(/^https?:\/\//, "").replace(/\/+$/, ""))
+    .filter(Boolean);
+  return Array.from(new Set(hosts));
+}
 
 const JIRA_EMAIL =
   env["VITE_JIRA_EMAIL"] ||
@@ -116,8 +129,9 @@ function getAuthHeader(): string {
  */
 export async function createJiraLeadWithSubtasks(
   lead: JiraLeadPayload
-): Promise<{ success: boolean; issueKey?: string; error?: string }> {
-  if (!JIRA_HOST || !JIRA_API_TOKEN || !JIRA_PROJECT_KEY) {
+): Promise<{ success: boolean; issueKey?: string; issueKeys?: string[]; error?: string }> {
+  const hosts = getJiraHosts();
+  if (hosts.length === 0 || !JIRA_API_TOKEN || !JIRA_PROJECT_KEY) {
     console.warn(
       "[Jira] Skipping Jira lead sync — Host, Project Key, or API Token not configured yet in .env."
     );
@@ -147,86 +161,104 @@ export async function createJiraLeadWithSubtasks(
     lead.message || "No custom message provided."
   ].join("\n");
 
-  try {
-    // 1. Create Parent Issue (Task)
-    const parentPayload = {
-      fields: {
-        project: { key: JIRA_PROJECT_KEY },
-        summary: summary,
-        description: {
-          type: "doc",
-          version: 1,
-          content: [
-            {
-              type: "paragraph",
-              content: [{ type: "text", text: descriptionContent }]
-            }
-          ]
-        },
-        issuetype: { name: "Task" },
-        labels: ["physiomatics-lead", (lead.lead_type || "web-lead").replace(/_/g, "-")].filter(Boolean)
-      }
-    };
+  const createdKeys: string[] = [];
+  const errors: string[] = [];
 
-    const parentRes = await fetch(`https://${JIRA_HOST}/rest/api/3/issue`, {
-      method: "POST",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
-      body: JSON.stringify(parentPayload)
-    });
-
-    if (!parentRes.ok) {
-      const errText = await parentRes.text();
-      console.error("[Jira] Failed to create parent task:", errText);
-      return { success: false, error: errText };
-    }
-
-    const parentData = await parentRes.json();
-    const parentKey = parentData.key;
-    console.log(`[Jira] Successfully created parent Task ${parentKey}`);
-
-    // 2. Create the 8 Subtasks linked to the parent task
-    for (const sub of LEAD_SUBTASKS) {
-      try {
-        const subPayload = {
-          fields: {
-            project: { key: JIRA_PROJECT_KEY },
-            parent: { key: parentKey },
-            summary: sub.summary,
-            description: {
-              type: "doc",
-              version: 1,
-              content: [
-                {
-                  type: "paragraph",
-                  content: [{ type: "text", text: sub.description }]
-                }
-              ]
-            },
-            issuetype: { name: "Sub-task" }
-          }
-        };
-
-        await fetch(`https://${JIRA_HOST}/rest/api/3/issue`, {
-          method: "POST",
-          headers: {
-            Authorization: authHeader,
-            "Content-Type": "application/json",
-            Accept: "application/json"
+  for (const host of hosts) {
+    try {
+      // 1. Create Parent Issue (Task)
+      const parentPayload = {
+        fields: {
+          project: { key: JIRA_PROJECT_KEY },
+          summary: summary,
+          description: {
+            type: "doc",
+            version: 1,
+            content: [
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: descriptionContent }]
+              }
+            ]
           },
-          body: JSON.stringify(subPayload)
-        });
-      } catch (subErr) {
-        console.warn(`[Jira] Failed to create subtask: ${sub.summary}`, subErr);
-      }
-    }
+          issuetype: { name: "Task" },
+          labels: ["physiomatics-lead", (lead.lead_type || "web-lead").replace(/_/g, "-")].filter(Boolean)
+        }
+      };
 
-    return { success: true, issueKey: parentKey };
-  } catch (err: any) {
-    console.error("[Jira] Exception during lead sync:", err);
-    return { success: false, error: err?.message || String(err) };
+      const parentRes = await fetch(`https://${host}/rest/api/3/issue`, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify(parentPayload)
+      });
+
+      if (!parentRes.ok) {
+        const errText = await parentRes.text();
+        console.error(`[Jira] Failed to create parent task on ${host}:`, errText);
+        errors.push(`${host}: ${errText}`);
+        continue;
+      }
+
+      const parentData = await parentRes.json();
+      const parentKey = parentData.key;
+      createdKeys.push(`${host}:${parentKey}`);
+      console.log(`[Jira] Successfully created parent Task ${parentKey} on ${host}`);
+
+      // 2. Create the 8 Subtasks linked to the parent task
+      for (const sub of LEAD_SUBTASKS) {
+        try {
+          const subPayload = {
+            fields: {
+              project: { key: JIRA_PROJECT_KEY },
+              parent: { key: parentKey },
+              summary: sub.summary,
+              description: {
+                type: "doc",
+                version: 1,
+                content: [
+                  {
+                    type: "paragraph",
+                    content: [{ type: "text", text: sub.description }]
+                  }
+                ]
+              },
+              issuetype: { name: "Sub-task" }
+            }
+          };
+
+          await fetch(`https://${host}/rest/api/3/issue`, {
+            method: "POST",
+            headers: {
+              Authorization: authHeader,
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify(subPayload)
+          });
+        } catch (subErr) {
+          console.warn(`[Jira] Failed to create subtask on ${host}: ${sub.summary}`, subErr);
+        }
+      }
+    } catch (err: any) {
+      console.error(`[Jira] Exception during lead sync on ${host}:`, err);
+      errors.push(`${host}: ${err?.message || String(err)}`);
+    }
   }
+
+  if (createdKeys.length > 0) {
+    return {
+      success: true,
+      issueKey: createdKeys[0].split(":")[1],
+      issueKeys: createdKeys
+    };
+  }
+
+  return {
+    success: false,
+    error: errors.join("; ") || "Failed to create Jira issues on all hosts"
+  };
 }

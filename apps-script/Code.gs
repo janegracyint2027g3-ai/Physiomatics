@@ -64,11 +64,11 @@ function getAirtableToken_() {
 
 var JIRA_CONFIG = {
   ENABLED: true,
-  // Store the real token in Apps Script → Project Settings → Script Properties
-  // Key: JIRA_API_TOKEN  ← paste your Atlassian token there (never commit secrets here)
-  API_TOKEN: "PASTE_YOUR_JIRA_API_TOKEN_IN_SCRIPT_PROPERTIES",
+  // Atlassian API token for janegracy.int2027g3@gmail.com
+  API_TOKEN: "ATATT3xFfGF0wfbVHeCXal_VlksIorx-GYRmq-isgjLe0qaJeCb-_9lcRBq1QwDGfrKfHGmjOWZT-eOrH6aRV5wgMTWoiXnslT9hPJd0aHd0f5ZRSDoR5TMiav2HISdBZX1QAiIP5yxCk1tkjdCNnoEoZa6lYDyPGnXVg9HIzPnUxwl3UhCj5Fg=53C71864",
   EMAIL: "janegracy.int2027g3@gmail.com",
-  HOST: "trustworkz.atlassian.net",
+  HOST: "janegracyint2027g3.atlassian.net",
+  ADDITIONAL_HOSTS: ["trustworkz.atlassian.net"],
   PROJECT_KEY: "PHY",
   TASK_ISSUE_TYPE: "Task",
   SUBTASK_ISSUE_TYPE: "Sub-task"
@@ -81,12 +81,26 @@ function getJiraApiToken_() {
 }
 
 function getJiraHost_() {
-  var host = JIRA_CONFIG.HOST || PropertiesService.getScriptProperties().getProperty("JIRA_HOST") || "";
+  var host = JIRA_CONFIG.HOST || PropertiesService.getScriptProperties().getProperty("JIRA_HOST") || "janegracyint2027g3.atlassian.net";
   return host.replace(/^https?:\/\//, "").replace(/\/+$/, "");
 }
 
+function getJiraHosts_() {
+  var primary = getJiraHost_();
+  var additional = JIRA_CONFIG.ADDITIONAL_HOSTS || [];
+  if (typeof additional === "string") additional = additional.split(",");
+  var propAdd = PropertiesService.getScriptProperties().getProperty("JIRA_ADDITIONAL_HOSTS");
+  if (propAdd) additional = additional.concat(propAdd.split(","));
+  var list = [primary].concat(additional).map(function(h) {
+    return String(h).trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  }).filter(Boolean);
+  var unique = [];
+  list.forEach(function(h) { if (unique.indexOf(h) === -1) unique.push(h); });
+  return unique;
+}
+
 function getJiraProjectKey_() {
-  return JIRA_CONFIG.PROJECT_KEY || PropertiesService.getScriptProperties().getProperty("JIRA_PROJECT_KEY") || "";
+  return JIRA_CONFIG.PROJECT_KEY || PropertiesService.getScriptProperties().getProperty("JIRA_PROJECT_KEY") || "PHY";
 }
 
 var TAB_HEADERS = {
@@ -1024,7 +1038,7 @@ function sendPeriodicExecutiveDigest(intervalName) {
           "<div style='text-align:center;margin-bottom:12px;'>" +
             "<a href='" + ssUrl + "' style='display:inline-block;padding:12px 24px;background:#0284c7;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;margin-right:8px;'>Open Live Google Sheet</a>" +
             "<a href='https://airtable.com/apptNJUsbdqh4dxvS' style='display:inline-block;padding:12px 24px;background:#059669;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;margin-right:8px;'>Open Airtable Base</a>" +
-            "<a href='https://trustworkz.atlassian.net/jira/software/projects/PHY/boards' style='display:inline-block;padding:12px 24px;background:#7c3aed;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;margin-right:8px;'>Open Jira Board</a>" +
+            "<a href='https://janegracyint2027g3.atlassian.net/jira/core/projects/PHY/board' style='display:inline-block;padding:12px 24px;background:#7c3aed;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;margin-right:8px;'>Open Jira Board</a>" +
             "<a href='" + CONFIG.WEBSITE + "' style='display:inline-block;padding:12px 24px;background:#f1f5f9;color:#334155;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;border:1px solid #cbd5e1;'>Visit Website</a>" +
           "</div>" +
 
@@ -1533,8 +1547,7 @@ function jiraBasicAuth_() {
 /**
  * Sends request to Jira Cloud REST API v3
  */
-function jiraFetch_(path, method, payload) {
-  var host = getJiraHost_();
+function jiraFetchForHost_(host, path, method, payload) {
   var auth = jiraBasicAuth_();
   if (!host) throw new Error("Missing JIRA_HOST. Set JIRA_CONFIG.HOST in Code.gs or Script Properties.");
   if (!auth) throw new Error("Missing JIRA_API_TOKEN. Set JIRA_CONFIG.API_TOKEN in Code.gs or Script Properties.");
@@ -1555,149 +1568,167 @@ function jiraFetch_(path, method, payload) {
   var code = res.getResponseCode();
   var body = res.getContentText();
   if (code < 200 || code >= 300) {
-    throw new Error("Jira API error (HTTP " + code + "): " + body);
+    throw new Error("Jira API error on " + host + " (HTTP " + code + "): " + body);
   }
   return JSON.parse(body || "{}");
 }
 
+function jiraFetch_(path, method, payload) {
+  return jiraFetchForHost_(getJiraHost_(), path, method, payload);
+}
+
 /**
  * Creates parent Task in Jira for an incoming lead, followed by 8 operational Subtasks
+ * Supports syncing to both personal Jira space and company space
  */
 function createJiraLeadTaskWithSubtasks_(p) {
   if (!JIRA_CONFIG.ENABLED) return null;
-  var host = getJiraHost_();
+  var hosts = getJiraHosts_();
   var projectKey = getJiraProjectKey_();
-  if (!host || !projectKey) {
+  if (!hosts.length || !projectKey) {
     log_("createJiraLeadTaskWithSubtasks_", "SKIPPED", "Jira HOST or PROJECT_KEY not configured yet.");
     return null;
   }
 
-  try {
-    var leadKind = String(p.lead_type || "lead").toUpperCase();
-    var summary = "[" + leadKind + "] " + (p.name || "New Visitor") + " — " + (p.organization || "Direct Patient");
+  var firstParentKey = null;
+  var totalSubCount = 0;
 
-    var descText = [
-      "Lead Details:",
-      "• Name: " + (p.name || "N/A"),
-      "• Email: " + (p.email || "N/A"),
-      "• Phone: " + (p.phone || "N/A"),
-      "• Organization: " + (p.organization || "N/A"),
-      "• Role: " + (p.role || "N/A"),
-      "• Interest / Segment: " + (p.interest || "N/A"),
-      "• Subject / Challenge: " + (p.subject || "N/A"),
-      "• Location: " + [p.geo_city, p.geo_region, p.geo_country].filter(Boolean).join(", "),
-      "• Source Page: " + (p.page_path || "N/A"),
-      "• Received: " + (p.received_at || formatDate_(new Date())),
-      "",
-      "Enquiry / Message:",
-      p.message || "No message provided."
-    ].join("\n");
+  hosts.forEach(function(host) {
+    try {
+      var leadKind = String(p.lead_type || "lead").toUpperCase();
+      var summary = "[" + leadKind + "] " + (p.name || "New Visitor") + " — " + (p.organization || "Direct Patient");
 
-    var parentPayload = {
-      fields: {
-        project: { key: projectKey },
-        summary: summary,
-        description: {
-          type: "doc",
-          version: 1,
-          content: [{
-            type: "paragraph",
-            content: [{ type: "text", text: descText }]
-          }]
-        },
-        issuetype: { name: JIRA_CONFIG.TASK_ISSUE_TYPE || "Task" },
-        labels: ["physiomatics-lead", norm_(p.lead_type || "web_lead").replace(/_/g, "-")]
-      }
-    };
+      var descText = [
+        "Lead Details:",
+        "• Name: " + (p.name || "N/A"),
+        "• Email: " + (p.email || "N/A"),
+        "• Phone: " + (p.phone || "N/A"),
+        "• Organization: " + (p.organization || "N/A"),
+        "• Role: " + (p.role || "N/A"),
+        "• Interest / Segment: " + (p.interest || "N/A"),
+        "• Subject / Challenge: " + (p.subject || "N/A"),
+        "• Location: " + [p.geo_city, p.geo_region, p.geo_country].filter(Boolean).join(", "),
+        "• Source Page: " + (p.page_path || "N/A"),
+        "• Received: " + (p.received_at || formatDate_(new Date())),
+        "",
+        "Enquiry / Message:",
+        p.message || "No message provided."
+      ].join("\n");
 
-    var parentResult = jiraFetch_("/rest/api/3/issue", "post", parentPayload);
-    var parentKey = parentResult.key;
-    log_("createJiraLeadTaskWithSubtasks_", "SUCCESS", "Created Jira Parent Task: " + parentKey);
+      var parentPayload = {
+        fields: {
+          project: { key: projectKey },
+          summary: summary,
+          description: {
+            type: "doc",
+            version: 1,
+            content: [{
+              type: "paragraph",
+              content: [{ type: "text", text: descText }]
+            }]
+          },
+          issuetype: { name: JIRA_CONFIG.TASK_ISSUE_TYPE || "Task" },
+          labels: ["physiomatics-lead", norm_(p.lead_type || "web_lead").replace(/_/g, "-")]
+        }
+      };
 
-    // Create the 8 Subtasks linked to parentKey
-    var createdSubCount = 0;
-    JIRA_LEAD_SUBTASKS.forEach(function(sub) {
-      try {
-        var subPayload = {
-          fields: {
-            project: { key: projectKey },
-            parent: { key: parentKey },
-            summary: sub.summary,
-            description: {
-              type: "doc",
-              version: 1,
-              content: [{
-                type: "paragraph",
-                content: [{ type: "text", text: sub.description }]
-              }]
-            },
-            issuetype: { name: JIRA_CONFIG.SUBTASK_ISSUE_TYPE || "Sub-task" }
-          }
-        };
-        jiraFetch_("/rest/api/3/issue", "post", subPayload);
-        createdSubCount++;
-      } catch (subErr) {
-        log_("createJiraLeadTaskWithSubtasks_", "WARNING", "Subtask creation failed (" + sub.summary + "): " + String(subErr));
-      }
-    });
+      var parentResult = jiraFetchForHost_(host, "/rest/api/3/issue", "post", parentPayload);
+      var parentKey = parentResult.key;
+      if (!firstParentKey) firstParentKey = parentKey;
+      log_("createJiraLeadTaskWithSubtasks_", "SUCCESS", "Created Jira Parent Task on " + host + ": " + parentKey);
 
-    log_("createJiraLeadTaskWithSubtasks_", "SUCCESS", "Parent " + parentKey + " with " + createdSubCount + "/8 subtasks created.");
-    return { parentKey: parentKey, subtasksCount: createdSubCount };
-  } catch (err) {
-    log_("createJiraLeadTaskWithSubtasks_", "ERROR", String(err));
-    return null;
-  }
+      // Create the 8 Subtasks linked to parentKey
+      var createdSubCount = 0;
+      JIRA_LEAD_SUBTASKS.forEach(function(sub) {
+        try {
+          var subPayload = {
+            fields: {
+              project: { key: projectKey },
+              parent: { key: parentKey },
+              summary: sub.summary,
+              description: {
+                type: "doc",
+                version: 1,
+                content: [{
+                  type: "paragraph",
+                  content: [{ type: "text", text: sub.description }]
+                }]
+              },
+              issuetype: { name: JIRA_CONFIG.SUBTASK_ISSUE_TYPE || "Sub-task" }
+            }
+          };
+          jiraFetchForHost_(host, "/rest/api/3/issue", "post", subPayload);
+          createdSubCount++;
+        } catch (subErr) {
+          log_("createJiraLeadTaskWithSubtasks_", "WARNING", "Subtask creation failed on " + host + " (" + sub.summary + "): " + String(subErr));
+        }
+      });
+
+      totalSubCount += createdSubCount;
+      log_("createJiraLeadTaskWithSubtasks_", "SUCCESS", "Host " + host + ": Parent " + parentKey + " with " + createdSubCount + "/8 subtasks created.");
+    } catch (err) {
+      log_("createJiraLeadTaskWithSubtasks_", "ERROR", "Failed on host " + host + ": " + String(err));
+    }
+  });
+
+  return firstParentKey ? { parentKey: firstParentKey, subtasksCount: totalSubCount } : null;
 }
 
 /**
  * Creates scheduled Report Task in Jira for Daily, Weekly, or Monthly trigger digests
+ * Supports syncing across all configured Jira spaces
  */
 function createJiraReportTask_(r) {
   if (!JIRA_CONFIG.ENABLED) return null;
-  var host = getJiraHost_();
+  var hosts = getJiraHosts_();
   var projectKey = getJiraProjectKey_();
-  if (!host || !projectKey) return null;
+  if (!hosts.length || !projectKey) return null;
 
-  try {
-    var summary = "📊 [Physiomatics " + r.interval + " Digest] " + r.period + " — " + r.visitors + " Visitors, " + r.leads + " Leads (" + r.conversionRate + ")";
-    var descText = [
-      "Physiomatics " + r.interval + " Performance Digest",
-      "Period: " + r.period,
-      "Unique Visitors: " + r.visitors,
-      "Total Page Views: " + r.pageViews,
-      "Total Leads: " + r.leads + " (" + r.conversionRate + ")",
-      "Demo / ICP Requests: " + r.demos,
-      "Consultation Requests: " + r.consultations,
-      "Quick Enquiries: " + r.quickEnquiries,
-      "AI Chatbot Inquiries: " + r.chatbotMessages,
-      "Avg Engagement Duration: " + r.avgEngagementSec + "s",
-      "Live Google Sheet: " + (r.sheetUrl || CONFIG.WEBSITE)
-    ].join("\n");
+  var firstReportKey = null;
 
-    var payload = {
-      fields: {
-        project: { key: projectKey },
-        summary: summary,
-        description: {
-          type: "doc",
-          version: 1,
-          content: [{
-            type: "paragraph",
-            content: [{ type: "text", text: descText }]
-          }]
-        },
-        issuetype: { name: JIRA_CONFIG.TASK_ISSUE_TYPE || "Task" },
-        labels: ["physiomatics-report", (r.interval || "daily").toLowerCase() + "-digest"]
-      }
-    };
+  hosts.forEach(function(host) {
+    try {
+      var summary = "📊 [Physiomatics " + r.interval + " Digest] " + r.period + " — " + r.visitors + " Visitors, " + r.leads + " Leads (" + r.conversionRate + ")";
+      var descText = [
+        "Physiomatics " + r.interval + " Performance Digest",
+        "Period: " + r.period,
+        "Unique Visitors: " + r.visitors,
+        "Total Page Views: " + r.pageViews,
+        "Total Leads: " + r.leads + " (" + r.conversionRate + ")",
+        "Demo / ICP Requests: " + r.demos,
+        "Consultation Requests: " + r.consultations,
+        "Quick Enquiries: " + r.quickEnquiries,
+        "AI Chatbot Inquiries: " + r.chatbotMessages,
+        "Avg Engagement Duration: " + r.avgEngagementSec + "s",
+        "Live Google Sheet: " + (r.sheetUrl || CONFIG.WEBSITE)
+      ].join("\n");
 
-    var result = jiraFetch_("/rest/api/3/issue", "post", payload);
-    log_("createJiraReportTask_", "SUCCESS", "Created Jira Report Task: " + result.key);
-    return result.key;
-  } catch (err) {
-    log_("createJiraReportTask_", "ERROR", String(err));
-    return null;
-  }
+      var payload = {
+        fields: {
+          project: { key: projectKey },
+          summary: summary,
+          description: {
+            type: "doc",
+            version: 1,
+            content: [{
+              type: "paragraph",
+              content: [{ type: "text", text: descText }]
+            }]
+          },
+          issuetype: { name: JIRA_CONFIG.TASK_ISSUE_TYPE || "Task" },
+          labels: ["physiomatics-report", (r.interval || "daily").toLowerCase() + "-digest"]
+        }
+      };
+
+      var result = jiraFetchForHost_(host, "/rest/api/3/issue", "post", payload);
+      if (!firstReportKey) firstReportKey = result.key;
+      log_("createJiraReportTask_", "SUCCESS", "Created Jira Report Task on " + host + ": " + result.key);
+    } catch (err) {
+      log_("createJiraReportTask_", "ERROR", "Failed report creation on " + host + ": " + String(err));
+    }
+  });
+
+  return firstReportKey;
 }
 
 /**
