@@ -14,6 +14,7 @@ import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/c
 import { saveLeadToAirtable } from "@/lib/airtable";
 import { createJiraLeadWithSubtasks } from "@/lib/jira";
 import { captureVercelLead } from "@/lib/vercelAnalytics";
+import { recordMeaningfulActivity } from "@/lib/visitorSession";
 import { GoogleCalendarButton } from "@/components/site/GoogleCalendarButton";
 
 export const Route = createFileRoute("/contact")({
@@ -309,6 +310,11 @@ function Contact() {
 
   const updateField = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+    recordMeaningfulActivity({
+      type: "form_interaction",
+      description: "consultation_form",
+      path: "/contact",
+    });
   };
 
   const handleReportUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -373,6 +379,11 @@ function Contact() {
 
     setSubmittedType("enquiry");
     setSubmitted(true);
+    recordMeaningfulActivity({
+      type: "page_view",
+      description: "enquiry_submitted",
+      path: "/contact",
+    });
 
     if (saved) {
       toast.success("Enquiry sent successfully!");
@@ -409,6 +420,11 @@ function Contact() {
     setStep(1);
     setSubmittedType("consultation");
     setSubmitted(true);
+    recordMeaningfulActivity({
+      type: "page_view",
+      description: "consultation_submitted",
+      path: "/contact",
+    });
 
     if (!saved) {
       toast.warning("Saved to WhatsApp. Our server had a brief hiccup — your request is still delivered via WhatsApp.");
