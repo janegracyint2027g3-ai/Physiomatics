@@ -75,12 +75,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── GET: Read comments from YouTube Data API v3 ──────────────────────────────
   if (req.method === "GET") {
     const cookies = parseCookies(req.headers.cookie);
-    const refreshToken = cookies["yt_refresh_token"];
+    const refreshToken =
+      process.env.YOUTUBE_REFRESH_TOKEN ||
+      cookies["yt_refresh_token"] ||
+      (typeof req.headers["x-youtube-refresh-token"] === "string" ? req.headers["x-youtube-refresh-token"] : undefined);
 
     if (!refreshToken) {
       return res.status(401).json({
         error: "Not authenticated",
-        hint: "Visit /api/youtube/auth to authorize YouTube read-only access.",
+        hint: "No refresh token found in server env (YOUTUBE_REFRESH_TOKEN) or browser cookie (yt_refresh_token). Visit /api/youtube/auth or configure YOUTUBE_REFRESH_TOKEN in Vercel settings.",
       });
     }
 
@@ -194,6 +197,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         textOriginal,
       ].join("\n");
 
+      const cleanCommentId = commentId ? String(commentId).replace(/[^a-zA-Z0-9_-]/g, "") : "";
+
+      // ── Deduplication Check: query Jira to see if this comment was already processed ──
+      if (cleanCommentId) {
+        try {
+          const jql = `project = "${jiraProjectKey}" AND (labels = "yt-comment-${cleanCommentId}" OR text ~ "${cleanCommentId}")`;
+          const searchRes = await fetch(
+            `https://${jiraHost}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=1&fields=key,summary`,
+            {
+              headers: { Authorization: authHeader, Accept: "application/json" },
+            }
+          );
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            if (searchData.issues && searchData.issues.length > 0) {
+              const existingIssue = searchData.issues[0];
+              return res.status(200).json({
+                success: true,
+                duplicate: true,
+                issueKey: existingIssue.key,
+                host: jiraHost,
+                message: `Duplicate detected: Jira task ${existingIssue.key} already exists for comment ${commentId}. Task creation skipped.`,
+              });
+            }
+          }
+        } catch (searchErr) {
+          console.warn("[YouTube Comments] Deduplication query warning:", searchErr);
+        }
+      }
+
       // 1. Create Parent Task
       const parentPayload = {
         fields: {
@@ -210,7 +243,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ],
           },
           issuetype: { name: "Task" },
-          labels: ["physiomatics-lead", "youtube-enquiry"],
+          labels: [
+            "physiomatics-lead",
+            "youtube-enquiry",
+            ...(cleanCommentId ? [`yt-comment-${cleanCommentId}`] : []),
+          ],
         },
       };
 

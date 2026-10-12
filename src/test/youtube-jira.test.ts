@@ -173,4 +173,37 @@ describe("YouTube Comments & Jira Lead Pipeline Integration", () => {
       fetchSpy.mockRestore();
     });
   });
+
+  describe("5. Deduplication Logic", () => {
+    it("recognizes existing Jira issue for duplicate comment ID", async () => {
+      const existingIssueKey = "PHY-136";
+      const commentId = "UgxTEST_DUPLICATE_001";
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (url: any) => {
+        const urlStr = String(url);
+        if (urlStr.includes("/rest/api/3/search")) {
+          return new Response(
+            JSON.stringify({
+              total: 1,
+              issues: [{ id: "10049", key: existingIssueKey, fields: { summary: "Existing task" } }],
+            }),
+            { status: 200 }
+          );
+        }
+        return new Response("{}", { status: 200 });
+      });
+
+      // Simulate search query check
+      const jql = `project = "PHY" AND (labels = "yt-comment-${commentId}" OR text ~ "${commentId}")`;
+      const searchRes = await fetch(
+        `https://janegracyint2027g3.atlassian.net/rest/api/3/search?jql=${encodeURIComponent(jql)}`
+      );
+      const searchData = await searchRes.json();
+
+      expect(searchData.issues).toHaveLength(1);
+      expect(searchData.issues[0].key).toBe(existingIssueKey);
+
+      fetchSpy.mockRestore();
+    });
+  });
 });

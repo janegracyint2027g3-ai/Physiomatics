@@ -45,14 +45,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: "OAuth not configured on server." });
   }
 
-  // Read refresh token from the HttpOnly cookie — never from req.body
+  // Read refresh token from server env (persistent) or HttpOnly cookie — never from req.body
   const cookies = parseCookies(req.headers.cookie);
-  const refreshToken = cookies["yt_refresh_token"];
+  const refreshToken =
+    process.env.YOUTUBE_REFRESH_TOKEN ||
+    cookies["yt_refresh_token"] ||
+    (typeof req.headers["x-youtube-refresh-token"] === "string" ? req.headers["x-youtube-refresh-token"] : undefined);
 
   if (!refreshToken) {
     return res.status(401).json({
       error: "Not authenticated",
-      hint: "Visit /api/youtube/auth to authorize YouTube access.",
+      hint: "No refresh token found in server env (YOUTUBE_REFRESH_TOKEN) or browser cookie. Visit /api/youtube/auth to authorize YouTube access.",
     });
   }
 
