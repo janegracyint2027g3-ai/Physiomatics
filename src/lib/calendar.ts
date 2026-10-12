@@ -46,29 +46,6 @@ export function openGoogleCalendarAppointment(source: string = "website_book_but
     console.warn("[Calendar] Analytics error:", err);
   }
 
-  // 2. Look for any existing mounted Google scheduling button and click it to open the native modal
-  const nativeBtn = document.querySelector<HTMLButtonElement>(
-    ".calendar-scheduling-button, [data-calendar-scheduling-target] button, .calendar-scheduling-button-target button"
-  );
-  if (nativeBtn) {
-    nativeBtn.click();
-    return;
-  }
-
-  // 3. Fallback: Open Google Calendar Appointment Scheduling in a centered popup window
-  const width = 720;
-  const height = 820;
-  const left = window.screenX + (window.outerWidth - width) / 2;
-  const top = window.screenY + (window.outerHeight - height) / 2;
-
-  const popup = window.open(
-    GOOGLE_CALENDAR_APPOINTMENT_URL,
-    "GoogleCalendarAppointmentScheduling",
-    `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`
-  );
-
-  if (!popup || popup.closed || typeof popup.closed === "undefined") {
-    // Popup was blocked by browser, open in new tab
-    window.open(GOOGLE_CALENDAR_APPOINTMENT_URL, "_blank", "noopener,noreferrer");
-  }
+  // 2. Always open in a new external tab — never inline on the same page
+  window.open(GOOGLE_CALENDAR_APPOINTMENT_URL, "_blank", "noopener,noreferrer");
 }
