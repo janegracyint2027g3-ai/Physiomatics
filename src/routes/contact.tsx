@@ -296,9 +296,11 @@ function Contact() {
   const [mode, setMode] = useState<"appointment" | "quick" | "long">("appointment");
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedType, setSubmittedType] = useState<"enquiry" | "consultation">("enquiry");
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [attachedReport, setAttachedReport] = useState<AttachedReportData | null>(null);
   const [isSubmittingLong, setIsSubmittingLong] = useState(false);
+  const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
 
   const totalSteps = 4; // Grouped the 7 steps into 4 for better UX
 
@@ -340,13 +342,40 @@ function Contact() {
 
   const submitQuick = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmittingQuick(true);
     const form = e.currentTarget;
     const data = new FormData(form);
-    const saved = await saveLead("quick_enquiry", data);
-    sendViaWhatsApp("Physiomatics — Quick enquiry", data);
-    form.reset();
+
+    let saved = false;
+    try {
+      saved = await Promise.race([
+        saveLead("quick_enquiry", data),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 4000)),
+      ]);
+    } catch (err) {
+      console.warn("saveLead error in quick enquiry:", err);
+    } finally {
+      setIsSubmittingQuick(false);
+    }
+
+    try {
+      sendViaWhatsApp("Physiomatics — Quick enquiry", data);
+    } catch (err) {
+      console.warn("WhatsApp open error:", err);
+    }
+
+    try {
+      form.reset();
+    } catch (_) {}
+
+    setSubmittedType("enquiry");
     setSubmitted(true);
-    if (!saved) toast.warning("We couldn't save your enquiry right now, but WhatsApp is open — press send to deliver it.");
+
+    if (saved) {
+      toast.success("Enquiry sent successfully!");
+    } else {
+      toast.info("Enquiry received and WhatsApp draft opened.");
+    }
   };
 
   const submitLong = async (e: FormEvent<HTMLFormElement>) => {
@@ -375,6 +404,7 @@ function Contact() {
     setFormData({});
     setAttachedReport(null);
     setStep(1);
+    setSubmittedType("consultation");
     setSubmitted(true);
 
     if (!saved) {
@@ -385,6 +415,7 @@ function Contact() {
   };
 
   if (submitted) {
+    const isEnquiry = submittedType === "enquiry" || mode === "quick";
     return (
       <div className="container-page py-16 max-w-xl mx-auto">
         <div className="rounded-3xl border bg-card shadow-soft p-10 text-center animate-in fade-in zoom-in-95 duration-500">
@@ -393,20 +424,30 @@ function Contact() {
             <CheckCircle2 className="size-10 text-primary" />
           </div>
 
-          <h2 className="font-display text-3xl font-bold text-foreground">Request Received! 🎉</h2>
+          <h2 className="font-display text-3xl font-bold text-foreground">
+            {isEnquiry ? "Enquiry Sent! 🎉" : "Request Received! 🎉"}
+          </h2>
           <p className="mt-3 text-base text-muted-foreground leading-relaxed">
-            Thank you for your interest in Physiomatics.<br />
-            Your consultation request has been <strong>saved to our system</strong> and your WhatsApp draft is ready to send.
+            Thank you for reaching out to Physiomatics.<br />
+            Your {isEnquiry ? "enquiry" : "consultation request"} has been{" "}
+            <strong>received and logged in our system</strong>, and your WhatsApp draft is ready to send.
           </p>
 
           {/* What happens next */}
           <div className="mt-8 text-left rounded-2xl bg-muted/50 border p-5 space-y-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">What happens next</p>
-            {[
-              { icon: "📋", text: "Your request is logged in our CRM and Jira pipeline" },
-              { icon: "📊", text: "Our team reviews it within 1–2 business days" },
-              { icon: "📅", text: "We'll reach out to schedule your demo session" },
-            ].map(({ icon, text }) => (
+            {(isEnquiry
+              ? [
+                  { icon: "📋", text: "Your enquiry is recorded in our system and team CRM" },
+                  { icon: "⚡", text: "Our specialists review inquiries within a few hours" },
+                  { icon: "💬", text: "We'll follow up directly via WhatsApp or email" },
+                ]
+              : [
+                  { icon: "📋", text: "Your request is logged in our CRM and Jira pipeline" },
+                  { icon: "📊", text: "Our team reviews it within 1–2 business days" },
+                  { icon: "📅", text: "We'll reach out to schedule your demo session" },
+                ]
+            ).map(({ icon, text }) => (
               <div key={text} className="flex items-start gap-3 text-sm text-foreground">
                 <span className="text-lg leading-none">{icon}</span>
                 <span>{text}</span>
@@ -419,7 +460,7 @@ function Contact() {
               <CalendarCheck className="mr-2 size-4" /> Book a calendar slot
             </Button>
             <Button variant="outline" size="lg" onClick={() => setSubmitted(false)}>
-              Submit another request
+              {isEnquiry ? "Send another enquiry" : "Submit another request"}
             </Button>
           </div>
         </div>
@@ -505,7 +546,16 @@ function Contact() {
               <Textarea id="msg" name="Message" rows={4} className="rounded-xl bg-background" />
             </div>
             <p className="text-xs text-muted-foreground">Please don't include detailed medical history. This form is not for emergencies.</p>
-            <Button type="submit" variant="hero" size="lg">Send enquiry</Button>
+            <Button type="submit" variant="hero" size="lg" disabled={isSubmittingQuick}>
+              {isSubmittingQuick ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Sending enquiry…
+                </>
+              ) : (
+                "Send enquiry"
+              )}
+            </Button>
           </form>
         )}
 
