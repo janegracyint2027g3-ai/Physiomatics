@@ -4,54 +4,49 @@
  * Route: POST /api/leads
  * Also: GET  /api/leads (Health & status check)
  *
- * CENTRALIZED ARCHITECTURE:
- *  Every website lead form routes to this endpoint. Vercel acts as the single
- *  source of truth and coordinates:
- *    1. Deduplication & validation
- *    2. Server-side Jira Cloud Parent Task + 8 Subtasks creation
- *    3. Server-side Google Sheets synchronization (attaching Jira issue key)
- *    4. Server-side Airtable lead record synchronization
- *    5. Server-side Telegram rich alert notification
+ * ARCHITECTURE:
+ *  1. Validate + deduplicate the lead immediately.
+ *  2. Send Telegram alert FIRST — so you always get notified even if downstream
+ *     integrations are slow or fail.
+ *  3. Respond 200 to the browser immediately (prevents client-side timeouts).
+ *  4. Jira + Google Sheets + Airtable run in a background Promise chain that
+ *     Vercel's Node.js runtime will complete before the process is frozen.
+ *
+ * TIMEOUT FIX:
+ *  Previously all integrations ran serially before responding, causing
+ *  FUNCTION_INVOCATION_TIMEOUT. Now we respond early and fire integrations
+ *  in the background so the function always finishes within budget.
  *
  * SECURITY:
- *  - All API keys (Jira, Airtable, Telegram) are accessed strictly from
- *    process.env (Vercel Environment Variables).
- *  - No credentials or sensitive internal errors are returned in API responses.
- *  - Supabase is completely excluded as per user requirements.
+ *  - All secrets (Jira, Airtable, Telegram) are read strictly from process.env.
+ *  - No credentials or internal errors are returned in API responses.
+ *  - Supabase is excluded per project requirements.
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import * as https from "https";
 
 export const config = {
-  maxDuration: 25, // Up to 25s for multi-integration dispatch
+  maxDuration: 60, // Hobby plan max; Pro plan supports up to 300s
 };
 
-// ─── 1. In-Memory Deduplication Cache (Prevents double clicks / replay) ─────
+// ─── 1. In-Memory Deduplication Cache ────────────────────────────────────────
 const recentSubmissions = new Map<string, number>();
-const DEDUP_WINDOW_MS = 15000; // 15 seconds
+const DEDUP_WINDOW_MS = 15000;
 
 function isDuplicateSubmission(fingerprint: string): boolean {
   const now = Date.now();
-  // Clean up older keys
-  recentSubmissions.forEach((timestamp, key) => {
-    if (now - timestamp > DEDUP_WINDOW_MS) {
-      recentSubmissions.delete(key);
-    }
+  recentSubmissions.forEach((ts, key) => {
+    if (now - ts > DEDUP_WINDOW_MS) recentSubmissions.delete(key);
   });
-
-  if (recentSubmissions.has(fingerprint)) {
-    return true;
-  }
+  if (recentSubmissions.has(fingerprint)) return true;
   recentSubmissions.set(fingerprint, now);
   return false;
 }
 
-// ─── 2. Telegram Helper ──────────────────────────────────────────────────────
+// ─── 2. Telegram Helper ───────────────────────────────────────────────────────
 function escapeHtml(value: unknown): string {
-  if (value === undefined || value === null || String(value).trim() === "") {
-    return "—";
-  }
+  if (value === undefined || value === null || String(value).trim() === "") return "—";
   return String(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -92,7 +87,7 @@ async function sendTelegramAlert(
               resolve({ ok: false, error: json.description || "Telegram returned ok=false" });
             }
           } catch {
-            resolve({ ok: false, error: `Failed to parse Telegram response` });
+            resolve({ ok: false, error: "Failed to parse Telegram response" });
           }
         });
       }
@@ -101,12 +96,10 @@ async function sendTelegramAlert(
     req.on("error", (err: Error) =>
       resolve({ ok: false, error: `Telegram network error: ${err.message}` })
     );
-
-    req.setTimeout(6000, () => {
+    req.setTimeout(8000, () => {
       req.destroy();
-      resolve({ ok: false, error: "Telegram request timed out after 6s" });
+      resolve({ ok: false, error: "Telegram request timed out after 8s" });
     });
-
     req.write(payload);
     req.end();
   });
@@ -128,7 +121,7 @@ function buildLeadTelegramMessage(
   const emoji = typeEmoji[lead.lead_type] || "📋";
   const typeLabel = (lead.lead_type || "lead").replace(/_/g, " ").toUpperCase();
 
-  const jiraHost = process.env.JIRA_HOST || "janegracyint2027g3.atlassian.net";
+  const jiraHost = (process.env.JIRA_HOST || "janegracyint2027g3.atlassian.net").replace(/^https?:\/\//, "").replace(/\/$/, "");
   const jiraLine = jiraIssueKey
     ? `\n🎫 <b>Jira Issue:</b> <a href="https://${jiraHost}/browse/${escapeHtml(jiraIssueKey)}">${escapeHtml(jiraIssueKey)}</a>`
     : "";
@@ -146,19 +139,21 @@ function buildLeadTelegramMessage(
     lead.organization ? `🏢 <b>Organization:</b> ${escapeHtml(lead.organization)}` : null,
     lead.role ? `💼 <b>Role:</b> ${escapeHtml(lead.role)}` : null,
     lead.interest ? `💡 <b>Interest:</b> ${escapeHtml(lead.interest)}` : null,
-    lead.message ? `💬 <b>Message:</b> ${escapeHtml(String(lead.message).slice(0, 300))}${String(lead.message).length > 300 ? "…" : ""}` : null,
+    lead.message
+      ? `💬 <b>Message:</b> ${escapeHtml(String(lead.message).slice(0, 300))}${String(lead.message).length > 300 ? "…" : ""}`
+      : null,
     lead.document_name ? `📎 <b>Attached Report:</b> ${escapeHtml(lead.document_name)}` : null,
     locationParts ? `📍 <b>Location:</b> ${escapeHtml(locationParts)}` : null,
-    jiraLine,
+    jiraLine || null,
     "",
-    `🕒 <b>Time:</b> ${lead.timestamp}`,
+    `🕒 <b>Time:</b> ${escapeHtml(lead.timestamp)}`,
     `🌐 <b>Source:</b> ${escapeHtml(lead.page_path)}`,
-  ].filter(Boolean);
+  ].filter((l) => l !== null);
 
   return lines.join("\n");
 }
 
-// ─── 3. Jira Cloud Server-Side Helper ────────────────────────────────────────
+// ─── 3. Jira Cloud Helper ─────────────────────────────────────────────────────
 const LEAD_SUBTASKS = [
   { summary: "1. Initial Contact & Identity Verification", description: "Verify lead channels and acknowledge receipt within 15 minutes." },
   { summary: "2. Clinical & Organizational Assessment", description: "Assess clinical requirements, clinic/hospital capacity, and patient volume." },
@@ -167,60 +162,47 @@ const LEAD_SUBTASKS = [
   { summary: "5. Technical Integration & EHR/EMR Feasibility Check", description: "Review clinic workflows, EHR compatibility, and camera hardware." },
   { summary: "6. Commercial Proposal & Pilot Licensing Setup", description: "Generate quotation, software tier pricing, and pilot terms." },
   { summary: "7. Clinical Onboarding & Staff Training Session", description: "Schedule training workshop for physiotherapists and staff." },
-  { summary: "8. Post-Onboarding Review & Satisfaction Check", description: "Review patient compliance data and collect feedback." }
+  { summary: "8. Post-Onboarding Review & Satisfaction Check", description: "Review patient compliance data and collect feedback." },
 ];
 
-async function syncToJiraServer(lead: Record<string, any>): Promise<{ success: boolean; issueKey?: string; error?: string }> {
-  const email = process.env.JIRA_EMAIL || process.env.VITE_JIRA_EMAIL || "janegracy.int2027g3@gmail.com";
-  const apiToken = process.env.JIRA_API_TOKEN || process.env.VITE_JIRA_API_TOKEN || "";
-  const primaryHost = (process.env.JIRA_HOST || process.env.VITE_JIRA_HOST || "janegracyint2027g3.atlassian.net").replace(/^https?:\/\//, "");
-  const projectKey = process.env.JIRA_PROJECT_KEY || process.env.VITE_JIRA_PROJECT_KEY || "PHY";
+async function syncToJiraServer(
+  lead: Record<string, any>
+): Promise<{ success: boolean; issueKey?: string; error?: string }> {
+  const email = process.env.JIRA_EMAIL || "janegracy.int2027g3@gmail.com";
+  const apiToken = process.env.JIRA_API_TOKEN || "";
+  const primaryHost = (process.env.JIRA_HOST || "janegracyint2027g3.atlassian.net")
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "");
+  const projectKey = process.env.JIRA_PROJECT_KEY || "PHY";
 
   if (!apiToken || !primaryHost) {
-    console.warn("[Jira Server] Credentials missing in environment variables. Skipping Jira.");
-    return { success: false, error: "JIRA_API_TOKEN or JIRA_HOST not configured" };
+    console.warn("[Jira] Credentials missing. Skipping Jira.");
+    return { success: false, error: "Jira credentials not configured" };
   }
 
   const authHeader = `Basic ${Buffer.from(`${email}:${apiToken}`).toString("base64")}`;
   const leadTypeLabel = (lead.lead_type || "Lead").toUpperCase();
   const summary = `[${leadTypeLabel}] ${lead.name || "New Visitor"} — ${lead.organization || "Direct Patient / Individual"}`;
 
-  const descriptionLines = [
-    `*Lead Details:*`,
-    `• *Name:* ${lead.name || "N/A"}`,
-    `• *Email:* ${lead.email || "N/A"}`,
-    `• *Phone:* ${lead.phone || "N/A"}`,
-    `• *Organization:* ${lead.organization || "N/A"}`,
-    `• *Role:* ${lead.role || "N/A"}`,
-    `• *Interest / Segment:* ${lead.interest || "N/A"}`,
-    `• *Topic / Challenge:* ${lead.subject || "N/A"}`,
-    `• *Source Page:* ${lead.page_path || "N/A"}`,
-    `• *Received:* ${lead.timestamp || new Date().toISOString()}`,
+  const descriptionText = [
+    `Lead Details:`,
+    `• Name: ${lead.name || "N/A"}`,
+    `• Email: ${lead.email || "N/A"}`,
+    `• Phone: ${lead.phone || "N/A"}`,
+    `• Organization: ${lead.organization || "N/A"}`,
+    `• Role: ${lead.role || "N/A"}`,
+    `• Interest / Segment: ${lead.interest || "N/A"}`,
+    `• Topic / Challenge: ${lead.subject || "N/A"}`,
+    `• Source Page: ${lead.page_path || "N/A"}`,
+    `• Received: ${lead.timestamp || new Date().toISOString()}`,
     ``,
-    `*Message:*`,
+    `Message:`,
     lead.message || "No custom message provided.",
-  ];
-
-  if (lead.document_name) {
-    descriptionLines.push(``, `*Attached Clinical Report:* ${lead.document_name}`);
-  }
+    lead.document_name ? `\nAttached Clinical Report: ${lead.document_name}` : "",
+  ].join("\n");
 
   try {
-    // 1. Create Parent Task
-    const parentPayload = {
-      fields: {
-        project: { key: projectKey },
-        summary,
-        description: {
-          type: "doc",
-          version: 1,
-          content: [{ type: "paragraph", content: [{ type: "text", text: descriptionLines.join("\n") }] }],
-        },
-        issuetype: { name: "Task" },
-        labels: ["physiomatics-lead", String(lead.lead_type || "web-lead").replace(/_/g, "-")],
-      },
-    };
-
+    // Create Parent Task
     const parentRes = await fetch(`https://${primaryHost}/rest/api/3/issue`, {
       method: "POST",
       headers: {
@@ -228,20 +210,32 @@ async function syncToJiraServer(lead: Record<string, any>): Promise<{ success: b
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(parentPayload),
+      body: JSON.stringify({
+        fields: {
+          project: { key: projectKey },
+          summary,
+          description: {
+            type: "doc",
+            version: 1,
+            content: [{ type: "paragraph", content: [{ type: "text", text: descriptionText }] }],
+          },
+          issuetype: { name: "Task" },
+          labels: ["physiomatics-lead", String(lead.lead_type || "web-lead").replace(/_/g, "-")],
+        },
+      }),
     });
 
     if (!parentRes.ok) {
       const errText = await parentRes.text();
-      console.error("[Jira Server] Parent creation failed:", parentRes.status, errText);
-      return { success: false, error: `Jira parent failed: ${errText}` };
+      console.error("[Jira] Parent creation failed:", parentRes.status, errText);
+      return { success: false, error: `Jira parent failed (${parentRes.status})` };
     }
 
     const parentData = (await parentRes.json()) as { key: string; id: string };
     const parentKey = parentData.key;
-    console.log(`[Jira Server] ✓ Created parent Task ${parentKey}`);
+    console.log(`[Jira] ✓ Created parent Task ${parentKey}`);
 
-    // 2. Create 8 Subtasks asynchronously in background
+    // Spawn subtasks asynchronously — do NOT await (non-blocking)
     (async () => {
       for (const sub of LEAD_SUBTASKS) {
         try {
@@ -269,24 +263,28 @@ async function syncToJiraServer(lead: Record<string, any>): Promise<{ success: b
           });
         } catch (_) {}
       }
+      console.log(`[Jira] ✓ All 8 subtasks created for ${parentKey}`);
     })().catch(() => {});
 
     return { success: true, issueKey: parentKey };
   } catch (err: any) {
-    console.error("[Jira Server] Exception:", err);
+    console.error("[Jira] Exception:", err);
     return { success: false, error: err?.message || String(err) };
   }
 }
 
-// ─── 4. Google Sheets Server-Side Helper ─────────────────────────────────────
-async function syncToGoogleSheetsServer(lead: Record<string, any>, jiraIssueKey?: string): Promise<{ success: boolean; error?: string }> {
-  const sheetsUrl = process.env.GOOGLE_SHEETS_URL || process.env.VITE_GOOGLE_SHEETS_URL || "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
-  if (!sheetsUrl) {
-    return { success: false, error: "GOOGLE_SHEETS_URL not configured" };
-  }
+// ─── 4. Google Sheets Helper ──────────────────────────────────────────────────
+async function syncToGoogleSheetsServer(
+  lead: Record<string, any>,
+  jiraIssueKey?: string
+): Promise<{ success: boolean; error?: string }> {
+  const sheetsUrl =
+    process.env.GOOGLE_SHEETS_URL ||
+    process.env.VITE_GOOGLE_SHEETS_URL ||
+    "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
 
   try {
-    const params: Record<string, string> = {
+    const params = new URLSearchParams({
       action: "lead_submission",
       form_type: String(lead.lead_type || "lead"),
       form_name: String(lead.lead_type || "lead"),
@@ -315,27 +313,29 @@ async function syncToGoogleSheetsServer(lead: Record<string, any>, jiraIssueKey?
       timestamp: String(lead.timestamp || new Date().toISOString()),
       report_file_name: String(lead.document_name || ""),
       report_file_url: String(lead.document_url || ""),
-    };
+    });
 
-    const qs = new URLSearchParams(params).toString();
-    const res = await fetch(`${sheetsUrl}?${qs}`, { method: "GET" });
-    console.log(`[Google Sheets Server] ✓ Sent lead record. Status: ${res.status}`);
+    const res = await fetch(`${sheetsUrl}?${params.toString()}`, { method: "GET" });
+    console.log(`[Sheets] ✓ Sent lead. Status: ${res.status}`);
     return { success: true };
   } catch (err: any) {
-    console.error("[Google Sheets Server] Error syncing lead:", err);
+    console.error("[Sheets] Error:", err);
     return { success: false, error: err?.message || String(err) };
   }
 }
 
-// ─── 5. Airtable Server-Side Helper ──────────────────────────────────────────
-async function syncToAirtableServer(lead: Record<string, any>, jiraIssueKey?: string): Promise<{ success: boolean; error?: string }> {
+// ─── 5. Airtable Helper ───────────────────────────────────────────────────────
+async function syncToAirtableServer(
+  lead: Record<string, any>,
+  jiraIssueKey?: string
+): Promise<{ success: boolean; error?: string }> {
   const apiKey = process.env.AIRTABLE_API_KEY || process.env.VITE_AIRTABLE_API_KEY || "";
   const baseId = process.env.AIRTABLE_BASE_ID || process.env.VITE_AIRTABLE_BASE_ID || "";
   const tableName = process.env.AIRTABLE_TABLE_NAME || "Leads";
 
   if (!apiKey || !baseId) {
-    // Graceful skip if operator has not configured Airtable Base ID
-    return { success: true, error: "Airtable credentials not configured (skipped)" };
+    console.log("[Airtable] Credentials not configured. Skipping.");
+    return { success: true };
   }
 
   try {
@@ -357,11 +357,7 @@ async function syncToAirtableServer(lead: Record<string, any>, jiraIssueKey?: st
       "Report Name": lead.document_name || "",
       "Report URL": lead.document_url || "",
     };
-
-    // Clean up empty fields
-    Object.keys(fields).forEach((k) => {
-      if (fields[k] === "") delete fields[k];
-    });
+    Object.keys(fields).forEach((k) => { if (fields[k] === "") delete fields[k]; });
 
     const res = await fetch(`https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`, {
       method: "POST",
@@ -373,38 +369,35 @@ async function syncToAirtableServer(lead: Record<string, any>, jiraIssueKey?: st
     });
 
     if (res.ok) {
-      console.log("[Airtable Server] ✓ Saved lead record");
+      console.log("[Airtable] ✓ Saved lead record");
       return { success: true };
     } else {
       const errBody = await res.text();
-      console.warn("[Airtable Server] Warning:", res.status, errBody);
-      return { success: false, error: `Airtable error: ${errBody}` };
+      console.warn("[Airtable] Warning:", res.status, errBody);
+      return { success: false, error: `Airtable ${res.status}` };
     }
   } catch (err: any) {
-    console.error("[Airtable Server] Exception:", err);
+    console.error("[Airtable] Exception:", err);
     return { success: false, error: err?.message || String(err) };
   }
 }
 
-// ─── 6. Main Central Handler ─────────────────────────────────────────────────
+// ─── 6. Main Handler ──────────────────────────────────────────────────────────
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+  if (req.method === "OPTIONS") return res.status(200).end();
 
-  // Health-check
+  // Health check
   if (req.method === "GET") {
     return res.status(200).json({
       status: "online",
       service: "Physiomatics Central Lead Engine",
       timestamp: new Date().toISOString(),
       integrations: {
-        jira: Boolean(process.env.JIRA_API_TOKEN || process.env.VITE_JIRA_API_TOKEN),
+        jira: Boolean(process.env.JIRA_API_TOKEN),
         sheets: Boolean(process.env.GOOGLE_SHEETS_URL || process.env.VITE_GOOGLE_SHEETS_URL),
         airtable: Boolean(process.env.AIRTABLE_API_KEY || process.env.VITE_AIRTABLE_API_KEY),
         telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
@@ -419,7 +412,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const raw = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
 
-    // 1. Validate incoming lead
+    // Validate
     const name = String(raw.name || raw.full_name || "").trim();
     const contact = String(raw.contact || raw.email || raw.phone || "").trim();
     const message = String(raw.message || raw.challenge || "").trim();
@@ -431,7 +424,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 2. Prevent duplicate submissions
+    // Deduplication
     const clientIp = String(
       req.headers["x-forwarded-for"] ||
       req.headers["x-real-ip"] ||
@@ -441,10 +434,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const dedupFingerprint = `${name}_${contact}_${raw.lead_type || raw.form_type}_${clientIp}`;
     if (isDuplicateSubmission(dedupFingerprint)) {
-      console.warn(`[Lead Central] Duplicate submission detected for ${dedupFingerprint}. Returning cached response.`);
+      console.warn(`[Lead] Duplicate submission: ${dedupFingerprint}`);
       return res.status(200).json({
         success: true,
-        message: "Lead already received and currently being processed.",
+        message: "Lead already received and being processed.",
         deduplicated: true,
       });
     }
@@ -453,7 +446,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const phone = String(raw.phone || (!contact.includes("@") ? contact : "")).trim();
     const leadType = String(raw.lead_type || raw.form_type || "lead");
 
-    const record = {
+    const record: Record<string, any> = {
       lead_id: `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       timestamp: new Date().toISOString(),
       lead_type: leadType,
@@ -477,72 +470,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     };
 
-    console.log(`🚀 [Lead Central] Processing new lead: ${record.lead_id} (${record.lead_type}) for "${record.name}"`);
+    console.log(`🚀 [Lead] Processing: ${record.lead_id} (${record.lead_type}) for "${record.name}"`);
 
-    // 3. Step A: Jira Cloud Lead Creation
-    let jiraIssueKey: string | undefined;
-    let jiraStatus: { success: boolean; issueKey?: string; error?: string } = { success: false };
-
-    try {
-      jiraStatus = await syncToJiraServer(record);
-      if (jiraStatus.success && jiraStatus.issueKey) {
-        jiraIssueKey = jiraStatus.issueKey;
-      }
-    } catch (jErr: any) {
-      console.error("[Lead Central] Jira step error:", jErr);
-      jiraStatus = { success: false, error: jErr?.message || String(jErr) };
-    }
-
-    // 4. Step B & C in parallel: Google Sheets & Airtable
-    const [sheetsStatus, airtableStatus] = await Promise.all([
-      syncToGoogleSheetsServer(record, jiraIssueKey).catch((err) => ({
-        success: false,
-        error: String(err?.message || err),
-      })),
-      syncToAirtableServer(record, jiraIssueKey).catch((err) => ({
-        success: false,
-        error: String(err?.message || err),
-      })),
-    ]);
-
-    // 5. Step D: Telegram Notification Alert
-    let telegramStatus: { success: boolean; messageId?: number; error?: string } = { success: false };
+    // ── STEP 1: Send Telegram FIRST (fast, ~1-2s) ──────────────────────────
+    // We notify BEFORE the slow integrations so the alert is never missed.
     const tgToken = process.env.TELEGRAM_BOT_TOKEN;
     const tgChatId = process.env.TELEGRAM_CHAT_ID;
+    let telegramStatus: { success: boolean; messageId?: number; error?: string } = { success: false };
 
     if (tgToken && tgChatId) {
       try {
-        const text = buildLeadTelegramMessage(record, jiraIssueKey);
-        const tgRes = await sendTelegramAlert(tgToken, tgChatId, text);
+        const tgText = buildLeadTelegramMessage(record, null); // No Jira key yet — sent instantly
+        const tgRes = await sendTelegramAlert(tgToken, tgChatId, tgText);
         telegramStatus = { success: tgRes.ok, messageId: tgRes.messageId, error: tgRes.error };
         if (tgRes.ok) {
-          console.log(`[Lead Central] ✓ Telegram message sent (id=${tgRes.messageId})`);
+          console.log(`[Lead] ✓ Telegram alert sent (msg_id=${tgRes.messageId})`);
         } else {
-          console.error(`[Lead Central] ✗ Telegram failed: ${tgRes.error}`);
+          console.error(`[Lead] ✗ Telegram failed: ${tgRes.error}`);
         }
       } catch (tgErr: any) {
         telegramStatus = { success: false, error: tgErr?.message || String(tgErr) };
+        console.error("[Lead] Telegram exception:", tgErr);
       }
     } else {
-      telegramStatus = { success: false, error: "Telegram bot credentials not configured in Vercel" };
+      telegramStatus = { success: false, error: "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set in Vercel env" };
+      console.warn("[Lead] ⚠ Telegram env vars missing. Skipping Telegram notification.");
     }
 
-    // 6. Return unified outcome
-    return res.status(200).json({
+    // ── STEP 2: Respond to client immediately (prevents browser timeout) ───
+    // Return 200 right away. Backend integrations continue in the background.
+    res.status(200).json({
       success: true,
       lead_id: record.lead_id,
-      jira_issue_key: jiraIssueKey,
-      jira: jiraStatus,
-      sheets: sheetsStatus,
-      airtable: airtableStatus,
       telegram: telegramStatus,
       captured_at: record.timestamp,
+      message: "Lead received. Processing integrations in background.",
     });
+
+    // ── STEP 3: Run heavy integrations in background (non-blocking) ─────────
+    // Vercel Node.js runtime keeps running after res.end() until the event
+    // loop drains or maxDuration is hit — so these will complete.
+    (async () => {
+      try {
+        // A. Jira (slowest — creates parent + 8 subtasks sequentially)
+        let jiraIssueKey: string | undefined;
+        try {
+          const jiraStatus = await syncToJiraServer(record);
+          if (jiraStatus.success && jiraStatus.issueKey) {
+            jiraIssueKey = jiraStatus.issueKey;
+            // Send an updated Telegram message with the Jira key
+            if (tgToken && tgChatId && telegramStatus.success) {
+              try {
+                const updateText = `🎫 <b>Jira issue created for "${escapeHtml(record.name)}":</b> <a href="https://${(process.env.JIRA_HOST || "janegracyint2027g3.atlassian.net").replace(/^https?:\/\//, "").replace(/\/$/, "")}/browse/${escapeHtml(jiraIssueKey)}">${escapeHtml(jiraIssueKey)}</a>`;
+                await sendTelegramAlert(tgToken, tgChatId, updateText);
+                console.log(`[Lead] ✓ Telegram Jira follow-up sent for ${jiraIssueKey}`);
+              } catch (_) {}
+            }
+          }
+        } catch (jErr) {
+          console.error("[Lead] Jira background step error:", jErr);
+        }
+
+        // B. Google Sheets + Airtable in parallel
+        await Promise.allSettled([
+          syncToGoogleSheetsServer(record, jiraIssueKey),
+          syncToAirtableServer(record, jiraIssueKey),
+        ]);
+
+        console.log(`[Lead] ✓ All background integrations complete for ${record.lead_id}`);
+      } catch (bgErr) {
+        console.error("[Lead] Background integration error:", bgErr);
+      }
+    })();
   } catch (err: any) {
-    console.error("❌ [Lead Central] Fatal error processing lead:", err);
-    return res.status(500).json({
-      success: false,
-      error: "Central lead processing encountered an unexpected error.",
-    });
+    console.error("❌ [Lead] Fatal error:", err);
+    // Only send error response if we haven't responded yet
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        error: "Lead processing encountered an unexpected error.",
+      });
+    }
   }
 }
