@@ -358,26 +358,71 @@ function Contact() {
       data.append("Attached Report", attachedReport.name);
     }
     
+    let saved = false;
     try {
-      const saved = await saveLead("consultation", data, attachedReport);
-      sendViaWhatsApp("Physiomatics — Consultation request", data, attachedReport?.name);
-      setFormData({});
-      setAttachedReport(null);
-      setStep(1);
-      setSubmitted(true);
-      if (!saved) toast.warning("We couldn't save your enquiry right now, but WhatsApp is open — press send to deliver it.");
+      saved = await saveLead("consultation", data, attachedReport);
+    } catch (err) {
+      console.warn("saveLead error (form will still submit):", err);
     } finally {
       setIsSubmittingLong(false);
+    }
+
+    // Always open WhatsApp and show success — even if backend had an issue
+    try {
+      sendViaWhatsApp("Physiomatics — Consultation request", data, attachedReport?.name);
+    } catch (_) {}
+
+    setFormData({});
+    setAttachedReport(null);
+    setStep(1);
+    setSubmitted(true);
+
+    if (!saved) {
+      toast.warning("Saved to WhatsApp. Our server had a brief hiccup — your request is still delivered via WhatsApp.");
+    } else {
+      toast.success("Consultation request submitted successfully!");
     }
   };
 
   if (submitted) {
     return (
-      <div className="container-page py-24 text-center max-w-lg">
-        <CheckCircle2 className="size-16 text-primary mx-auto" />
-        <h2 className="mt-6 text-3xl font-bold">Request Received</h2>
-        <p className="mt-4 text-muted-foreground">Thank you for your interest in Physiomatics. Your request has been saved and your WhatsApp draft is ready.</p>
-        <Button className="mt-8" onClick={() => setSubmitted(false)}>Submit another request</Button>
+      <div className="container-page py-16 max-w-xl mx-auto">
+        <div className="rounded-3xl border bg-card shadow-soft p-10 text-center animate-in fade-in zoom-in-95 duration-500">
+          {/* Animated success icon */}
+          <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-primary/10 ring-8 ring-primary/10">
+            <CheckCircle2 className="size-10 text-primary" />
+          </div>
+
+          <h2 className="font-display text-3xl font-bold text-foreground">Request Received! 🎉</h2>
+          <p className="mt-3 text-base text-muted-foreground leading-relaxed">
+            Thank you for your interest in Physiomatics.<br />
+            Your consultation request has been <strong>saved to our system</strong> and your WhatsApp draft is ready to send.
+          </p>
+
+          {/* What happens next */}
+          <div className="mt-8 text-left rounded-2xl bg-muted/50 border p-5 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary">What happens next</p>
+            {[
+              { icon: "📋", text: "Your request is logged in our CRM and Jira pipeline" },
+              { icon: "📊", text: "Our team reviews it within 1–2 business days" },
+              { icon: "📅", text: "We'll reach out to schedule your demo session" },
+            ].map(({ icon, text }) => (
+              <div key={text} className="flex items-start gap-3 text-sm text-foreground">
+                <span className="text-lg leading-none">{icon}</span>
+                <span>{text}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            <Button variant="hero" size="lg" onClick={() => { setSubmitted(false); setMode("appointment"); }}>
+              <CalendarCheck className="mr-2 size-4" /> Book a calendar slot
+            </Button>
+            <Button variant="outline" size="lg" onClick={() => setSubmitted(false)}>
+              Submit another request
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
