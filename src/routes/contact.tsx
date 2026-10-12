@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,8 +10,6 @@ import { whatsappLink } from "@/lib/site";
 import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus, CalendarCheck, Calendar, Paperclip, FileText, UploadCloud, X, Loader2 } from "lucide-react";
 import { sendToGoogleSheet, uploadReportDocument } from "@/lib/googleSheets";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
-import { saveLeadToAirtable } from "@/lib/airtable";
-import { createJiraLeadWithSubtasks } from "@/lib/jira";
 import { captureVercelLead } from "@/lib/vercelAnalytics";
 import { recordMeaningfulActivity } from "@/lib/visitorSession";
 import { GoogleCalendarButton } from "@/components/site/GoogleCalendarButton";
@@ -78,20 +75,8 @@ async function saveLead(formType: string, data: FormData, attachedFile?: Attache
       console.warn("Report upload to Drive warning:", uploadErr);
     }
   }
-  
-  // 1. Sync to Google Sheets (including report document URL & file name)
-  sendToGoogleSheet({
-    action: "lead_submission",
-    form_name: formType,
-    form_status: "submitted",
-    conversion_name: formType,
-    conversion_value: 1,
-    report_file_name: attachedFile?.name,
-    report_file_url: reportDriveUrl,
-    ...row,
-  }).catch((err) => console.error("Google Sheets sync warning:", err));
 
-  // 1b. Microsoft Clarity event & session recording priority upgrade
+  // Microsoft Clarity event & session recording priority upgrade
   try {
     trackClarityEvent("lead_submission");
     trackClarityEvent(`lead_${formType}`);
@@ -106,8 +91,10 @@ async function saveLead(formType: string, data: FormData, attachedFile?: Attache
   const leadInterest = row.organization_type || "";
   const leadSubject = row.challenge || "";
 
-  // 1c. Sync to Airtable (including report document URL & attachment object)
-  saveLeadToAirtable({
+  // Centralized Lead Processing via Vercel Serverless Backend:
+  // Vercel coordinates server-side Jira (Parent + 8 Subtasks), Google Sheets,
+  // Airtable, and Telegram alert delivery with server-side credentials.
+  const result = await captureVercelLead({
     name: leadName,
     email: leadEmail,
     phone: leadPhone,
@@ -120,48 +107,9 @@ async function saveLead(formType: string, data: FormData, attachedFile?: Attache
     country: row.country,
     document_name: attachedFile?.name,
     document_url: reportDriveUrl,
-  }).catch(() => {});
-
-  // 1d. Sync to Jira (Parent Task + 8 Subtasks + File Attachment uploaded to Jira)
-  const jiraPromise = createJiraLeadWithSubtasks({
-    name: leadName,
-    email: leadEmail,
-    phone: leadPhone,
-    organization: row.organization,
-    role: leadRole,
-    interest: leadInterest,
-    subject: leadSubject,
-    message: row.message,
-    lead_type: formType,
-    country: row.country,
-    document_name: attachedFile?.name,
-    document_url: reportDriveUrl,
-    document_file: attachedFile?.file,
-    document_base64: attachedFile?.base64,
-    document_type: attachedFile?.type,
-  }).catch(() => null);
-
-  // 1e. Sync to Vercel (Web Analytics & Serverless Lead Engine + Telegram Alert)
-  jiraPromise.then((jiraResult) => {
-    captureVercelLead({
-      name: leadName,
-      email: leadEmail,
-      phone: leadPhone,
-      organization: row.organization,
-      role: leadRole,
-      interest: leadInterest,
-      subject: leadSubject,
-      message: row.message,
-      lead_type: formType,
-      country: row.country,
-      jira_issue_key: jiraResult?.issueKey || undefined,
-    }).catch(() => {});
   });
 
-  // 2. Save to Supabase leads table
-  const { error } = await supabase.from("leads").insert(row);
-  if (error) console.error("Failed to save enquiry to Supabase:", error.message);
-  return !error;
+  return result.success;
 }
 
 function sendViaWhatsApp(title: string, data: FormData, reportName?: string, reportUrl?: string) {

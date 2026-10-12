@@ -133,19 +133,9 @@ export async function sendToGoogleSheet(payload: SheetPayload): Promise<boolean>
     console.error("[Sheets] ✗ primary failed:", err);
   }
 
-  // Also forward to Vercel Web Analytics & Vercel Lead Automation
+  // Forward non-lead UI engagement events to Vercel Web Analytics
   try {
-    const isLead =
-      payload.form_status === "submitted" ||
-      payload.action === "lead_submission" ||
-      payload.action === "icp_lead" ||
-      payload.form_type === "icp_lead" ||
-      payload.form_type === "quick_enquiry" ||
-      payload.form_type === "consultation";
-
-    if (isLead) {
-      captureVercelLead(baseParams).catch(() => {});
-    } else if (payload.action === "click") {
+    if (payload.action === "click") {
       trackVercelEvent("cta_click", {
         label: String(payload.label || payload.element_text || "button"),
         path: baseParams.page_path || "/",

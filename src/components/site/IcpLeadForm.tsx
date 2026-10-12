@@ -1,7 +1,7 @@
 /**
  * IcpLeadForm – compact inline lead capture used in ICP page sidebars.
- * Saves to Google Sheets (fire-and-forget) and Supabase `leads` table, then
- * opens a WhatsApp pre-filled message so the visitor can send with one tap.
+ * Centralized through Vercel Serverless Lead Engine (/api/leads) which
+ * coordinates Jira, Google Sheets, Airtable, and Telegram delivery.
  */
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
@@ -9,12 +9,8 @@ import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
-import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { whatsappLink } from "@/lib/site";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
-import { saveLeadToAirtable } from "@/lib/airtable";
-import { createJiraLeadWithSubtasks } from "@/lib/jira";
 import { captureVercelLead } from "@/lib/vercelAnalytics";
 
 interface IcpLeadFormProps {
@@ -38,24 +34,7 @@ export function IcpLeadForm({
     if (!name.trim() || !contact.trim()) return;
     setLoading(true);
 
-    const payload = {
-      form_type: "icp_lead",
-      full_name: name.trim(),
-      contact: contact.trim(),
-      organization_type: segment,
-    };
-
-    // 1. Google Sheets (fire-and-forget)
-    sendToGoogleSheet({
-      action: "icp_lead",
-      form_name: "icp_lead",
-      form_status: "submitted",
-      conversion_name: "demo_request",
-      conversion_value: 1,
-      ...payload,
-    }).catch((err) => console.error("IcpLeadForm Sheets error:", err));
-
-    // 1b. Microsoft Clarity event & session recording priority upgrade
+    // 1. Microsoft Clarity event & session recording priority upgrade
     try {
       trackClarityEvent("lead_submission");
       trackClarityEvent("demo_request");
@@ -63,29 +42,11 @@ export function IcpLeadForm({
       upgradeClaritySession(`demo_${segment}`);
     } catch (_) {}
 
-    // 1c. Sync to Airtable
-    saveLeadToAirtable({
-      name: name.trim(),
-      phone: contact.trim(),
-      organization: segment,
-      interest: segment,
-      lead_type: "demo_request",
-    }).catch(() => {});
-
-    // 1d. Sync to Jira (Parent Task + 8 Subtasks)
-    const jiraPromise = createJiraLeadWithSubtasks({
-      name: name.trim(),
-      phone: contact.trim().includes("@") ? undefined : contact.trim(),
-      email: contact.trim().includes("@") ? contact.trim() : undefined,
-      organization: segment,
-      interest: segment,
-      lead_type: "demo_request",
-      subject: `Demo request for ${segment}`,
-    }).catch(() => null);
-
-    // 1e. Sync to Vercel (Web Analytics & Serverless Lead Engine + Telegram Alert)
-    jiraPromise.then((jiraResult) => {
-      captureVercelLead({
+    // 2. Centralized Lead Processing via Vercel:
+    // Dispatches single request to /api/leads which coordinates Jira,
+    // Google Sheets, Airtable, and Telegram server-side.
+    try {
+      await captureVercelLead({
         name: name.trim(),
         phone: contact.trim().includes("@") ? undefined : contact.trim(),
         email: contact.trim().includes("@") ? contact.trim() : undefined,
@@ -93,13 +54,10 @@ export function IcpLeadForm({
         interest: segment,
         lead_type: "demo_request",
         subject: `Demo request for ${segment}`,
-        jira_issue_key: jiraResult?.issueKey || undefined,
-      }).catch(() => {});
-    });
-
-    // 2. Supabase
-    const { error } = await supabase.from("leads").insert(payload);
-    if (error) console.error("IcpLeadForm Supabase error:", error.message);
+      });
+    } catch (leadErr) {
+      console.warn("[IcpLeadForm] Vercel lead engine notice:", leadErr);
+    }
 
     // 3. WhatsApp handoff
     const waMsg =
@@ -116,18 +74,14 @@ export function IcpLeadForm({
 
   if (done) {
     return (
-      <div className="flex flex-col items-center gap-3 py-6 text-center">
-        <CheckCircle2 className="size-10 text-primary" />
-        <p className="font-semibold">We've received your request!</p>
+      <div className="rounded-2xl border bg-card p-6 text-center space-y-3">
+        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10">
+          <CheckCircle2 className="size-6 text-primary" />
+        </div>
+        <h4 className="font-semibold text-base">Request Received!</h4>
         <p className="text-xs text-muted-foreground">
-          Complete the WhatsApp message that just opened to confirm your demo.
+          Check WhatsApp to send your pre-filled message. Our team will get back to you shortly.
         </p>
-        <button
-          className="mt-2 text-xs underline text-muted-foreground hover:text-primary transition-colors"
-          onClick={() => { setDone(false); setName(""); setContact(""); }}
-        >
-          Submit another
-        </button>
       </div>
     );
   }
@@ -135,37 +89,41 @@ export function IcpLeadForm({
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
       <div className="grid gap-1.5">
-        <Label htmlFor={`icp-name-${segment}`}>Your name *</Label>
+        <Label htmlFor={`icp-name-${segment}`}>Your name</Label>
         <Input
           id={`icp-name-${segment}`}
-          placeholder="e.g. Dr. Priya Nair"
+          required
+          placeholder="Dr. Sarah / Coach Mike"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          required
-          className="h-10 rounded-xl bg-background text-sm"
+          className="rounded-xl"
         />
       </div>
+
       <div className="grid gap-1.5">
-        <Label htmlFor={`icp-contact-${segment}`}>Email or phone *</Label>
+        <Label htmlFor={`icp-contact-${segment}`}>Email or phone</Label>
         <Input
           id={`icp-contact-${segment}`}
-          placeholder="email or +91 …"
+          required
+          placeholder="sarah@clinic.com or +91 98765 43210"
           value={contact}
           onChange={(e) => setContact(e.target.value)}
-          required
-          className="h-10 rounded-xl bg-background text-sm"
+          className="rounded-xl"
         />
       </div>
+
       <Button
         type="submit"
         variant="hero"
-        className="w-full"
+        size="lg"
         disabled={loading}
+        className="w-full rounded-xl"
       >
         {loading ? "Sending…" : ctaLabel}
       </Button>
-      <p className="text-[10px] text-muted-foreground text-center leading-tight">
-        No spam. Your info is stored securely and only used to schedule your demo.
+
+      <p className="text-[11px] text-muted-foreground text-center">
+        No credit card required. Free 30-min setup.
       </p>
     </form>
   );

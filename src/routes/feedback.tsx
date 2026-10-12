@@ -16,8 +16,7 @@ export const Route = createFileRoute("/feedback")({
   component: FeedbackPage,
 });
 
-import { sendToGoogleSheet } from "@/lib/googleSheets";
-import { supabase } from "@/integrations/supabase/client";
+import { captureVercelLead } from "@/lib/vercelAnalytics";
 import { trackClarityEvent, setClarityTag } from "@/lib/clarity";
 
 function FeedbackPage() {
@@ -31,7 +30,15 @@ function FeedbackPage() {
 
     setIsSubmitting(true);
     
-    // 1. Sync to Google Sheet
+    // 1. Centralized lead/feedback routing via Vercel
+    captureVercelLead({
+      lead_type: "feedback",
+      message: feedback.trim(),
+      interest: category,
+      subject: `User Feedback: ${category}`,
+    }).catch(() => {});
+
+    // 2. Log to Google Sheets
     sendToGoogleSheet({
       action: "user_feedback",
       form_type: "feedback",
@@ -45,16 +52,6 @@ function FeedbackPage() {
       trackClarityEvent("feedback_submitted");
       setClarityTag("feedback_category", category);
     } catch (_) {}
-
-    // 2. Sync to Supabase feedback table if available
-    try {
-      await supabase.from("feedback").insert({
-        category,
-        message: feedback.trim(),
-      } as any);
-    } catch (e) {
-      // ignore table if RLS or schema doesn't exist
-    }
 
     setIsSubmitting(false);
     setFeedback("");

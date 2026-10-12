@@ -62,10 +62,22 @@ export function trackVercelEvent(
   }
 }
 
+export interface VercelLeadResult {
+  success: boolean;
+  lead_id?: string;
+  jira_issue_key?: string;
+  jira?: { success: boolean; issueKey?: string; error?: string };
+  sheets?: { success: boolean; error?: string };
+  airtable?: { success: boolean; error?: string };
+  telegram?: { success: boolean; messageId?: number; error?: string };
+  error?: string;
+}
+
 /**
- * Capture a new lead across Vercel Web Analytics and Vercel Serverless API
+ * Centralized Lead Capture: routes lead to Vercel Serverless Lead Engine (/api/leads)
+ * which coordinates server-side Jira, Google Sheets, Airtable, and Telegram delivery.
  */
-export async function captureVercelLead(lead: VercelLeadData): Promise<boolean> {
+export async function captureVercelLead(lead: VercelLeadData): Promise<VercelLeadResult> {
   const leadType = String(lead.lead_type || lead.form_type || "lead");
 
   // 1. Log custom event in Vercel Web Analytics
@@ -80,19 +92,18 @@ export async function captureVercelLead(lead: VercelLeadData): Promise<boolean> 
       has_organization: Boolean(lead.organization),
     });
 
-    // Also track specific conversion type
     trackVercelEvent(`conversion_${leadType}`, {
       page: String(lead.page_path || window?.location?.pathname || "/"),
       segment: String(lead.interest || lead.organization_type || "general"),
     });
   } catch (_) {}
 
-  // 2. Dispatch to Vercel Serverless Function (/api/leads)
+  // 2. Dispatch to Central Vercel Serverless Function (/api/leads)
   try {
     const payload = {
       ...lead,
       captured_at: new Date().toISOString(),
-      source_platform: "vercel_frontend",
+      source_platform: "vercel_central_engine",
       page_url: typeof window !== "undefined" ? window.location.href : "",
       user_agent: typeof navigator !== "undefined" ? navigator.userAgent : "",
     };
@@ -104,12 +115,16 @@ export async function captureVercelLead(lead: VercelLeadData): Promise<boolean> 
     });
 
     if (res.ok) {
-      console.info("[Vercel Lead Engine] ✓ Lead recorded in Vercel Automation.");
-      return true;
+      const data = await res.json();
+      console.info("[Vercel Central Lead Engine] ✓ Processed lead:", data.lead_id);
+      return data;
+    } else {
+      const errText = await res.text();
+      console.warn("[Vercel Central Lead Engine] Server returned error:", res.status, errText);
+      return { success: false, error: errText };
     }
-  } catch (err) {
-    console.warn("[Vercel Lead Engine] API route notice:", err);
+  } catch (err: any) {
+    console.error("[Vercel Central Lead Engine] Network error:", err);
+    return { success: false, error: err?.message || String(err) };
   }
-
-  return true;
 }
