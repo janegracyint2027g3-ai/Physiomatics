@@ -74,6 +74,30 @@ var JIRA_CONFIG = {
   SUBTASK_ISSUE_TYPE: "Sub-task"
 };
 
+// ── YouTube Auto-Sync Configuration ──────────────────────────────────────────
+// These credentials match your .env file. The refresh token never expires unless
+// you revoke access in Google Account → Security → Third-party apps.
+var YOUTUBE_CONFIG = {
+  // ⚠️  Store real values in Apps Script → Project Settings → Script Properties
+  // Keys: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN
+  CLIENT_ID:     PropertiesService.getScriptProperties().getProperty("YOUTUBE_CLIENT_ID")     || "",
+  CLIENT_SECRET: PropertiesService.getScriptProperties().getProperty("YOUTUBE_CLIENT_SECRET") || "",
+  // Refresh token stored in Script Properties (key: YOUTUBE_REFRESH_TOKEN)
+  // Set it there so you can rotate without editing code.
+  REFRESH_TOKEN: PropertiesService.getScriptProperties().getProperty("YOUTUBE_REFRESH_TOKEN") || "",
+  // Comma-separated list of video IDs to monitor for new comments
+  MONITOR_VIDEO_IDS: "eRGcQo4qWiM",
+  // How many comments to fetch per poll (max 100)
+  MAX_RESULTS: 100,
+  // Auto-sync trigger interval in hours (1 = every hour, 0.25 = every 15 min)
+  TRIGGER_HOURS: 1
+};
+
+function getYouTubeRefreshToken_() {
+  var fromProps = PropertiesService.getScriptProperties().getProperty("YOUTUBE_REFRESH_TOKEN");
+  return fromProps || YOUTUBE_CONFIG.REFRESH_TOKEN || "";
+}
+
 function getJiraApiToken_() {
   return (JIRA_CONFIG.API_TOKEN && JIRA_CONFIG.API_TOKEN.indexOf("PASTE_") !== 0)
     ? JIRA_CONFIG.API_TOKEN
@@ -139,7 +163,7 @@ var TAB_HEADERS = {
     "received_at", "lead_id", "visitor_id", "session_id", "name", "email",
     "phone", "organization", "role", "interest", "subject", "message",
     "page_path", "lead_source", "lead_status", "follow_up_status",
-    "source_environment"
+    "source_environment", "report_file_name", "report_file_url"
   ],
   Feedback: [
     "received_at", "feedback_id", "visitor_id", "session_id", "name", "email",
@@ -219,7 +243,27 @@ var TAB_HEADERS = {
     "Quick_Enquiries", "Consultations", "Chatbot_Messages", "Feedback_Count",
     "Total_Leads", "Conversion_Rate", "Avg_Engagement_Sec"
   ],
-  System_Logs: ["Timestamp", "Action", "Status", "Details"]
+  System_Logs: ["Timestamp", "Action", "Status", "Details"],
+  // ── YouTube raw data tab ──────────────────────────────────────────────────
+  YouTube_Raw_Leads: [
+    "synced_at",          // timestamp when synced to this sheet
+    "comment_id",         // YouTube comment thread ID (unique)
+    "video_id",           // YouTube video ID
+    "video_title",        // YouTube video title
+    "video_url",          // Full YouTube watch URL
+    "channel",            // e.g. @JaneGracyDavid
+    "author_name",        // commenter display name
+    "author_channel_url", // link to commenter's channel
+    "comment_text",       // top-level comment
+    "reply_text",         // concatenated replies (pipe-separated)
+    "published_at",       // when the comment was posted on YouTube
+    "like_count",         // likes on the comment
+    "is_enquiry",         // TRUE / FALSE intent classification
+    "lead_source",        // always "youtube_comment"
+    "jira_key_primary",   // Jira issue key on primary host
+    "jira_key_secondary", // Jira issue key on secondary host
+    "sync_status"         // "new" | "duplicate" | "error"
+  ]
 };
 
 /* ----------------------------- INITIALIZATION ----------------------------- */
@@ -312,10 +356,44 @@ function doPost(e) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       throw new Error("Invalid JSON payload.");
     }
+    // ── YouTube Raw Lead ingestion ──────────────────────────────────────────
+    if (payload.action === "youtube_lead") {
+      return saveYouTubeLead_(payload);
+    }
+    // ── Upload Clinical Report to Google Drive ──────────────────────────────
+    if (payload.action === "upload_report") {
+      var driveUrl = saveFileToDrive_(payload.file_name, payload.file_type, payload.file_base64);
+      return json_({ success: true, fileUrl: driveUrl, fileName: payload.file_name });
+    }
     return processEvent_(payload);
   } catch (err) {
     log_("doPost", "ERROR", err && err.stack ? err.stack : String(err));
     return json_({ success: false, message: String(err.message || err) });
+  }
+}
+
+/**
+ * Saves uploaded document (base64) to Google Drive in folder 'Physiomatics Clinical Reports'
+ * and returns the shareable viewing URL.
+ */
+function saveFileToDrive_(fileName, fileType, fileBase64) {
+  if (!fileBase64) return "";
+  try {
+    var raw = String(fileBase64);
+    var commaIdx = raw.indexOf(",");
+    if (commaIdx !== -1) raw = raw.substring(commaIdx + 1);
+    var decoded = Utilities.base64Decode(raw);
+    var blob = Utilities.newBlob(decoded, fileType || "application/octet-stream", fileName || "Physiomatics_Report.pdf");
+    var folderName = "Physiomatics Clinical Reports";
+    var folders = DriveApp.getFoldersByName(folderName);
+    var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
+    var file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    log_("saveFileToDrive_", "SUCCESS", "Saved report to Google Drive: " + file.getName() + " -> " + file.getUrl());
+    return file.getUrl();
+  } catch (err) {
+    log_("saveFileToDrive_", "WARN", "Drive upload warning: " + String(err));
+    return "";
   }
 }
 
@@ -582,6 +660,77 @@ function classifySubmission_(p) {
   return "";
 }
 
+/* ──────────────── YOUTUBE RAW LEAD STORAGE ─────────────────────────────── */
+
+/**
+ * Appends a single YouTube comment lead to the YouTube_Raw_Leads sheet.
+ * Called directly from doPost when action === "youtube_lead".
+ *
+ * Expected payload fields:
+ *   comment_id, video_id, video_title, channel, author_name,
+ *   author_channel_url, comment_text, reply_text, published_at,
+ *   like_count, is_enquiry, jira_key_primary, jira_key_secondary, sync_status
+ */
+function saveYouTubeLead_(payload) {
+  try {
+    var ss = getSpreadsheet();
+    var sheet = getTab(ss, "YouTube_Raw_Leads");
+    var p = payload || {};
+
+    // Deduplication: skip if same comment_id already exists in column B
+    if (p.comment_id) {
+      var lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        var existingIds = sheet.getRange(2, 2, lastRow - 1, 1).getValues().map(function(r) { return String(r[0]).trim(); });
+        if (existingIds.indexOf(String(p.comment_id).trim()) !== -1) {
+          return json_({ success: true, skipped: true, reason: "duplicate_comment_id", comment_id: p.comment_id });
+        }
+      }
+    }
+
+    var videoId = String(p.video_id || "");
+    var videoUrl = videoId ? "https://www.youtube.com/watch?v=" + videoId : String(p.video_url || "");
+
+    appendValues_(sheet, [
+      new Date().toISOString(),                       // synced_at
+      String(p.comment_id || ""),                     // comment_id
+      videoId,                                        // video_id
+      String(p.video_title || ""),                    // video_title
+      videoUrl,                                       // video_url
+      String(p.channel || ""),                        // channel
+      String(p.author_name || ""),                    // author_name
+      String(p.author_channel_url || ""),             // author_channel_url
+      String(p.comment_text || ""),                   // comment_text
+      String(p.reply_text || ""),                     // reply_text
+      String(p.published_at || ""),                   // published_at
+      String(p.like_count !== undefined ? p.like_count : ""),  // like_count
+      p.is_enquiry ? "TRUE" : "FALSE",                // is_enquiry
+      "youtube_comment",                              // lead_source
+      String(p.jira_key_primary || ""),               // jira_key_primary
+      String(p.jira_key_secondary || ""),             // jira_key_secondary
+      String(p.sync_status || "new")                  // sync_status
+    ]);
+
+    log_("saveYouTubeLead_", "SUCCESS", "YouTube lead stored: " + p.comment_id + " by " + p.author_name);
+    return json_({ success: true, stored: true, comment_id: p.comment_id, author: p.author_name });
+  } catch (err) {
+    log_("saveYouTubeLead_", "ERROR", String(err.message || err));
+    return json_({ success: false, message: String(err.message || err) });
+  }
+}
+
+/**
+ * Manual trigger: Run this from the Apps Script editor to bulk-load any
+ * YouTube leads that were previously synced to Jira but not yet in Sheets.
+ * In practice the sync script will call saveYouTubeLead_ via HTTP POST.
+ */
+function INITIALIZE_YOUTUBE_RAW_LEADS_TAB() {
+  var ss = getSpreadsheet();
+  getTab(ss, "YouTube_Raw_Leads");
+  log_("INITIALIZE_YOUTUBE_RAW_LEADS_TAB", "SUCCESS", "YouTube_Raw_Leads tab ready.");
+  return "YouTube_Raw_Leads tab initialized.";
+}
+
 /* ---------------------------- LEAD ROUTING -------------------------------- */
 
 function saveDemo_(ss, p) {
@@ -611,14 +760,22 @@ function saveQuickEnquiry_(ss, p) {
 function saveConsultation_(ss, p) {
   p.lead_id  = str_(first_(p, ["lead_id", "leadId"], "lead_" + Utilities.getUuid()));
   p.lead_type = "consultation_request";
+
+  // If a base64 file was posted directly with the consultation and not yet saved to Drive, save it now
+  if (p.report_file_base64 && !p.report_file_url) {
+    p.report_file_url = saveFileToDrive_(p.report_file_name, p.report_file_type, p.report_file_base64);
+  }
+
   appendValues_(getTab(ss, "Consultation_Requests"), [
     p.received_at, p.lead_id, p.visitor_id, p.session_id, p.name, p.email,
     p.phone, p.organization, p.role, p.interest, p.subject, p.message,
     p.page_path, p.lead_source, p.lead_status, p.follow_up_status,
-    p.source_environment
+    p.source_environment,
+    p.report_file_name || "",
+    p.report_file_url || ""
   ]);
   saveMasterLead_(ss, p);
-  log_("saveConsultation_", "SUCCESS", "Consultation request stored: " + p.lead_id);
+  log_("saveConsultation_", "SUCCESS", "Consultation request stored: " + p.lead_id + (p.report_file_url ? " [with report: " + p.report_file_name + "]" : ""));
 }
 
 function saveFeedback_(ss, p) {
@@ -1107,14 +1264,16 @@ function monthlyReport() { sendPeriodicExecutiveDigest("Monthly"); }
 function setupPhysiomaticsTriggers() {
   ScriptApp.getProjectTriggers().forEach(function (trigger) {
     var fn = trigger.getHandlerFunction();
-    if (["dailyReport", "weeklyReport", "monthlyReport"].indexOf(fn) >= 0) {
+    if (["dailyReport", "weeklyReport", "monthlyReport", "SYNC_YOUTUBE_COMMENTS_AUTO"].indexOf(fn) >= 0) {
       ScriptApp.deleteTrigger(trigger);
     }
   });
   ScriptApp.newTrigger("dailyReport").timeBased().everyDays(1).atHour(21).create();
   ScriptApp.newTrigger("weeklyReport").timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(9).create();
   ScriptApp.newTrigger("monthlyReport").timeBased().onMonthDay(1).atHour(9).create();
-  log_("setupPhysiomaticsTriggers", "SUCCESS", "Triggers installed.");
+  // Automatically poll YouTube comments every hour for new leads
+  ScriptApp.newTrigger("SYNC_YOUTUBE_COMMENTS_AUTO").timeBased().everyHours(1).create();
+  log_("setupPhysiomaticsTriggers", "SUCCESS", "All triggers installed including YouTube hourly auto-sync.");
 }
 
 /* ---------------------------- AGGREGATION --------------------------------- */
@@ -1360,6 +1519,11 @@ function onOpen() {
     .addItem("Sync Google Sheet leads to Airtable",      "SYNC_ALL_SHEET_DATA_TO_AIRTABLE")
     .addItem("Sync Google Sheet leads to Jira",          "SYNC_ALL_SHEET_LEADS_TO_JIRA")
     .addSeparator()
+    .addItem("Sync YouTube comments now (manual)",       "SYNC_YOUTUBE_COMMENTS_AUTO")
+    .addItem("Enable YouTube auto-sync (hourly trigger)","SETUP_YOUTUBE_AUTO_SYNC_TRIGGER")
+    .addItem("Disable YouTube auto-sync",                "DELETE_YOUTUBE_AUTO_SYNC_TRIGGER")
+    .addItem("Initialize YouTube raw leads tab",         "INITIALIZE_YOUTUBE_RAW_LEADS_TAB")
+    .addSeparator()
     .addItem("Test: ICP demo request",                   "TEST_ICPDemoRequest")
     .addItem("Test: Quick enquiry",                      "TEST_QuickEnquiry")
     .addItem("Test: Consultation request",               "TEST_ConsultationRequest")
@@ -1372,7 +1536,7 @@ function onOpen() {
     .addItem("Test: Jira lead task with 8 subtasks",     "TEST_JiraLeadWithSubtasks")
     .addItem("Test: Jira daily report task",             "TEST_JiraDailyReportTask")
     .addSeparator()
-    .addItem("Enable scheduled reports",                 "setupPhysiomaticsTriggers")
+    .addItem("Enable scheduled reports (all triggers)",  "setupPhysiomaticsTriggers")
     .addToUi();
 }
 
@@ -1820,3 +1984,445 @@ function TEST_JiraDailyReportTask() {
   if (!reportKey) throw new Error("Failed to create Jira daily report task. Check JIRA_HOST and JIRA_PROJECT_KEY.");
   return "Successfully created Jira Daily Report task: " + reportKey;
 }
+
+/* ============================================================================
+   YOUTUBE AUTO-SYNC ENGINE
+   ----------------------------------------------------------------------------
+   Periodically and automatically:
+   1. Refreshes OAuth 2.0 access token using YOUTUBE_CONFIG.REFRESH_TOKEN.
+   2. Fetches comment threads & replies from monitored YouTube video(s).
+   3. Detects patient/client enquiries & booking intent.
+   4. Avoids duplicates in YouTube_Raw_Leads sheet and Jira.
+   5. Automatically creates Jira Parent Task + 8 Subtasks on both Jira hosts.
+   6. Saves the raw lead data directly into Google Sheets ("YouTube_Raw_Leads").
+   7. Operates 24/7 in Google Cloud via Apps Script time-driven triggers.
+   ============================================================================ */
+
+/**
+ * Classifies comment text for sales, clinic, consultation, or pricing intent.
+ */
+function ytIsEnquiry_(text) {
+  if (!text || !String(text).trim()) return false;
+  var patterns = [
+    /\b(price|pricing|cost|fee|charge|how much|quote)\b/i,
+    /\b(demo|appointment|consultation|consult|book|booking|session|trial)\b/i,
+    /\b(contact|email|phone|whatsapp|reach out|call me|message me)\b/i,
+    /\b(clinic|hospital|physio|physiotherapist|patient|treatment|therapy|rehab)\b/i,
+    /\b(license|licensing|subscription|plan|software|features|integration)\b/i,
+    /\b(pain|injury|exercise|posture|biomechanics|assessment)\b/i,
+    /\b(help|interested|available|how to buy|where to get)\b/i,
+    /\b(url|link|website|web|portal|app|info|information|details|share|send|access)\b/i
+  ];
+  return patterns.some(function(p) { return p.test(text); });
+}
+
+/**
+ * Obtains a fresh YouTube Data API v3 OAuth Access Token using the refresh token.
+ */
+function getYouTubeAccessToken_() {
+  var clientId = YOUTUBE_CONFIG.CLIENT_ID;
+  var clientSecret = YOUTUBE_CONFIG.CLIENT_SECRET;
+  var refreshToken = getYouTubeRefreshToken_();
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error("Missing YouTube OAuth configuration (CLIENT_ID, CLIENT_SECRET, REFRESH_TOKEN).");
+  }
+
+  var tokenUrl = "https://oauth2.googleapis.com/token";
+  var payload = {
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type: "refresh_token"
+  };
+
+  var res = UrlFetchApp.fetch(tokenUrl, {
+    method: "post",
+    payload: payload,
+    muteHttpExceptions: true
+  });
+
+  var code = res.getResponseCode();
+  var body = res.getContentText();
+  if (code < 200 || code >= 300) {
+    throw new Error("Failed to refresh YouTube access token (HTTP " + code + "): " + body);
+  }
+
+  var json = JSON.parse(body);
+  return json.access_token;
+}
+
+/**
+ * Fetches comment threads (including replies) for a YouTube video.
+ * Checks both published comments and held-for-review comments so leads containing
+ * phone numbers, emails, or contact keywords are never dropped by YouTube's filters.
+ */
+function fetchYouTubeComments_(token, videoId, maxResults) {
+  maxResults = maxResults || YOUTUBE_CONFIG.MAX_RESULTS || 100;
+  var list = [];
+  var seenIds = [];
+
+  var endpoints = [
+    "https://www.googleapis.com/youtube/v3/commentThreads?part=snippet,replies&videoId=" + encodeURIComponent(videoId) + "&maxResults=" + maxResults + "&textFormat=plainText",
+    "https://www.googleapis.com/youtube/v3/commentThreads?part=snippet,replies&videoId=" + encodeURIComponent(videoId) + "&maxResults=" + maxResults + "&moderationStatus=heldForReview&textFormat=plainText"
+  ];
+
+  endpoints.forEach(function(url) {
+    try {
+      var res = UrlFetchApp.fetch(url, {
+        method: "get",
+        headers: { "Authorization": "Bearer " + token },
+        muteHttpExceptions: true
+      });
+
+      if (res.getResponseCode() !== 200) return;
+
+      var data = JSON.parse(res.getContentText() || "{}");
+      var items = data.items || [];
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var top = (item.snippet && item.snippet.topLevelComment && item.snippet.topLevelComment.snippet) ? item.snippet.topLevelComment.snippet : {};
+        var commentId = item.id || (item.snippet && item.snippet.topLevelComment ? item.snippet.topLevelComment.id : "");
+        if (!commentId || seenIds.indexOf(commentId) !== -1) continue;
+        seenIds.push(commentId);
+
+        // Auto-approve if held for review so it's not hidden
+        if (top.moderationStatus === "heldForReview") {
+          try {
+            UrlFetchApp.fetch("https://www.googleapis.com/youtube/v3/comments/setModerationStatus?id=" + encodeURIComponent(commentId) + "&moderationStatus=published", {
+              method: "post",
+              headers: { "Authorization": "Bearer " + token },
+              muteHttpExceptions: true
+            });
+            log_("fetchYouTubeComments_", "INFO", "Auto-approved held-for-review comment " + commentId);
+          } catch (modErr) {
+            log_("fetchYouTubeComments_", "WARN", "Moderation approval error: " + String(modErr));
+          }
+        }
+
+        var replies = [];
+        if (item.replies && item.replies.comments) {
+          for (var j = 0; j < item.replies.comments.length; j++) {
+            var r = item.replies.comments[j];
+            var rSnippet = r.snippet || {};
+            replies.push({
+              id: r.id,
+              author: rSnippet.authorDisplayName || "Viewer",
+              text: rSnippet.textOriginal || rSnippet.textDisplay || "",
+              publishedAt: rSnippet.publishedAt || ""
+            });
+          }
+        }
+
+        list.push({
+          id: commentId,
+          authorDisplayName: top.authorDisplayName || "Viewer",
+          authorChannelUrl: (top.authorChannelUrl && top.authorChannelUrl.value) ? top.authorChannelUrl.value : (top.authorChannelUrl || ""),
+          text: top.textOriginal || top.textDisplay || "",
+          publishedAt: top.publishedAt || "",
+          videoId: (item.snippet && item.snippet.videoId) ? item.snippet.videoId : videoId,
+          replies: replies
+        });
+      }
+    } catch (err) {
+      log_("fetchYouTubeComments_", "WARN", "Error fetching from endpoint: " + String(err));
+    }
+  });
+
+  return list;
+}
+
+/**
+ * Retrieves the video title for cleaner Jira and Sheet logging.
+ */
+function getYouTubeVideoTitle_(token, videoId) {
+  try {
+    var url = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id=" + encodeURIComponent(videoId);
+    var res = UrlFetchApp.fetch(url, {
+      method: "get",
+      headers: { "Authorization": "Bearer " + token },
+      muteHttpExceptions: true
+    });
+    if (res.getResponseCode() === 200) {
+      var data = JSON.parse(res.getContentText() || "{}");
+      if (data.items && data.items.length > 0 && data.items[0].snippet) {
+        return data.items[0].snippet.title || "Physiomatics Video";
+      }
+    }
+  } catch (err) {
+    log_("getYouTubeVideoTitle_", "WARN", String(err));
+  }
+  return "Physiomatics Video (" + videoId + ")";
+}
+
+/**
+ * Checks if a comment ID has already been recorded in column B of YouTube_Raw_Leads.
+ */
+function ytCommentAlreadyInSheet_(sheet, commentId) {
+  if (!commentId) return false;
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return false;
+  var ids = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+  var target = String(commentId).trim();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]).trim() === target) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Creates Jira Parent Task + 8 Subtasks for a YouTube comment enquiry across configured Jira spaces.
+ */
+function ytCreateJiraLead_(comment, videoTitle) {
+  if (!JIRA_CONFIG.ENABLED) return { primaryKey: "", secondaryKey: "", alreadyExists: false };
+  var hosts = getJiraHosts_();
+  var projectKey = getJiraProjectKey_();
+  if (!hosts.length || !projectKey) return { primaryKey: "", secondaryKey: "", alreadyExists: false };
+
+  var cleanId = String(comment.id || "").replace(/[^a-zA-Z0-9_-]/g, "");
+  var videoRef = videoTitle ? 'Video: "' + videoTitle + '"' : "Video ID: " + comment.videoId;
+  var videoUrl = comment.videoId ? "https://www.youtube.com/watch?v=" + comment.videoId : "";
+  var summary = "[YOUTUBE_ENQUIRY] " + comment.authorDisplayName + " — " + videoRef;
+
+  var repliesText = (comment.replies && comment.replies.length > 0)
+    ? "\n\n*Thread Replies:*\n" + comment.replies.map(function(r) { return "• " + r.author + ": \"" + r.text + "\" (" + r.publishedAt + ")"; }).join("\n")
+    : "";
+
+  var descText = [
+    "*YouTube Lead / Enquiry Details:*",
+    "• *Author / Name:* " + comment.authorDisplayName,
+    "• *Video Title:* " + videoTitle,
+    "• *Comment ID:* " + comment.id,
+    "• *Published At:* " + comment.publishedAt,
+    "• *Channel URL:* " + (comment.authorChannelUrl || "N/A"),
+    "• *Video URL:* " + (videoUrl || "N/A"),
+    "",
+    "*Comment Enquiry:*",
+    "\"" + comment.text + "\"",
+    repliesText
+  ].filter(Boolean).join("\n");
+
+  var keys = {};
+
+  hosts.forEach(function(host) {
+    try {
+      // Deduplication check via JQL
+      var jql = 'project = "' + projectKey + '" AND (labels = "yt-comment-' + cleanId + '" OR text ~ "' + cleanId + '")';
+      var searchRes = jiraFetchForHost_(host, "/rest/api/3/search/jql?jql=" + encodeURIComponent(jql) + "&maxResults=1&fields=key", "get");
+      if (searchRes && searchRes.issues && searchRes.issues.length > 0) {
+        var existingKey = searchRes.issues[0].key;
+        keys[host] = existingKey;
+        log_("ytCreateJiraLead_", "INFO", "Comment " + cleanId + " already in Jira " + host + " as " + existingKey);
+        return;
+      }
+
+      var parentPayload = {
+        fields: {
+          project: { key: projectKey },
+          summary: summary,
+          description: {
+            type: "doc",
+            version: 1,
+            content: [{
+              type: "paragraph",
+              content: [{ type: "text", text: descText }]
+            }]
+          },
+          issuetype: { name: JIRA_CONFIG.TASK_ISSUE_TYPE || "Task" },
+          labels: ["physiomatics-lead", "youtube-enquiry", "yt-comment-" + cleanId]
+        }
+      };
+
+      var parentResult = jiraFetchForHost_(host, "/rest/api/3/issue", "post", parentPayload);
+      var parentKey = parentResult.key;
+      keys[host] = parentKey;
+      log_("ytCreateJiraLead_", "SUCCESS", "Created YouTube lead parent Task on " + host + ": " + parentKey);
+
+      // Create 8 standard operational subtasks
+      var subtasks = [
+        {
+          summary: "1. Initial Contact & Channel Reply (YouTube / DM)",
+          description: "Acknowledge receipt on YouTube, reply with portal link or direct message, and verify lead details."
+        },
+        {
+          summary: "2. Clinical & Organizational Assessment",
+          description: "Assess clinical requirements, clinic/hospital capacity, patient volume, and biomechanics specialization needs."
+        },
+        {
+          summary: "3. Schedule Discovery & Live Demo Session",
+          description: "Coordinate calendar invite with senior consultant and prepare tailored Physiomatics platform demo."
+        },
+        {
+          summary: "4. Conduct Live Platform Walkthrough",
+          description: "Demonstrate AI posture tracking, patient dashboard, exercise compliance monitoring, and reporting suite."
+        },
+        {
+          summary: "5. Technical Integration & EHR/EMR Feasibility Check",
+          description: "Review clinic workflows, EHR/EMR compatibility, hardware setup (cameras/sensors), and HIPAA/GDPR readiness."
+        },
+        {
+          summary: "6. Commercial Proposal & Pilot Licensing Setup",
+          description: "Generate customized quotation, software tier pricing, pilot period terms, and send clinical SLA contract."
+        },
+        {
+          summary: "7. Clinical Onboarding & Staff Training Session",
+          description: "Schedule training workshop for physiotherapists, assign clinic admin credentials, and conduct trial run."
+        },
+        {
+          summary: "8. Post-Onboarding Review & Satisfaction Check",
+          description: "Review 14-day patient compliance data, collect feedback, address clinical questions, and ensure full operational adoption."
+        }
+      ];
+
+      subtasks.forEach(function(sub) {
+        try {
+          var subPayload = {
+            fields: {
+              project: { key: projectKey },
+              parent: { key: parentKey },
+              summary: sub.summary,
+              description: {
+                type: "doc",
+                version: 1,
+                content: [{
+                  type: "paragraph",
+                  content: [{ type: "text", text: sub.description }]
+                }]
+              },
+              issuetype: { name: JIRA_CONFIG.SUBTASK_ISSUE_TYPE || "Sub-task" }
+            }
+          };
+          jiraFetchForHost_(host, "/rest/api/3/issue", "post", subPayload);
+        } catch (subErr) {
+          log_("ytCreateJiraLead_", "WARN", "Subtask creation failed on " + host + " (" + sub.summary + "): " + String(subErr));
+        }
+      });
+    } catch (err) {
+      log_("ytCreateJiraLead_", "ERROR", "Jira task creation error on " + host + ": " + String(err));
+    }
+  });
+
+  var primaryKey = keys[hosts[0]] || "";
+  var secondaryKey = hosts[1] ? (keys[hosts[1]] || "") : "";
+  return { primaryKey: primaryKey, secondaryKey: secondaryKey };
+}
+
+/**
+ * MASTER ORCHESTRATOR — Automatically called by time trigger or manual menu item.
+ * Syncs YouTube video comments into YouTube_Raw_Leads tab and creates Jira leads.
+ */
+function SYNC_YOUTUBE_COMMENTS_AUTO() {
+  log_("SYNC_YOUTUBE_COMMENTS_AUTO", "INFO", "Starting automated YouTube comments sync...");
+  try {
+    var ss = getSpreadsheet();
+    var sheet = getTab(ss, "YouTube_Raw_Leads");
+
+    var token = getYouTubeAccessToken_();
+    var videoIds = (YOUTUBE_CONFIG.MONITOR_VIDEO_IDS || "eRGcQo4qWiM").split(",").map(function(s) { return s.trim(); }).filter(Boolean);
+
+    var totalChecked = 0;
+    var totalNewLeads = 0;
+    var totalStored = 0;
+
+    videoIds.forEach(function(videoId) {
+      var videoTitle = getYouTubeVideoTitle_(token, videoId);
+      var comments = fetchYouTubeComments_(token, videoId);
+
+      comments.forEach(function(comment) {
+        totalChecked++;
+        var isEnquiry = ytIsEnquiry_(comment.text);
+        var inSheet = ytCommentAlreadyInSheet_(sheet, comment.id);
+
+        if (inSheet) {
+          return; // Already in sheet — avoid duplicate row
+        }
+
+        var jiraKeyPrimary = "";
+        var jiraKeySecondary = "";
+
+        if (isEnquiry) {
+          totalNewLeads++;
+          var jiraRes = ytCreateJiraLead_(comment, videoTitle);
+          jiraKeyPrimary = jiraRes.primaryKey || "";
+          jiraKeySecondary = jiraRes.secondaryKey || "";
+        }
+
+        var videoUrl = "https://www.youtube.com/watch?v=" + videoId;
+        var replyText = (comment.replies || []).map(function(r) { return r.author + ": " + r.text; }).join(" | ");
+
+        appendValues_(sheet, [
+          new Date().toISOString(),                       // synced_at
+          String(comment.id || ""),                       // comment_id
+          videoId,                                        // video_id
+          videoTitle,                                     // video_title
+          videoUrl,                                       // video_url
+          String(comment.authorChannelUrl || ""),         // channel
+          String(comment.authorDisplayName || ""),        // author_name
+          String(comment.authorChannelUrl || ""),         // author_channel_url
+          String(comment.text || ""),                     // comment_text
+          replyText,                                      // reply_text
+          String(comment.publishedAt || ""),              // published_at
+          "",                                             // like_count
+          isEnquiry ? "TRUE" : "FALSE",                   // is_enquiry
+          "youtube_comment",                              // lead_source
+          jiraKeyPrimary,                                 // jira_key_primary
+          jiraKeySecondary,                               // jira_key_secondary
+          isEnquiry ? "lead_synced" : "comment_logged"     // sync_status
+        ]);
+
+        totalStored++;
+      });
+    });
+
+    var summaryMsg = "YouTube auto-sync completed. Checked: " + totalChecked + ", Stored: " + totalStored + ", New Leads: " + totalNewLeads;
+    log_("SYNC_YOUTUBE_COMMENTS_AUTO", "SUCCESS", summaryMsg);
+    return summaryMsg;
+  } catch (err) {
+    var errMsg = "YouTube auto-sync error: " + String(err.message || err);
+    log_("SYNC_YOUTUBE_COMMENTS_AUTO", "ERROR", errMsg);
+    return errMsg;
+  }
+}
+
+/**
+ * Activates an hourly time-driven trigger for SYNC_YOUTUBE_COMMENTS_AUTO.
+ * Runs in Google Cloud 24/7 completely hands-free.
+ */
+function SETUP_YOUTUBE_AUTO_SYNC_TRIGGER() {
+  DELETE_YOUTUBE_AUTO_SYNC_TRIGGER();
+
+  var trigger = ScriptApp.newTrigger("SYNC_YOUTUBE_COMMENTS_AUTO")
+    .timeBased()
+    .everyHours(1)
+    .create();
+
+  log_("SETUP_YOUTUBE_AUTO_SYNC_TRIGGER", "SUCCESS", "Hourly YouTube sync trigger established. Trigger ID: " + trigger.getUniqueId());
+  return "Hourly YouTube auto-sync trigger successfully activated! YouTube comments will be automatically checked and synced to Jira + Google Sheets every hour.";
+}
+
+/**
+ * Removes any existing YouTube auto-sync triggers.
+ */
+function DELETE_YOUTUBE_AUTO_SYNC_TRIGGER() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var count = 0;
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "SYNC_YOUTUBE_COMMENTS_AUTO") {
+      ScriptApp.deleteTrigger(triggers[i]);
+      count++;
+    }
+  }
+  log_("DELETE_YOUTUBE_AUTO_SYNC_TRIGGER", "SUCCESS", "Removed " + count + " existing triggers.");
+  return "Removed " + count + " YouTube sync triggers.";
+}
+
+/**
+ * Quick test function to run anytime from the Apps Script editor.
+ */
+function TEST_YouTubeAutoSync() {
+  return SYNC_YOUTUBE_COMMENTS_AUTO();
+}
+

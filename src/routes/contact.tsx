@@ -8,8 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { PageHero } from "@/components/site/PageHero";
 import { whatsappLink } from "@/lib/site";
-import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus, CalendarCheck, Calendar } from "lucide-react";
-import { sendToGoogleSheet } from "@/lib/googleSheets";
+import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus, CalendarCheck, Calendar, Paperclip, FileText, UploadCloud, X, Loader2 } from "lucide-react";
+import { sendToGoogleSheet, uploadReportDocument } from "@/lib/googleSheets";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
 import { saveLeadToAirtable } from "@/lib/airtable";
 import { createJiraLeadWithSubtasks } from "@/lib/jira";
@@ -30,6 +30,15 @@ export const Route = createFileRoute("/contact")({
 
 const roles = ["Physiotherapist / clinic", "Elderly individual / caregiver", "Injury rehabilitation", "Educator / institution", "Partner / organization"];
 
+export interface AttachedReportData {
+  file: File;
+  name: string;
+  size: number;
+  type: string;
+  base64: string;
+  driveUrl?: string;
+}
+
 function leadRow(formType: string, data: FormData) {
   const get = (k: string) => String(data.get(k) ?? "").trim();
   return {
@@ -49,16 +58,35 @@ function leadRow(formType: string, data: FormData) {
   };
 }
 
-async function saveLead(formType: string, data: FormData) {
+async function saveLead(formType: string, data: FormData, attachedFile?: AttachedReportData | null) {
   const row = leadRow(formType, data);
+  let reportDriveUrl = attachedFile?.driveUrl || "";
+
+  // If a clinical report was attached, upload to Google Drive first to obtain shareable link
+  if (attachedFile && !reportDriveUrl) {
+    try {
+      const uploadRes = await uploadReportDocument({
+        name: attachedFile.name,
+        type: attachedFile.type,
+        base64: attachedFile.base64,
+      });
+      if (uploadRes?.fileUrl) {
+        reportDriveUrl = uploadRes.fileUrl;
+      }
+    } catch (uploadErr) {
+      console.warn("Report upload to Drive warning:", uploadErr);
+    }
+  }
   
-  // 1. Sync to Google Sheets
+  // 1. Sync to Google Sheets (including report document URL & file name)
   sendToGoogleSheet({
     action: "lead_submission",
     form_name: formType,
     form_status: "submitted",
     conversion_name: formType,
     conversion_value: 1,
+    report_file_name: attachedFile?.name,
+    report_file_url: reportDriveUrl,
     ...row,
   }).catch((err) => console.error("Google Sheets sync warning:", err));
 
@@ -77,7 +105,7 @@ async function saveLead(formType: string, data: FormData) {
   const leadInterest = row.organization_type || "";
   const leadSubject = row.challenge || "";
 
-  // 1c. Sync to Airtable
+  // 1c. Sync to Airtable (including report document URL & attachment object)
   saveLeadToAirtable({
     name: leadName,
     email: leadEmail,
@@ -89,9 +117,11 @@ async function saveLead(formType: string, data: FormData) {
     message: row.message,
     lead_type: formType,
     country: row.country,
+    document_name: attachedFile?.name,
+    document_url: reportDriveUrl,
   }).catch(() => {});
 
-  // 1d. Sync to Jira (Parent Task + 8 Subtasks)
+  // 1d. Sync to Jira (Parent Task + 8 Subtasks + File Attachment uploaded to Jira)
   createJiraLeadWithSubtasks({
     name: leadName,
     email: leadEmail,
@@ -103,6 +133,11 @@ async function saveLead(formType: string, data: FormData) {
     message: row.message,
     lead_type: formType,
     country: row.country,
+    document_name: attachedFile?.name,
+    document_url: reportDriveUrl,
+    document_file: attachedFile?.file,
+    document_base64: attachedFile?.base64,
+    document_type: attachedFile?.type,
   }).catch(() => {});
 
   // 1e. Sync to Vercel (Web Analytics & Serverless Lead Engine)
@@ -125,8 +160,11 @@ async function saveLead(formType: string, data: FormData) {
   return !error;
 }
 
-function sendViaWhatsApp(title: string, data: FormData) {
+function sendViaWhatsApp(title: string, data: FormData, reportName?: string, reportUrl?: string) {
   const lines = [title, ...[...data.entries()].filter(([, v]) => String(v).trim()).map(([k, v]) => `${k}: ${v}`)];
+  if (reportName) {
+    lines.push(`Attached Report: ${reportName}${reportUrl ? ` (${reportUrl})` : ""}`);
+  }
   window.open(whatsappLink(lines.join("\n")), "_blank", "noopener");
 }
 
@@ -259,6 +297,8 @@ function Contact() {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [attachedReport, setAttachedReport] = useState<AttachedReportData | null>(null);
+  const [isSubmittingLong, setIsSubmittingLong] = useState(false);
 
   const totalSteps = 4; // Grouped the 7 steps into 4 for better UX
 
@@ -266,8 +306,33 @@ function Contact() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleReportUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error("File is too large. Maximum allowed size is 15MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachedReport({
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type || "application/octet-stream",
+        base64: reader.result as string,
+      });
+      toast.success(`Attached report: ${file.name}`);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeAttachedReport = () => {
+    setAttachedReport(null);
+    toast.info("Report removed");
+  };
+
   const nextStep = () => {
-    // Basic validation could be added here
     setStep(s => Math.min(s + 1, totalSteps));
   };
 
@@ -286,15 +351,24 @@ function Contact() {
 
   const submitLong = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsSubmittingLong(true);
     const data = new FormData();
     Object.entries(formData).forEach(([k, v]) => data.append(k, v));
+    if (attachedReport) {
+      data.append("Attached Report", attachedReport.name);
+    }
     
-    const saved = await saveLead("consultation", data);
-    sendViaWhatsApp("Physiomatics — Consultation request", data);
-    setFormData({});
-    setStep(1);
-    setSubmitted(true);
-    if (!saved) toast.warning("We couldn't save your enquiry right now, but WhatsApp is open — press send to deliver it.");
+    try {
+      const saved = await saveLead("consultation", data, attachedReport);
+      sendViaWhatsApp("Physiomatics — Consultation request", data, attachedReport?.name);
+      setFormData({});
+      setAttachedReport(null);
+      setStep(1);
+      setSubmitted(true);
+      if (!saved) toast.warning("We couldn't save your enquiry right now, but WhatsApp is open — press send to deliver it.");
+    } finally {
+      setIsSubmittingLong(false);
+    }
   };
 
   if (submitted) {
@@ -435,7 +509,7 @@ function Contact() {
 
             {step === 3 && (
               <fieldset className="grid gap-5 animate-in fade-in slide-in-from-right-4">
-                <legend className="mb-4 font-display text-2xl">Your Needs</legend>
+                <legend className="mb-4 font-display text-2xl">Your Needs & Clinical Information</legend>
                 <div className="grid gap-1.5">
                   <Label htmlFor="challenge">Current challenges</Label>
                   <Textarea id="challenge" rows={3} className="rounded-xl bg-background" value={formData["Main challenge"] || ""} onChange={(e) => updateField("Main challenge", e.target.value)} />
@@ -444,33 +518,158 @@ function Contact() {
                   <Label htmlFor="req">Required features & timeline</Label>
                   <Textarea id="req" rows={3} className="rounded-xl bg-background" value={formData["Requirements and timeline"] || ""} onChange={(e) => updateField("Requirements and timeline", e.target.value)} />
                 </div>
+
+                {/* ── Upload Report Area ── */}
+                <div className="grid gap-2 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-1.5 font-semibold text-foreground text-sm">
+                      <Paperclip className="size-4 text-primary" />
+                      Upload Clinical Report or Diagnostic Document
+                    </Label>
+                    <span className="text-xs text-muted-foreground font-medium">Optional</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Attach clinical assessment, biomechanics notes, or diagnostic report (PDF, DOCX, PNG, JPG). Will sync automatically to Jira, Google Sheets, and Airtable.
+                  </p>
+                  
+                  {!attachedReport ? (
+                    <label className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-primary/30 hover:border-primary rounded-2xl cursor-pointer bg-primary/5 hover:bg-primary/10 transition-colors text-center group">
+                      <UploadCloud className="size-8 text-primary mb-2 group-hover:scale-110 transition-transform" />
+                      <span className="font-semibold text-sm text-foreground">Click to upload report or drag and drop</span>
+                      <span className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, PNG, JPG (up to 15MB)</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                        onChange={handleReportUpload}
+                      />
+                    </label>
+                  ) : (
+                    <div className="flex items-center justify-between p-4 rounded-2xl border bg-card shadow-xs border-primary/30">
+                      <div className="flex items-center gap-3">
+                        <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <FileText className="size-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm text-foreground truncate">{attachedReport.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(attachedReport.size / (1024 * 1024)).toFixed(2)} MB • Ready to sync to Jira, Sheets & Airtable
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeAttachedReport}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+                      >
+                        <X className="size-4 mr-1" /> Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </fieldset>
             )}
 
             {step === 4 && (
               <fieldset className="grid gap-5 animate-in fade-in slide-in-from-right-4">
                 <legend className="mb-4 font-display text-2xl">Review & Submit</legend>
-                <div className="rounded-xl bg-muted p-4 text-sm mb-4">
+                <div className="rounded-xl bg-muted p-4 text-sm space-y-1">
                   <p><strong>Name:</strong> {formData["Full name"]}</p>
                   <p><strong>Email:</strong> {formData["Work email"]}</p>
                   <p><strong>Organization:</strong> {formData["Organization name"]}</p>
+                  {formData["Role / job title"] && <p><strong>Role:</strong> {formData["Role / job title"]}</p>}
                 </div>
+
+                {/* ── Attached Report in Step 4 ── */}
+                <div className="rounded-2xl border bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-1.5 font-semibold text-sm">
+                      <Paperclip className="size-4 text-primary" />
+                      Attached Clinical Report
+                    </Label>
+                    {!attachedReport && (
+                      <span className="text-xs text-muted-foreground">Optional</span>
+                    )}
+                  </div>
+
+                  {!attachedReport ? (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-muted/40 border border-dashed">
+                      <div className="text-xs text-muted-foreground">
+                        Have an assessment, referral letter, or patient report? Attach it here.
+                      </div>
+                      <label className="cursor-pointer shrink-0">
+                        <Button type="button" variant="outline" size="sm" asChild>
+                          <span>
+                            <UploadCloud className="size-4 mr-1.5 text-primary" />
+                            Upload Report
+                          </span>
+                        </Button>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                          onChange={handleReportUpload}
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3.5 rounded-xl bg-primary/5 border border-primary/20">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <FileText className="size-5 text-primary shrink-0" />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-xs text-foreground truncate">{attachedReport.name}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {(attachedReport.size / (1024 * 1024)).toFixed(2)} MB • Syncing to Jira, Google Sheets & Airtable
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeAttachedReport}
+                        className="text-xs text-destructive hover:bg-destructive/10 h-8 px-2 shrink-0"
+                      >
+                        <X className="size-3.5 mr-1" /> Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
                 <label className="flex gap-3 text-sm">
                   <input type="checkbox" required className="mt-1 size-4 accent-primary" /> 
-                  <span>I agree to be contacted about my request and confirm that I have not included sensitive patient medical records.</span>
+                  <span>I agree to be contacted about my request and confirm that all submitted documents comply with clinical data privacy practices.</span>
                 </label>
               </fieldset>
             )}
 
             <div className="mt-8 flex justify-between pt-4 border-t">
               {step > 1 ? (
-                <Button type="button" variant="outline" onClick={prevStep}><ChevronLeft className="mr-2 size-4"/> Back</Button>
+                <Button type="button" variant="outline" onClick={prevStep} disabled={isSubmittingLong}>
+                  <ChevronLeft className="mr-2 size-4"/> Back
+                </Button>
               ) : <div></div>}
               
               {step < totalSteps ? (
-                <Button type="button" onClick={nextStep}>Next <ChevronRight className="ml-2 size-4"/></Button>
+                <Button type="button" onClick={nextStep}>
+                  Next <ChevronRight className="ml-2 size-4"/>
+                </Button>
               ) : (
-                <Button type="submit" variant="hero">Submit Request</Button>
+                <Button type="submit" variant="hero" disabled={isSubmittingLong}>
+                  {isSubmittingLong ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Uploading Report & Submitting…
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 size-4" />
+                      Submit Consultation Request
+                    </>
+                  )}
+                </Button>
               )}
             </div>
           </form>

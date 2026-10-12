@@ -22,6 +22,11 @@ export interface JiraLeadPayload {
   country?: string;
   received_at?: string;
   lead_id?: string;
+  document_name?: string;
+  document_url?: string;
+  document_file?: File | Blob;
+  document_base64?: string;
+  document_type?: string;
 }
 
 export interface JiraReportPayload {
@@ -144,7 +149,7 @@ export async function createJiraLeadWithSubtasks(
   const leadTypeLabel = (lead.lead_type || "Lead").toUpperCase();
   const summary = `[${leadTypeLabel}] ${lead.name || "New Visitor"} — ${lead.organization || "Direct Patient / Individual"}`;
 
-  const descriptionContent = [
+  const descriptionLines = [
     `*Lead Details:*`,
     `• *Name:* ${lead.name || "N/A"}`,
     `• *Email:* ${lead.email || "N/A"}`,
@@ -159,7 +164,18 @@ export async function createJiraLeadWithSubtasks(
     ``,
     `*Enquiry / Message:*`,
     lead.message || "No custom message provided."
-  ].join("\n");
+  ];
+
+  if (lead.document_name) {
+    descriptionLines.push(
+      ``,
+      `*Attached Clinical / Diagnostic Report:*`,
+      `• *File Name:* ${lead.document_name}`,
+      lead.document_url ? `• *Document Link:* [${lead.document_name}|${lead.document_url}]` : `• *Status:* Attached directly to this Jira issue`
+    );
+  }
+
+  const descriptionContent = descriptionLines.join("\n");
 
   const createdKeys: string[] = [];
   const errors: string[] = [];
@@ -207,6 +223,43 @@ export async function createJiraLeadWithSubtasks(
       const parentKey = parentData.key;
       createdKeys.push(`${host}:${parentKey}`);
       console.log(`[Jira] Successfully created parent Task ${parentKey} on ${host}`);
+
+      // 1b. If an attached report document was provided, upload directly to Jira issue
+      if (lead.document_file || (lead.document_base64 && lead.document_name)) {
+        try {
+          const form = new FormData();
+          if (lead.document_file) {
+            form.append("file", lead.document_file, lead.document_name || "report.pdf");
+          } else if (lead.document_base64) {
+            const rawBase64 = lead.document_base64.includes(",")
+              ? lead.document_base64.split(",")[1]
+              : lead.document_base64;
+            const byteChars = atob(rawBase64);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: lead.document_type || "application/octet-stream" });
+            form.append("file", blob, lead.document_name || "clinical_report.pdf");
+          }
+
+          const attachRes = await fetch(`https://${host}/rest/api/3/issue/${parentKey}/attachments`, {
+            method: "POST",
+            headers: {
+              Authorization: authHeader,
+              "X-Atlassian-Token": "no-check"
+            },
+            body: form
+          });
+
+          if (attachRes.ok) {
+            console.log(`[Jira] ✓ Successfully attached document ${lead.document_name} to ${parentKey} on ${host}`);
+          } else {
+            console.warn(`[Jira] Attachment response on ${host}:`, await attachRes.text());
+          }
+        } catch (attachErr: any) {
+          console.warn(`[Jira] Attachment upload error on ${host}:`, attachErr.message || attachErr);
+        }
+      }
 
       // 2. Create the 8 Subtasks linked to the parent task
       for (const sub of LEAD_SUBTASKS) {

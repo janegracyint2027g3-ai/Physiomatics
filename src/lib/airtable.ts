@@ -24,7 +24,8 @@ export interface AirtableLeadRecord {
   country?: string;
   visitor_id?: string;
   session_id?: string;
-  received_at?: string;
+  document_name?: string;
+  document_url?: string;
 }
 
 const AIRTABLE_API_KEY =
@@ -77,7 +78,19 @@ export async function saveLeadToAirtable(
     City: lead.city || "",
     Country: lead.country || "",
     "Received At": lead.received_at || new Date().toISOString(),
+    "Report Name": lead.document_name || "",
+    "Report URL": lead.document_url || "",
   };
+
+  // Attach document if URL is present (Airtable attachment field format)
+  if (lead.document_url) {
+    fields["Report Document"] = [
+      {
+        url: lead.document_url,
+        filename: lead.document_name || "Physiomatics_Report.pdf",
+      },
+    ];
+  }
 
   // Strip empty string fields if Airtable fields are strict
   Object.keys(fields).forEach((k) => {

@@ -218,6 +218,7 @@ const ENQUIRY_PATTERNS = [
   /\b(license|licensing|subscription|plan|software|features|integration)\b/i,
   /\b(pain|injury|exercise|posture|biomechanics|assessment)\b/i,
   /\b(help|interested|available|how to buy|where to get)\b/i,
+  /\b(url|link|website|web|portal|app|info|information|details|share|send|access)\b/i,
 ];
 
 /**

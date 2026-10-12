@@ -33,6 +33,7 @@ const ENQUIRY_PATTERNS = [
   /\b(license|licensing|subscription|plan|software|features|integration)\b/i,
   /\b(pain|injury|exercise|posture|biomechanics|assessment)\b/i,
   /\b(help|interested|available|how to buy|where to get)\b/i,
+  /\b(url|link|website|web|portal|app|info|information|details|share|send|access)\b/i,
 ];
 
 export function isEnquiryText(text: string): boolean {
@@ -117,17 +118,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         url.searchParams.set("allThreadsRelatedToChannelId", channelId);
       }
 
-      const commentsRes = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      if (!commentsRes.ok) {
-        const errorText = await commentsRes.text();
-        return res.status(commentsRes.status).json({ error: "YouTube API error", detail: errorText });
+      const fetchEndpoints = [url.toString()];
+      if (videoId) {
+        const heldUrl = new URL(url.toString());
+        heldUrl.searchParams.set("moderationStatus", "heldForReview");
+        fetchEndpoints.push(heldUrl.toString());
       }
 
-      const commentsData = await commentsRes.json();
-      const comments = (commentsData.items ?? []).map((item: any) => {
+      const allItems: any[] = [];
+      const seenIds = new Set<string>();
+
+      for (const endpoint of fetchEndpoints) {
+        try {
+          const commentsRes = await fetch(endpoint, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (commentsRes.ok) {
+            const commentsData = await commentsRes.json();
+            for (const item of commentsData.items ?? []) {
+              const commentId = item.id || item.snippet?.topLevelComment?.id;
+              if (commentId && !seenIds.has(commentId)) {
+                seenIds.add(commentId);
+                allItems.push(item);
+              }
+            }
+          }
+        } catch {
+          // ignore endpoint failure
+        }
+      }
+
+      const comments = allItems.map((item: any) => {
         const top = item.snippet?.topLevelComment?.snippet || {};
         const text = top.textOriginal || top.textDisplay || "";
         return {

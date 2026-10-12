@@ -34,6 +34,11 @@ describe("YouTube Comments & Jira Lead Pipeline Integration", () => {
       expect(isPotentialEnquiry("Does the AI sensor support post-stroke biomechanics assessment?")).toBe(true);
     });
 
+    it("identifies URL and platform link requests", () => {
+      expect(isPotentialEnquiry("Pls share us the url")).toBe(true);
+      expect(isPotentialEnquiry("Can you send the website link or demo portal?")).toBe(true);
+    });
+
     it("ignores generic non-enquiry comments", () => {
       expect(isPotentialEnquiry("Great video, thanks for sharing!")).toBe(false);
       expect(isPotentialEnquiry("Nice music in the background.")).toBe(false);

@@ -200,3 +200,40 @@ export function trackScroll(section: string) {
     section,
   }).catch(() => {});
 }
+
+/**
+ * Uploads a customer clinical report/document to Google Drive via Apps Script Web App
+ * and returns the shareable viewing link for Google Sheets, Jira, and Airtable.
+ */
+export async function uploadReportDocument(fileData: {
+  name: string;
+  type: string;
+  base64: string;
+}): Promise<{ success: boolean; fileUrl?: string; fileName?: string; error?: string }> {
+  if (!GOOGLE_SHEETS_URL) {
+    return { success: false, error: "GOOGLE_SHEETS_URL not configured" };
+  }
+  try {
+    const res = await fetch(GOOGLE_SHEETS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "upload_report",
+        file_name: fileData.name,
+        file_type: fileData.type,
+        file_base64: fileData.base64,
+      }),
+      redirect: "follow",
+    });
+
+    const data = await res.json();
+    if (data.fileUrl) {
+      console.info("[Sheets/Drive] ✓ Report uploaded to Google Drive:", data.fileUrl);
+      return { success: true, fileUrl: data.fileUrl, fileName: fileData.name };
+    }
+    return { success: false, error: data.message || "Failed to obtain file URL" };
+  } catch (err: any) {
+    console.warn("[Sheets/Drive] Report upload error:", err.message);
+    return { success: false, error: err.message };
+  }
+}
