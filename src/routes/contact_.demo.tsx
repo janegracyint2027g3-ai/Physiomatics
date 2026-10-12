@@ -39,7 +39,7 @@ function DemoPage() {
               <GoogleCalendarButton
                 label="Book an appointment"
                 source="contact_demo_page"
-                useNativeGoogleWidget={true}
+                useNativeGoogleWidget={false}
               />
             </div>
           </div>

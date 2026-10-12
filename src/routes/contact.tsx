@@ -350,7 +350,7 @@ function Contact() {
               <GoogleCalendarButton
                 label="Book an appointment"
                 source="contact_appointment_tab"
-                useNativeGoogleWidget={true}
+                useNativeGoogleWidget={false}
                 size="lg"
                 className="px-8 py-6 text-base font-bold shadow-lg"
               />
