@@ -2348,9 +2348,9 @@ function ytCreateJiraLead_(comment, videoTitle) {
 
   hosts.forEach(function(host) {
     try {
-      // Deduplication check via JQL
-      var jql = 'project = "' + projectKey + '" AND (labels = "yt-comment-' + cleanId + '" OR text ~ "' + cleanId + '")';
-      var searchRes = jiraFetchForHost_(host, "/rest/api/3/search/jql?jql=" + encodeURIComponent(jql) + "&maxResults=1&fields=key", "get");
+      // Deduplication: search for existing Jira issue with this comment label (API v2)
+      var jql = 'project = "' + projectKey + '" AND labels = "yt-comment-' + cleanId + '"';
+      var searchRes = jiraFetchForHost_(host, "/rest/api/2/search?jql=" + encodeURIComponent(jql) + "&maxResults=1&fields=key", "get");
       if (searchRes && searchRes.issues && searchRes.issues.length > 0) {
         var existingKey = searchRes.issues[0].key;
         keys[host] = existingKey;
@@ -2358,83 +2358,49 @@ function ytCreateJiraLead_(comment, videoTitle) {
         return;
       }
 
+      // API v2 — plain text description (no ADF required)
       var parentPayload = {
         fields: {
           project: { key: projectKey },
           summary: summary,
-          description: {
-            type: "doc",
-            version: 1,
-            content: [{
-              type: "paragraph",
-              content: [{ type: "text", text: descText }]
-            }]
-          },
+          description: descText,
           issuetype: { name: JIRA_CONFIG.TASK_ISSUE_TYPE || "Task" },
           labels: ["physiomatics-lead", "youtube-enquiry", "yt-comment-" + cleanId]
         }
       };
 
-      var parentResult = jiraFetchForHost_(host, "/rest/api/3/issue", "post", parentPayload);
+      var parentResult = jiraFetchForHost_(host, "/rest/api/2/issue", "post", parentPayload);
+      if (!parentResult || !parentResult.key) {
+        log_("ytCreateJiraLead_", "WARN", "Failed to create Jira parent task on " + host);
+        return;
+      }
       var parentKey = parentResult.key;
       keys[host] = parentKey;
       log_("ytCreateJiraLead_", "SUCCESS", "Created YouTube lead parent Task on " + host + ": " + parentKey);
 
-      // Create 8 standard operational subtasks
+      // Create 8 standard operational subtasks (API v2 — plain text)
       var subtasks = [
-        {
-          summary: "1. Initial Contact & Channel Reply (YouTube / DM)",
-          description: "Acknowledge receipt on YouTube, reply with portal link or direct message, and verify lead details."
-        },
-        {
-          summary: "2. Clinical & Organizational Assessment",
-          description: "Assess clinical requirements, clinic/hospital capacity, patient volume, and biomechanics specialization needs."
-        },
-        {
-          summary: "3. Schedule Discovery & Live Demo Session",
-          description: "Coordinate calendar invite with senior consultant and prepare tailored Physiomatics platform demo."
-        },
-        {
-          summary: "4. Conduct Live Platform Walkthrough",
-          description: "Demonstrate AI posture tracking, patient dashboard, exercise compliance monitoring, and reporting suite."
-        },
-        {
-          summary: "5. Technical Integration & EHR/EMR Feasibility Check",
-          description: "Review clinic workflows, EHR/EMR compatibility, hardware setup (cameras/sensors), and HIPAA/GDPR readiness."
-        },
-        {
-          summary: "6. Commercial Proposal & Pilot Licensing Setup",
-          description: "Generate customized quotation, software tier pricing, pilot period terms, and send clinical SLA contract."
-        },
-        {
-          summary: "7. Clinical Onboarding & Staff Training Session",
-          description: "Schedule training workshop for physiotherapists, assign clinic admin credentials, and conduct trial run."
-        },
-        {
-          summary: "8. Post-Onboarding Review & Satisfaction Check",
-          description: "Review 14-day patient compliance data, collect feedback, address clinical questions, and ensure full operational adoption."
-        }
+        { summary: "1. Initial Contact & Channel Reply (YouTube / DM)", description: "Acknowledge receipt on YouTube, reply with portal link or direct message, and verify lead details." },
+        { summary: "2. Clinical & Organizational Assessment", description: "Assess clinical requirements, clinic/hospital capacity, patient volume, and biomechanics specialization needs." },
+        { summary: "3. Schedule Discovery & Live Demo Session", description: "Coordinate calendar invite with senior consultant and prepare tailored Physiomatics platform demo." },
+        { summary: "4. Conduct Live Platform Walkthrough", description: "Demonstrate AI posture tracking, patient dashboard, exercise compliance monitoring, and reporting suite." },
+        { summary: "5. Technical Integration & EHR/EMR Feasibility Check", description: "Review clinic workflows, EHR/EMR compatibility, hardware setup (cameras/sensors), and HIPAA/GDPR readiness." },
+        { summary: "6. Commercial Proposal & Pilot Licensing Setup", description: "Generate customized quotation, software tier pricing, pilot period terms, and send clinical SLA contract." },
+        { summary: "7. Clinical Onboarding & Staff Training Session", description: "Schedule training workshop for physiotherapists, assign clinic admin credentials, and conduct trial run." },
+        { summary: "8. Post-Onboarding Review & Satisfaction Check", description: "Review 14-day patient compliance data, collect feedback, address clinical questions, and ensure full operational adoption." }
       ];
 
       subtasks.forEach(function(sub) {
         try {
-          var subPayload = {
+          jiraFetchForHost_(host, "/rest/api/2/issue", "post", {
             fields: {
               project: { key: projectKey },
               parent: { key: parentKey },
-              summary: sub.summary,
-              description: {
-                type: "doc",
-                version: 1,
-                content: [{
-                  type: "paragraph",
-                  content: [{ type: "text", text: sub.description }]
-                }]
-              },
+              summary: sub.summary + " [" + parentKey + "]",
+              description: sub.description,
               issuetype: { name: JIRA_CONFIG.SUBTASK_ISSUE_TYPE || "Sub-task" }
             }
-          };
-          jiraFetchForHost_(host, "/rest/api/3/issue", "post", subPayload);
+          });
         } catch (subErr) {
           log_("ytCreateJiraLead_", "WARN", "Subtask creation failed on " + host + " (" + sub.summary + "): " + String(subErr));
         }
@@ -2469,6 +2435,7 @@ function SYNC_YOUTUBE_COMMENTS_AUTO() {
     videoIds.forEach(function(videoId) {
       var videoTitle = getYouTubeVideoTitle_(token, videoId);
       var comments = fetchYouTubeComments_(token, videoId);
+      var videoUrl = "https://www.youtube.com/watch?v=" + videoId;
 
       comments.forEach(function(comment) {
         totalChecked++;
@@ -2479,38 +2446,134 @@ function SYNC_YOUTUBE_COMMENTS_AUTO() {
           return; // Already in sheet — avoid duplicate row
         }
 
-        var jiraKeyPrimary = "";
-        var jiraKeySecondary = "";
-
-        if (isEnquiry) {
-          totalNewLeads++;
-          var jiraRes = ytCreateJiraLead_(comment, videoTitle);
-          jiraKeyPrimary = jiraRes.primaryKey || "";
-          jiraKeySecondary = jiraRes.secondaryKey || "";
-        }
-
-        var videoUrl = "https://www.youtube.com/watch?v=" + videoId;
+        var authorName = String(comment.authorDisplayName || "YouTube Viewer");
+        var commentText = String(comment.text || "");
         var replyText = (comment.replies || []).map(function(r) { return r.author + ": " + r.text; }).join(" | ");
 
+        // ── 1. Jira Task + 8 Subtasks (only for enquiry-intent comments) ────
+        var jiraKeyPrimary = "";
+        var jiraKeySecondary = "";
+        if (isEnquiry) {
+          totalNewLeads++;
+          try {
+            var jiraRes = ytCreateJiraLead_(comment, videoTitle);
+            jiraKeyPrimary = jiraRes.primaryKey || "";
+            jiraKeySecondary = jiraRes.secondaryKey || "";
+          } catch (jiraErr) {
+            log_("SYNC_YOUTUBE_COMMENTS_AUTO", "WARN", "Jira creation error for comment " + comment.id + ": " + String(jiraErr));
+          }
+        }
+
+        // ── 2. Airtable Sync (all comments, mark type) ─────────────────────
+        var airtableStatus = "skipped";
+        try {
+          if (AIRTABLE_CONFIG.ENABLED && getAirtableToken_()) {
+            airtableStatus = syncSingleLeadToAirtable_({
+              name: authorName,
+              email: "",
+              phone: "",
+              organization: "YouTube Channel Engagement",
+              role: "YouTube Viewer",
+              lead_type: isEnquiry ? "YouTube ENQUIRY" : "YouTube COMMENT",
+              interest: isEnquiry ? "YouTube Comment Enquiry" : "YouTube Channel Engagement",
+              message: commentText || ("Commented on: " + videoUrl),
+              page_path: videoUrl,
+              jira_issue_key: jiraKeyPrimary
+            }) ? "synced" : "error";
+          }
+        } catch (atErr) {
+          log_("SYNC_YOUTUBE_COMMENTS_AUTO", "WARN", "Airtable sync error: " + String(atErr));
+          airtableStatus = "error";
+        }
+
+        // ── 3. Telegram Alert ───────────────────────────────────────────────
+        var telegramStatus = "skipped";
+        if (isEnquiry) {
+          try {
+            var tMsg = "\uD83C\uDFAC <b>New YouTube " + (isEnquiry ? "ENQUIRY" : "Comment") + " Lead!</b>\n\n" +
+              "\uD83D\uDC64 <b>Author:</b> " + authorName + "\n" +
+              "\uD83C\uDFAC <b>Video:</b> " + videoTitle + "\n" +
+              (commentText ? "\uD83D\uDCAC <b>Comment:</b> " + commentText + "\n" : "") +
+              "\uD83D\uDD17 <b>Video URL:</b> " + videoUrl + "\n" +
+              (jiraKeyPrimary ? "\uD83C\uDFAB <b>Jira:</b> " + jiraKeyPrimary + "\n" : "") +
+              "\uD83D\uDD52 " + new Date().toISOString();
+            telegramStatus = sendTelegramMessage_(tMsg) ? "sent" : "failed";
+          } catch (teleErr) {
+            log_("SYNC_YOUTUBE_COMMENTS_AUTO", "WARN", "Telegram error: " + String(teleErr));
+            telegramStatus = "failed";
+          }
+        }
+
+        // ── 4. Email Alert (enquiries only) ─────────────────────────────────
+        var emailStatus = "skipped";
+        if (isEnquiry && CONFIG.ENABLE_EMAIL_NOTIFICATIONS && EMAIL_CONFIG.leadEmails.length) {
+          try {
+            MailApp.sendEmail({
+              to: EMAIL_CONFIG.leadEmails.join(","),
+              subject: "\uD83C\uDFAC [YOUTUBE LEAD] " + authorName + " commented on \"" + videoTitle + "\"",
+              body: "New YouTube comment enquiry:\n\n" +
+                "Author: " + authorName + "\n" +
+                "Channel: " + (comment.authorChannelUrl || "N/A") + "\n" +
+                "Video: " + videoTitle + " (" + videoUrl + ")\n" +
+                "Comment: " + commentText + "\n" +
+                "Jira Ticket: " + (jiraKeyPrimary || "N/A") + "\n" +
+                "Timestamp: " + new Date().toISOString(),
+              name: "Physiomatics YouTube Intelligence"
+            });
+            emailStatus = "sent";
+          } catch (mailErr) {
+            log_("SYNC_YOUTUBE_COMMENTS_AUTO", "WARN", "Email error: " + String(mailErr));
+            emailStatus = "failed";
+          }
+        }
+
+        // ── 5. Append to YouTube_Raw_Leads Sheet ────────────────────────────
         appendValues_(sheet, [
-          new Date().toISOString(),                       // synced_at
-          String(comment.id || ""),                       // comment_id
-          videoId,                                        // video_id
-          videoTitle,                                     // video_title
-          videoUrl,                                       // video_url
-          String(comment.authorChannelUrl || ""),         // channel
-          String(comment.authorDisplayName || ""),        // author_name
-          String(comment.authorChannelUrl || ""),         // author_channel_url
-          String(comment.text || ""),                     // comment_text
-          replyText,                                      // reply_text
-          String(comment.publishedAt || ""),              // published_at
-          "",                                             // like_count
-          isEnquiry ? "TRUE" : "FALSE",                   // is_enquiry
-          "youtube_comment",                              // lead_source
-          jiraKeyPrimary,                                 // jira_key_primary
-          jiraKeySecondary,                               // jira_key_secondary
-          isEnquiry ? "lead_synced" : "comment_logged"     // sync_status
+          new Date().toISOString(),
+          String(comment.id || ""),
+          videoId,
+          videoTitle,
+          videoUrl,
+          String(comment.authorChannelUrl || ""),
+          authorName,
+          String(comment.authorChannelUrl || ""),
+          commentText,
+          replyText,
+          String(comment.publishedAt || ""),
+          "",
+          isEnquiry ? "TRUE" : "FALSE",
+          "youtube_comment",
+          jiraKeyPrimary,
+          jiraKeySecondary,
+          airtableStatus,
+          telegramStatus,
+          emailStatus,
+          isEnquiry ? "lead_synced" : "comment_logged"
         ]);
+
+        // ── 6. Also write to Lead_Management for unified reporting ───────────
+        if (isEnquiry) {
+          try {
+            var leadSheet = getTab(ss, "Lead_Management");
+            appendValues_(leadSheet, [
+              new Date().toISOString(),
+              "yt_" + comment.id,
+              authorName,
+              "", "",
+              "YouTube Viewer", "",
+              "YouTube ENQUIRY",
+              "YouTube Comment Enquiry",
+              commentText || "Commented on: " + videoUrl,
+              videoUrl,
+              "India",
+              jiraKeyPrimary || "",
+              "New",
+              "", ""
+            ]);
+          } catch (lmErr) {
+            log_("SYNC_YOUTUBE_COMMENTS_AUTO", "WARN", "Lead_Management append error: " + String(lmErr));
+          }
+        }
 
         totalStored++;
       });
@@ -2518,6 +2581,9 @@ function SYNC_YOUTUBE_COMMENTS_AUTO() {
 
     var summaryMsg = "YouTube auto-sync completed. Checked: " + totalChecked + ", Stored: " + totalStored + ", New Leads: " + totalNewLeads;
     log_("SYNC_YOUTUBE_COMMENTS_AUTO", "SUCCESS", summaryMsg);
+    if (totalNewLeads > 0) {
+      sendTelegramMessage_("\uD83D\uDE80 <b>YouTube Leads Captured!</b>\n\nProcessed <b>" + totalNewLeads + "</b> new YouTube enquiry lead(s) into Jira, Sheets, Airtable!\n\uD83D\uDD52 " + new Date().toISOString());
+    }
     return summaryMsg;
   } catch (err) {
     var errMsg = "YouTube auto-sync error: " + String(err.message || err);
@@ -3088,16 +3154,27 @@ function SYNC_LINKEDIN_FROM_GMAIL() {
  *    - Email Alert
  */
 function MASTER_LINKEDIN_AUTOMATION_RUNNER() {
-  log_("MASTER_LINKEDIN_AUTOMATION_RUNNER", "INFO", "Executing automated 24/7 LinkedIn lead scan...");
+  log_("MASTER_LINKEDIN_AUTOMATION_RUNNER", "INFO", "Executing automated 24/7 LinkedIn + YouTube lead scan...");
+
+  // ── LinkedIn: Gmail notification parser ──────────────────────────────────
   try {
     SYNC_LINKEDIN_FROM_GMAIL();
   } catch (gErr) {
     log_("MASTER_LINKEDIN_AUTOMATION_RUNNER", "WARN", "Gmail sync error: " + String(gErr));
   }
+
+  // ── LinkedIn: Public post scraper / REST API ─────────────────────────────
   try {
     SYNC_LINKEDIN_POSTS_AUTO();
   } catch (pErr) {
-    log_("MASTER_LINKEDIN_AUTOMATION_RUNNER", "WARN", "Post sync error: " + String(pErr));
+    log_("MASTER_LINKEDIN_AUTOMATION_RUNNER", "WARN", "LinkedIn post sync error: " + String(pErr));
+  }
+
+  // ── YouTube: Comment / enquiry sync ─────────────────────────────────────
+  try {
+    SYNC_YOUTUBE_COMMENTS_AUTO();
+  } catch (ytErr) {
+    log_("MASTER_LINKEDIN_AUTOMATION_RUNNER", "WARN", "YouTube sync error: " + String(ytErr));
   }
 }
 
@@ -3123,16 +3200,20 @@ function SETUP_LINKEDIN_AUTO_SYNC_TRIGGER() {
 function ENSURE_LINKEDIN_TRIGGER_ACTIVE_() {
   try {
     var triggers = ScriptApp.getProjectTriggers();
+    var hasMaster = false;
     for (var i = 0; i < triggers.length; i++) {
       if (triggers[i].getHandlerFunction() === "MASTER_LINKEDIN_AUTOMATION_RUNNER") {
-        return; // Trigger is already running
+        hasMaster = true;
+        break;
       }
     }
-    ScriptApp.newTrigger("MASTER_LINKEDIN_AUTOMATION_RUNNER")
-      .timeBased()
-      .everyMinutes(1)
-      .create();
-    log_("ENSURE_LINKEDIN_TRIGGER_ACTIVE_", "SUCCESS", "1-minute autonomous LinkedIn trigger auto-installed.");
+    if (!hasMaster) {
+      ScriptApp.newTrigger("MASTER_LINKEDIN_AUTOMATION_RUNNER")
+        .timeBased()
+        .everyMinutes(1)
+        .create();
+      log_("ENSURE_LINKEDIN_TRIGGER_ACTIVE_", "SUCCESS", "1-minute master runner trigger auto-installed (covers LinkedIn + YouTube).");
+    }
   } catch (e) {
     log_("ENSURE_LINKEDIN_TRIGGER_ACTIVE_", "INFO", "Trigger check note: " + e);
   }
