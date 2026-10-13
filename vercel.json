@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/linkedin?sync=true",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
