@@ -402,6 +402,13 @@ export function Assistant() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Listen for global open requests (e.g. from top announcement Ask AI button)
+  useEffect(() => {
+    const handleOpenRequest = () => setOpen(true);
+    window.addEventListener("open-ai-assistant", handleOpenRequest);
+    return () => window.removeEventListener("open-ai-assistant", handleOpenRequest);
+  }, []);
+
   const handleSend = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const text = inputValue.trim();

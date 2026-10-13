@@ -49,20 +49,38 @@ function Home() {
       <HeroCarousel />
 
       <section className="container-page py-24 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent -z-10 rounded-b-[4rem]"></div>
+        {/* Translucent neat background grid & ambient glow */}
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-b-[4rem]">
+          <div className="absolute top-0 right-1/4 size-96 rounded-full bg-[#592787]/[0.05] blur-3xl" />
+          <div className="absolute bottom-0 left-10 size-80 rounded-full bg-[#5AA9AC]/[0.08] blur-3xl" />
+          <div 
+            className="absolute inset-0 opacity-[0.18]"
+            style={{
+              backgroundImage: 'radial-gradient(circle, #592787 1.2px, transparent 1.2px)',
+              backgroundSize: '24px 24px',
+            }}
+          />
+        </div>
+
         <SectionHead eyebrow="Who We Serve" title="Built for everyone in the recovery journey" />
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {audiences.map((a) => (
-            <Link key={a.title} to={a.link as "/solutions"} className="group relative overflow-hidden rounded-[2rem] border bg-card/60 backdrop-blur-xl p-8 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:border-primary/30">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                <a.icon className="size-24" />
+            <Link 
+              key={a.title} 
+              to={a.link as "/solutions"} 
+              className="group relative overflow-hidden rounded-[2.25rem] border border-white/80 dark:border-white/10 bg-white/75 dark:bg-card/50 backdrop-blur-xl p-8 shadow-[0_10px_35px_-10px_rgba(89,39,135,0.07)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_25px_50px_-12px_rgba(89,39,135,0.18)] hover:border-primary/35 hover:bg-white/90"
+            >
+              {/* Subtle card top gradient shine */}
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-15 transition-opacity">
+                <a.icon className="size-24 text-primary" />
               </div>
               <div className="relative z-10 flex flex-col h-full">
-                <div className="rounded-2xl bg-primary/10 p-3 w-fit">
+                <div className="rounded-2xl bg-primary/10 border border-primary/15 p-3.5 w-fit backdrop-blur-xs">
                   <a.icon className="size-6 text-primary" />
                 </div>
-                <h3 className="mt-6 text-xl font-bold tracking-tight">{a.title}</h3>
-                <p className="mt-3 text-sm text-muted-foreground flex-1 leading-relaxed">{a.text}</p>
+                <h3 className="mt-6 text-xl font-bold tracking-tight text-[#3b1d60]">{a.title}</h3>
+                <p className="mt-3 text-sm text-muted-foreground flex-1 leading-relaxed font-sans">{a.text}</p>
                 <div className="mt-8 flex items-center gap-2 text-sm font-semibold text-primary">
                   <span>{a.cta}</span>
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
@@ -96,18 +114,18 @@ function Home() {
         </div>
       </section>
 
-      <section className="container-page py-24">
+      <section className="container-page py-24 relative">
         <div className="text-center mb-16">
           <SectionHead eyebrow="Why Choose Us" title="Technology that respects your recovery" />
         </div>
         <div className="grid gap-8 md:grid-cols-3">
           {features.map((f) => (
-            <div key={f.title} className="flex gap-6 rounded-3xl bg-muted/50 p-8 border border-muted transition hover:bg-muted">
-              <div className="shrink-0 rounded-2xl bg-primary/10 p-4 h-fit">
+            <div key={f.title} className="flex gap-6 rounded-[2rem] bg-white/75 dark:bg-card/50 backdrop-blur-xl p-8 border border-white/80 dark:border-white/10 shadow-[0_8px_30px_-8px_rgba(89,39,135,0.06)] hover:shadow-[0_18px_40px_-10px_rgba(89,39,135,0.14)] hover:-translate-y-1 transition-all">
+              <div className="shrink-0 rounded-2xl bg-primary/10 border border-primary/15 p-4 h-fit">
                 <f.icon className="size-6 text-primary" />
               </div>
               <div>
-                <h3 className="text-xl font-bold mb-2">{f.title}</h3>
+                <h3 className="text-xl font-bold mb-2 text-[#3b1d60]">{f.title}</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">{f.text}</p>
               </div>
             </div>
@@ -117,8 +135,8 @@ function Home() {
 
       <section className="container-page grid items-center gap-16 py-24 lg:grid-cols-2">
         <div className="relative group">
-          <div className="absolute -inset-4 bg-gradient-to-r from-primary to-coral opacity-20 blur-2xl rounded-[3rem] transition-opacity group-hover:opacity-30"></div>
-          <img src={rehab} alt="A man recording a squat on a phone tripod in a rehab studio" width={1216} height={912} loading="lazy" className="relative z-10 aspect-[4/3] w-full rounded-[2rem] object-cover shadow-2xl ring-1 ring-border/50" />
+          <div className="absolute -inset-4 bg-gradient-to-r from-primary/15 to-[#5AA9AC]/20 opacity-40 blur-2xl rounded-[3rem] transition-opacity group-hover:opacity-70"></div>
+          <img src={rehab} alt="A man recording a squat on a phone tripod in a rehab studio" width={1216} height={912} loading="lazy" className="relative z-10 aspect-[4/3] w-full rounded-[2.5rem] object-cover shadow-2xl border border-white/80 ring-1 ring-border/50" />
         </div>
         <div className="flex flex-col justify-center">
           <SectionHead eyebrow="AI Video Analytics" title="Real computer vision, honestly explained" sub="Physiomatics runs a pose-estimation model directly in your browser. Your video never leaves your device." />
@@ -133,63 +151,74 @@ function Home() {
             ].map(([I, t, d]) => {
               const Icon = I as typeof ScanLine;
               return (
-                <li key={t as string} className="flex gap-4 items-start rounded-2xl bg-card border p-5 shadow-sm hover:shadow-md transition">
-                  <Icon className="size-5 text-coral shrink-0 mt-0.5" />
+                <li key={t as string} className="flex gap-4 items-start rounded-2xl bg-white/75 dark:bg-card/60 backdrop-blur-md border border-white/80 dark:border-white/10 p-5 shadow-xs hover:shadow-md transition">
+                  <Icon className="size-5 text-[#5AA9AC] shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-semibold text-sm">{t as string}</div>
+                    <div className="font-semibold text-sm text-[#3b1d60]">{t as string}</div>
                     <div className="text-xs text-muted-foreground mt-1">{d as string}</div>
                   </div>
                 </li>
               );
             })}
           </ul>
-          <Button asChild className="mt-10 w-fit rounded-full px-8 shadow-lg shadow-primary/20"><Link to="/analyze">Try the Demo <ArrowRight className="ml-2 size-4" /></Link></Button>
+          <Button asChild className="mt-10 w-fit rounded-full px-8 shadow-lg shadow-[#5AA9AC]/20 bg-[#5AA9AC] hover:bg-[#48989b] text-white"><Link to="/analyze">Try the Demo <ArrowRight className="ml-2 size-4" /></Link></Button>
         </div>
       </section>
       
       <section className="container-page py-12">
-        <div className="rounded-[3rem] bg-gradient-to-br from-primary-soft to-background border p-10 md:p-20 shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-1/2 h-full bg-primary/5 blur-3xl rounded-full translate-x-1/3 -translate-y-1/4"></div>
+        <div className="rounded-[3rem] bg-gradient-to-br from-white via-primary-soft/25 to-white border border-white/80 p-10 md:p-20 shadow-xl relative overflow-hidden">
+          {/* Translucent neat background grid & ambient light */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute top-0 right-0 w-1/2 h-full bg-[#5AA9AC]/10 blur-3xl rounded-full translate-x-1/3 -translate-y-1/4" />
+            <div className="absolute bottom-0 left-0 w-1/3 h-full bg-[#592787]/[0.06] blur-3xl rounded-full -translate-x-1/4" />
+            <div 
+              className="absolute inset-0 opacity-[0.20]"
+              style={{
+                backgroundImage: 'radial-gradient(circle, #592787 1.2px, transparent 1.2px)',
+                backgroundSize: '24px 24px',
+              }}
+            />
+          </div>
           
           <div className="relative z-10 text-center max-w-2xl mx-auto mb-16">
             <div className="eyebrow text-primary mb-4">Progress Monitoring</div>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Track your recovery journey</h2>
-            <p className="text-muted-foreground text-lg">Review session history, completion rates, and exercise adherence in one beautiful dashboard.</p>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-[#3b1d60]">Track your recovery journey</h2>
+            <p className="text-muted-foreground text-lg font-sans">Review session history, completion rates, and exercise adherence in one beautiful dashboard.</p>
           </div>
           
           <div className="relative z-10 grid gap-6 md:grid-cols-3">
-            <div className="rounded-3xl bg-card/80 backdrop-blur-xl p-8 border shadow-lg hover:-translate-y-1 transition-transform">
+            <div className="rounded-3xl bg-white/85 dark:bg-card/70 backdrop-blur-xl p-8 border border-white/90 shadow-lg hover:-translate-y-1.5 transition-all">
               <div className="flex items-center justify-between mb-6">
-                <div className="bg-primary/10 p-3 rounded-2xl">
+                <div className="bg-primary/10 border border-primary/15 p-3 rounded-2xl">
                   <BarChart className="text-primary size-6" />
                 </div>
-                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Adherence</h4>
+                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Adherence</h4>
               </div>
-              <div className="text-5xl font-display font-bold">85<span className="text-2xl text-muted-foreground">%</span></div>
-              <div className="text-sm text-emerald-500 font-medium mt-3 flex items-center gap-1">
+              <div className="text-5xl font-display font-bold text-[#3b1d60]">85<span className="text-2xl text-muted-foreground">%</span></div>
+              <div className="text-sm text-emerald-600 font-medium mt-3 flex items-center gap-1">
                 <CheckCircle2 className="size-4" /> +5% from last week
               </div>
             </div>
             
-            <div className="rounded-3xl bg-card/80 backdrop-blur-xl p-8 border shadow-lg hover:-translate-y-1 transition-transform">
+            <div className="rounded-3xl bg-white/85 dark:bg-card/70 backdrop-blur-xl p-8 border border-white/90 shadow-lg hover:-translate-y-1.5 transition-all">
               <div className="flex items-center justify-between mb-6">
-                <div className="bg-coral/10 p-3 rounded-2xl">
-                  <Activity className="text-coral size-6" />
+                <div className="bg-[#5AA9AC]/15 border border-[#5AA9AC]/20 p-3 rounded-2xl">
+                  <Activity className="text-[#5AA9AC] size-6" />
                 </div>
-                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Completion</h4>
+                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Completion</h4>
               </div>
-              <div className="text-5xl font-display font-bold">12<span className="text-2xl text-muted-foreground">/14</span></div>
+              <div className="text-5xl font-display font-bold text-[#3b1d60]">12<span className="text-2xl text-muted-foreground">/14</span></div>
               <div className="text-sm text-muted-foreground mt-3">Sessions this month</div>
             </div>
             
-            <div className="rounded-3xl bg-card/80 backdrop-blur-xl p-8 border shadow-lg hover:-translate-y-1 transition-transform">
+            <div className="rounded-3xl bg-white/85 dark:bg-card/70 backdrop-blur-xl p-8 border border-white/90 shadow-lg hover:-translate-y-1.5 transition-all">
               <div className="flex items-center justify-between mb-6">
-                <div className="bg-primary/10 p-3 rounded-2xl">
+                <div className="bg-primary/10 border border-primary/15 p-3 rounded-2xl">
                   <History className="text-primary size-6" />
                 </div>
-                <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Avg Time</h4>
+                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Avg Time</h4>
               </div>
-              <div className="text-5xl font-display font-bold">24<span className="text-2xl text-muted-foreground">m</span></div>
+              <div className="text-5xl font-display font-bold text-[#3b1d60]">24<span className="text-2xl text-muted-foreground">m</span></div>
               <div className="text-sm text-muted-foreground mt-3">Optimal range achieved</div>
             </div>
           </div>
