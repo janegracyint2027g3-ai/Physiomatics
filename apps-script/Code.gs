@@ -98,6 +98,20 @@ function getYouTubeRefreshToken_() {
   return fromProps || YOUTUBE_CONFIG.REFRESH_TOKEN || "";
 }
 
+// ── LinkedIn Auto-Sync Configuration ─────────────────────────────────────────
+var LINKEDIN_CONFIG = {
+  ENABLED: true,
+  // Script Properties: LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID, LINKEDIN_MONITOR_POST_URNS
+  ACCESS_TOKEN:      PropertiesService.getScriptProperties().getProperty("LINKEDIN_ACCESS_TOKEN")      || "",
+  ORGANIZATION_ID:   PropertiesService.getScriptProperties().getProperty("LINKEDIN_ORGANIZATION_ID")   || "",
+  MONITOR_POST_URNS: PropertiesService.getScriptProperties().getProperty("LINKEDIN_MONITOR_POST_URNS") || "",
+  MAX_RESULTS: 100
+};
+
+function getLinkedInAccessToken_() {
+  return PropertiesService.getScriptProperties().getProperty("LINKEDIN_ACCESS_TOKEN") || LINKEDIN_CONFIG.ACCESS_TOKEN || "";
+}
+
 function getJiraApiToken_() {
   return (JIRA_CONFIG.API_TOKEN && JIRA_CONFIG.API_TOKEN.indexOf("PASTE_") !== 0)
     ? JIRA_CONFIG.API_TOKEN
@@ -263,6 +277,27 @@ var TAB_HEADERS = {
     "jira_key_primary",   // Jira issue key on primary host
     "jira_key_secondary", // Jira issue key on secondary host
     "sync_status"         // "new" | "duplicate" | "error"
+  ],
+  // ── LinkedIn raw data tab ──────────────────────────────────────────────────
+  LinkedIn_Raw_Leads: [
+    "synced_at",          // timestamp when synced
+    "interaction_id",     // LinkedIn comment URN or reaction ID (unique)
+    "interaction_type",   // comment | like | reaction | share | lead_form
+    "author_name",        // commenter or reactor name
+    "author_profile_url", // direct link to their LinkedIn profile
+    "author_headline",    // professional headline or job title
+    "author_urn",         // urn:li:person:...
+    "post_url",           // link to the LinkedIn post
+    "post_urn",           // urn:li:share:... or urn:li:activity:...
+    "content_text",       // comment text or reaction detail
+    "is_enquiry",         // TRUE / FALSE
+    "lead_source",        // "linkedin_post"
+    "jira_key_primary",   // Jira issue key on primary host
+    "jira_key_secondary", // Jira issue key on secondary host
+    "airtable_status",    // synced / error / skipped
+    "telegram_status",    // sent / failed
+    "email_status",       // sent / failed
+    "sync_status"         // new | duplicate | error
   ]
 };
 
@@ -348,6 +383,14 @@ function doGet(e) {
       return json_({ success: false, message: String(err.message || err) });
     }
   }
+  if (params.action === "linkedin_lead") {
+    try {
+      return saveLinkedInLead_(params);
+    } catch (err) {
+      log_("doGet_linkedin_lead", "ERROR", String(err));
+      return json_({ success: false, message: String(err.message || err) });
+    }
+  }
   if (params.action || params.event_name || params.event_type) {
     try {
       return processEvent_(params);
@@ -378,6 +421,10 @@ function doPost(e) {
     // ── YouTube Raw Lead ingestion ──────────────────────────────────────────
     if (payload.action === "youtube_lead") {
       return saveYouTubeLead_(payload);
+    }
+    // ── LinkedIn Raw Lead ingestion ──────────────────────────────────────────
+    if (payload.action === "linkedin_lead") {
+      return saveLinkedInLead_(payload);
     }
     // ── Upload Clinical Report to Google Drive ──────────────────────────────
     if (payload.action === "upload_report") {
@@ -1553,6 +1600,12 @@ function onOpen() {
     .addItem("Disable YouTube auto-sync",                "DELETE_YOUTUBE_AUTO_SYNC_TRIGGER")
     .addItem("Initialize YouTube raw leads tab",         "INITIALIZE_YOUTUBE_RAW_LEADS_TAB")
     .addSeparator()
+    .addItem("Sync LinkedIn post leads now (manual)",       "SYNC_LINKEDIN_POSTS_AUTO")
+    .addItem("Enable LinkedIn auto-sync (hourly trigger)",  "SETUP_LINKEDIN_AUTO_SYNC_TRIGGER")
+    .addItem("Disable LinkedIn auto-sync",                  "DELETE_LINKEDIN_AUTO_SYNC_TRIGGER")
+    .addItem("Initialize LinkedIn raw leads tab",           "INITIALIZE_LINKEDIN_RAW_LEADS_TAB")
+    .addItem("Test: LinkedIn lead simulation",              "TEST_LINKEDIN_LEAD")
+    .addSeparator()
     .addItem("Test: ICP demo request",                   "TEST_ICPDemoRequest")
     .addItem("Test: Quick enquiry",                      "TEST_QuickEnquiry")
     .addItem("Test: Consultation request",               "TEST_ConsultationRequest")
@@ -2457,5 +2510,446 @@ function DELETE_YOUTUBE_AUTO_SYNC_TRIGGER() {
  */
 function TEST_YouTubeAutoSync() {
   return SYNC_YOUTUBE_COMMENTS_AUTO();
+}
+
+/* ============================================================================
+   LINKEDIN AUTO-SYNC & LEAD PROCESSING ENGINE
+   ----------------------------------------------------------------------------
+   Periodically and automatically:
+   1. Captures comments, likes, reactions & shares from monitored LinkedIn posts.
+   2. Deduplicates against LinkedIn_Raw_Leads tab.
+   3. Automatically creates Jira Parent Task + 8 Subtasks for each prospect.
+   4. Records lead into Google Sheets ("LinkedIn_Raw_Leads" & "Lead_Management").
+   5. Synchronizes lead into Airtable "Leads" table.
+   6. Dispatches instant Telegram alert with profile link.
+   7. Dispatches instant HTML Email alert to janegracy.int2027g3@gmail.com.
+   8. Operates 24/7 in Google Cloud via Apps Script time-driven triggers.
+   ============================================================================ */
+
+/**
+ * Initializes the LinkedIn_Raw_Leads sheet tab if not present.
+ */
+function INITIALIZE_LINKEDIN_RAW_LEADS_TAB() {
+  var ss = getSpreadsheet();
+  getTab(ss, "LinkedIn_Raw_Leads");
+  log_("INITIALIZE_LINKEDIN_RAW_LEADS_TAB", "SUCCESS", "LinkedIn_Raw_Leads tab ready.");
+  return "LinkedIn_Raw_Leads tab initialized successfully.";
+}
+
+/**
+ * Appends a LinkedIn lead into LinkedIn_Raw_Leads and dispatches multi-channel alerts.
+ */
+function saveLinkedInLead_(payload) {
+  try {
+    var ss = getSpreadsheet();
+    var sheet = getTab(ss, "LinkedIn_Raw_Leads");
+    var p = payload || {};
+
+    var interactionId = String(p.interaction_id || ("li_" + Date.now() + "_" + Math.floor(Math.random()*1000))).trim();
+
+    // Deduplication check
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      var existingIds = sheet.getRange(2, 2, lastRow - 1, 1).getValues().map(function(r) { return String(r[0]).trim(); });
+      if (existingIds.indexOf(interactionId) !== -1) {
+        return json_({ success: true, skipped: true, reason: "duplicate_interaction_id", interaction_id: interactionId });
+      }
+    }
+
+    var authorName = String(p.author_name || "LinkedIn Prospect");
+    var authorHeadline = String(p.author_headline || "");
+    var authorProfileUrl = String(p.author_profile_url || "");
+    var interactionType = String(p.interaction_type || "comment").toLowerCase();
+    var contentText = String(p.content_text || p.comment_text || "");
+    var postUrl = String(p.post_url || "");
+    var postUrn = String(p.post_urn || "");
+    var isEnquiry = Boolean(contentText && ytIsEnquiry_(contentText));
+
+    // 1. Jira Task + 8 Subtasks
+    var jiraKeys = liCreateJiraLead_(p);
+    var jiraPrimary = jiraKeys.primaryKey || "";
+    var jiraSecondary = jiraKeys.secondaryKey || "";
+
+    // 2. Airtable Sync
+    var airtableStatus = "skipped";
+    try {
+      if (AIRTABLE_CONFIG.ENABLED && getAirtableToken_()) {
+        airtableStatus = syncSingleLeadToAirtable_({
+          name: authorName,
+          email: p.email || "",
+          phone: p.phone || "",
+          organization: authorHeadline || "LinkedIn Lead",
+          role: authorHeadline,
+          lead_type: "LinkedIn " + interactionType.toUpperCase(),
+          interest: "LinkedIn Post Engagement",
+          message: contentText || ("Interacted on post: " + (postUrl || postUrn)),
+          page_path: postUrl || "LinkedIn",
+          jira_issue_key: jiraPrimary
+        }) ? "synced" : "error";
+      }
+    } catch (atErr) {
+      log_("saveLinkedInLead_", "WARN", "Airtable sync error: " + String(atErr));
+      airtableStatus = "error";
+    }
+
+    // 3. Telegram Alert
+    var telegramStatus = "skipped";
+    try {
+      var botToken = PropertiesService.getScriptProperties().getProperty("TELEGRAM_BOT_TOKEN");
+      var chatId = PropertiesService.getScriptProperties().getProperty("TELEGRAM_CHAT_ID");
+      if (botToken && chatId) {
+        var msg = "💼 <b>New LinkedIn Lead (" + interactionType.toUpperCase() + ")</b>\n\n" +
+          "👤 <b>Name:</b> " + authorName + "\n" +
+          (authorHeadline ? "💼 <b>Headline:</b> " + authorHeadline + "\n" : "") +
+          (authorProfileUrl ? "🔗 <b>Profile:</b> " + authorProfileUrl + "\n" : "") +
+          (contentText ? "💬 <b>Message:</b> " + contentText + "\n" : "") +
+          (postUrl ? "📄 <b>Post:</b> " + postUrl + "\n" : "") +
+          (jiraPrimary ? "🎫 <b>Jira:</b> " + jiraPrimary + "\n" : "") +
+          "\n🕒 " + new Date().toISOString();
+
+        var teleRes = UrlFetchApp.fetch("https://api.telegram.org/bot" + botToken + "/sendMessage", {
+          method: "post",
+          payload: { chat_id: chatId, text: msg, parse_mode: "HTML" },
+          muteHttpExceptions: true
+        });
+        telegramStatus = teleRes.getResponseCode() === 200 ? "sent" : "failed";
+      }
+    } catch (teleErr) {
+      log_("saveLinkedInLead_", "WARN", "Telegram error: " + String(teleErr));
+      telegramStatus = "failed";
+    }
+
+    // 4. Email Alert
+    var emailStatus = "skipped";
+    try {
+      if (CONFIG.ENABLE_EMAIL_NOTIFICATIONS && EMAIL_CONFIG.leadEmails.length) {
+        var emailSubject = "💼 [LINKEDIN LEAD] " + authorName + " (" + interactionType.toUpperCase() + ")";
+        var emailBody = "New lead engaged with your LinkedIn company post:\n\n" +
+          "Name: " + authorName + "\n" +
+          "Headline: " + authorHeadline + "\n" +
+          "Profile URL: " + authorProfileUrl + "\n" +
+          "Interaction: " + interactionType + "\n" +
+          "Comment / Note: " + contentText + "\n" +
+          "Post: " + postUrl + "\n" +
+          "Jira Ticket: " + (jiraPrimary || "N/A") + "\n" +
+          "Timestamp: " + new Date().toISOString();
+
+        MailApp.sendEmail({
+          to: EMAIL_CONFIG.leadEmails.join(","),
+          subject: emailSubject,
+          body: emailBody,
+          name: "Physiomatics LinkedIn Intelligence"
+        });
+        emailStatus = "sent";
+      }
+    } catch (mailErr) {
+      log_("saveLinkedInLead_", "WARN", "Email alert error: " + String(mailErr));
+      emailStatus = "failed";
+    }
+
+    // 5. Append to LinkedIn_Raw_Leads
+    appendValues_(sheet, [
+      new Date().toISOString(),
+      interactionId,
+      interactionType,
+      authorName,
+      authorProfileUrl,
+      authorHeadline,
+      String(p.author_urn || ""),
+      postUrl,
+      postUrn,
+      contentText,
+      isEnquiry ? "TRUE" : "FALSE",
+      "linkedin_post",
+      jiraPrimary,
+      jiraSecondary,
+      airtableStatus,
+      telegramStatus,
+      emailStatus,
+      "new"
+    ]);
+
+    // 6. Also write to Lead_Management for unified reporting
+    try {
+      var leadSheet = getTab(ss, "Lead_Management");
+      appendValues_(leadSheet, [
+        new Date().toISOString(),
+        "linkedin_" + interactionId,
+        authorName,
+        p.email || "",
+        p.phone || "",
+        authorHeadline || "LinkedIn Lead",
+        authorHeadline || "",
+        "LinkedIn " + interactionType.toUpperCase(),
+        "LinkedIn Post Engagement",
+        contentText || "Engaged with company post",
+        postUrl || "LinkedIn",
+        "India",
+        jiraPrimary || "",
+        "New",
+        "",
+        ""
+      ]);
+    } catch (lmErr) {
+      log_("saveLinkedInLead_", "WARN", "Lead_Management append error: " + String(lmErr));
+    }
+
+    log_("saveLinkedInLead_", "SUCCESS", "LinkedIn lead stored: " + interactionId + " by " + authorName);
+    return json_({
+      success: true,
+      interaction_id: interactionId,
+      author: authorName,
+      jira_key: jiraPrimary,
+      airtable: airtableStatus,
+      telegram: telegramStatus,
+      email: emailStatus
+    });
+  } catch (err) {
+    log_("saveLinkedInLead_", "ERROR", String(err.message || err));
+    return json_({ success: false, message: String(err.message || err) });
+  }
+}
+
+/**
+ * Creates Jira Parent Task + 8 Subtasks for a LinkedIn lead across configured hosts.
+ */
+function liCreateJiraLead_(lead) {
+  if (!JIRA_CONFIG.ENABLED) return { primaryKey: "", secondaryKey: "" };
+  var hosts = getJiraHosts_();
+  var projectKey = getJiraProjectKey_();
+  if (!hosts.length || !projectKey) return { primaryKey: "", secondaryKey: "" };
+
+  var actionLabel = String(lead.interaction_type || "ENGAGEMENT").toUpperCase();
+  var summary = "[LINKEDIN_" + actionLabel + "] " + (lead.author_name || "LinkedIn Prospect") + " — " + (lead.author_headline || "Direct Prospect");
+
+  var descText = [
+    "*LinkedIn Lead Details:*",
+    "• *Author / Name:* " + (lead.author_name || "N/A"),
+    "• *Headline / Role:* " + (lead.author_headline || "N/A"),
+    "• *Profile URL:* " + (lead.author_profile_url || "N/A"),
+    "• *Interaction Type:* " + (lead.interaction_type || "N/A"),
+    "• *Post URL:* " + (lead.post_url || "N/A"),
+    "• *Post URN:* " + (lead.post_urn || "N/A"),
+    "• *Received At:* " + (lead.timestamp || new Date().toISOString()),
+    "",
+    "*Message / Comment:*",
+    "\"" + (lead.content_text || lead.comment_text || "Engaged with company post.") + "\""
+  ].join("\n");
+
+  var keys = {};
+
+  hosts.forEach(function(host) {
+    try {
+      var payload = {
+        fields: {
+          project: { key: projectKey },
+          summary: summary,
+          description: {
+            type: "doc",
+            version: 1,
+            content: [{
+              type: "paragraph",
+              content: [{ type: "text", text: descText }]
+            }]
+          },
+          issuetype: { name: JIRA_CONFIG.TASK_ISSUE_TYPE || "Task" },
+          labels: ["physiomatics-lead", "linkedin-lead"]
+        }
+      };
+
+      var res = jiraFetchForHost_(host, "/rest/api/3/issue", "post", payload);
+      if (!res || !res.key) return;
+
+      var parentKey = res.key;
+      keys[host] = parentKey;
+
+      var subtasks = [
+        { summary: "1. Direct Message & Identity Verification on LinkedIn", description: "Send connection request or DM acknowledging interaction on LinkedIn within 15 minutes." },
+        { summary: "2. Clinical & Organizational Background Review", description: "Review member's LinkedIn profile, clinic affiliations, role, and rehabilitation interest." },
+        { summary: "3. Schedule Platform Discovery & Demo Session", description: "Share calendar invite link for live Physiomatics platform demo." },
+        { summary: "4. Conduct Live Platform Walkthrough", description: "Demonstrate AI posture tracking, patient dashboard, and compliance monitoring." },
+        { summary: "5. Technical Integration & Camera Feasibility Check", description: "Review clinic workflows, EHR compatibility, and camera hardware setup." },
+        { summary: "6. Commercial Proposal & Pilot Licensing Setup", description: "Send quotation, pricing tier, and pilot clinical terms." },
+        { summary: "7. Clinical Onboarding & Staff Training Session", description: "Schedule workshop for clinic physiotherapists and assign staff credentials." },
+        { summary: "8. Post-Onboarding Review & Satisfaction Check", description: "Review initial patient sessions and collect feedback." }
+      ];
+
+      subtasks.forEach(function(sub) {
+        try {
+          jiraFetchForHost_(host, "/rest/api/3/issue", "post", {
+            fields: {
+              project: { key: projectKey },
+              parent: { key: parentKey },
+              summary: sub.summary + " [" + parentKey + "]",
+              description: {
+                type: "doc",
+                version: 1,
+                content: [{
+                  type: "paragraph",
+                  content: [{ type: "text", text: sub.description }]
+                }]
+              },
+              issuetype: { name: JIRA_CONFIG.SUBTASK_ISSUE_TYPE || "Sub-task" }
+            }
+          });
+        } catch (subErr) {
+          log_("liCreateJiraLead_", "WARN", "Subtask creation failed on " + host + ": " + String(subErr));
+        }
+      });
+    } catch (err) {
+      log_("liCreateJiraLead_", "ERROR", "Jira task creation error on " + host + ": " + String(err));
+    }
+  });
+
+  return { primaryKey: keys[hosts[0]] || "", secondaryKey: hosts[1] ? (keys[hosts[1]] || "") : "" };
+}
+
+/**
+ * MASTER ORCHESTRATOR — Automatically fetches new comments and reactions from monitored LinkedIn posts.
+ */
+function SYNC_LINKEDIN_POSTS_AUTO() {
+  log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Starting automated LinkedIn sync...");
+  try {
+    var token = getLinkedInAccessToken_();
+    if (!token) {
+      throw new Error("Missing LINKEDIN_ACCESS_TOKEN in Script Properties.");
+    }
+
+    var postUrns = (LINKEDIN_CONFIG.MONITOR_POST_URNS || "").split(",").map(function(s) { return s.trim(); }).filter(Boolean);
+    if (!postUrns.length) {
+      return "No LinkedIn Post URN configured. Set LINKEDIN_MONITOR_POST_URNS in Script Properties.";
+    }
+
+    var totalProcessed = 0;
+
+    postUrns.forEach(function(postUrn) {
+      var cleanUrn = encodeURIComponent(postUrn);
+
+      // 1. Fetch Comments
+      try {
+        var commentsRes = UrlFetchApp.fetch("https://api.linkedin.com/rest/socialActions/" + cleanUrn + "/comments?count=50", {
+          method: "get",
+          headers: {
+            "Authorization": "Bearer " + token,
+            "LinkedIn-Version": "202401",
+            "X-Restli-Protocol-Version": "2.0.0"
+          },
+          muteHttpExceptions: true
+        });
+
+        if (commentsRes.getResponseCode() === 200) {
+          var cData = JSON.parse(commentsRes.getContentText() || "{}");
+          var elements = cData.elements || [];
+          elements.forEach(function(c) {
+            var actor = c.actor || "";
+            var commentId = c.$URN || c.id || ("li_c_" + Date.now());
+            saveLinkedInLead_({
+              interaction_id: commentId,
+              interaction_type: "comment",
+              author_urn: actor,
+              author_name: (c.created && c.created.actor && c.created.actor.name) ? c.created.actor.name : "LinkedIn Member",
+              author_profile_url: actor ? ("https://www.linkedin.com/in/" + actor.replace("urn:li:person:", "")) : "",
+              content_text: (c.message && c.message.text) ? c.message.text : "",
+              post_urn: postUrn,
+              timestamp: new Date().toISOString()
+            });
+            totalProcessed++;
+          });
+        }
+      } catch (cErr) {
+        log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN", "Error fetching comments: " + String(cErr));
+      }
+
+      // 2. Fetch Reactions (Likes)
+      try {
+        var reactRes = UrlFetchApp.fetch("https://api.linkedin.com/rest/socialActions/" + cleanUrn + "/reactions?count=100", {
+          method: "get",
+          headers: {
+            "Authorization": "Bearer " + token,
+            "LinkedIn-Version": "202401",
+            "X-Restli-Protocol-Version": "2.0.0"
+          },
+          muteHttpExceptions: true
+        });
+
+        if (reactRes.getResponseCode() === 200) {
+          var rData = JSON.parse(reactRes.getContentText() || "{}");
+          var rElements = rData.elements || [];
+          rElements.forEach(function(r) {
+            var actor = r.root || r.actor || "";
+            var rType = (r.reactionType || "LIKE").toLowerCase();
+            var reactionId = "li_react_" + actor.replace(/[^a-zA-Z0-9]/g, "") + "_" + postUrn.replace(/[^a-zA-Z0-9]/g, "");
+            saveLinkedInLead_({
+              interaction_id: reactionId,
+              interaction_type: rType,
+              author_urn: actor,
+              author_name: "LinkedIn Member",
+              author_profile_url: actor ? ("https://www.linkedin.com/in/" + actor.replace("urn:li:person:", "")) : "",
+              content_text: "Reacted (" + rType + ") on your post",
+              post_urn: postUrn,
+              timestamp: new Date().toISOString()
+            });
+            totalProcessed++;
+          });
+        }
+      } catch (rErr) {
+        log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN", "Error fetching reactions: " + String(rErr));
+      }
+    });
+
+    var msg = "LinkedIn auto-sync finished. Processed: " + totalProcessed;
+    log_("SYNC_LINKEDIN_POSTS_AUTO", "SUCCESS", msg);
+    return msg;
+  } catch (err) {
+    var errMsg = "LinkedIn auto-sync error: " + String(err.message || err);
+    log_("SYNC_LINKEDIN_POSTS_AUTO", "ERROR", errMsg);
+    return errMsg;
+  }
+}
+
+/**
+ * Activates an hourly time trigger in Google Cloud for LinkedIn sync.
+ */
+function SETUP_LINKEDIN_AUTO_SYNC_TRIGGER() {
+  DELETE_LINKEDIN_AUTO_SYNC_TRIGGER();
+  var trigger = ScriptApp.newTrigger("SYNC_LINKEDIN_POSTS_AUTO")
+    .timeBased()
+    .everyHours(1)
+    .create();
+  log_("SETUP_LINKEDIN_AUTO_SYNC_TRIGGER", "SUCCESS", "Hourly LinkedIn trigger set: " + trigger.getUniqueId());
+  return "Hourly LinkedIn auto-sync trigger successfully activated!";
+}
+
+/**
+ * Deletes any existing LinkedIn auto-sync triggers.
+ */
+function DELETE_LINKEDIN_AUTO_SYNC_TRIGGER() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var count = 0;
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "SYNC_LINKEDIN_POSTS_AUTO") {
+      ScriptApp.deleteTrigger(triggers[i]);
+      count++;
+    }
+  }
+  return "Removed " + count + " LinkedIn triggers.";
+}
+
+/**
+ * Test simulation: Creates a demo LinkedIn lead and verifies Jira, Sheets, Airtable, Telegram, and Email.
+ */
+function TEST_LINKEDIN_LEAD() {
+  return saveLinkedInLead_({
+    interaction_id: "test_li_" + Date.now(),
+    interaction_type: "comment",
+    author_name: "Dr. Rajesh Sharma (Lead Physiotherapist)",
+    author_headline: "Head of Orthopedic Rehabilitation & Sports Medicine",
+    author_profile_url: "https://www.linkedin.com/in/dr-rajesh-sharma-physio",
+    content_text: "We are expanding our clinic network in Bengaluru and looking for an AI movement analysis platform. How can we book a demo and review trial licensing?",
+    post_url: "https://www.linkedin.com/feed/update/urn:li:activity:7251829384918239182",
+    post_urn: "urn:li:activity:7251829384918239182",
+    email: "dr.rajesh@orthorehab.in",
+    phone: "+91 98450 12345"
+  });
 }
 
