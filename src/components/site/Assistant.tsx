@@ -72,8 +72,8 @@ const KB: { triggers: string[]; answer: string; links?: { label: string; to: str
     links: [{ label: "Contact for DPA", to: "/contact" }],
   },
   {
-    triggers: ["contact", "reach", "email", "phone", "whatsapp", "call", "speak", "talk"],
-    answer: "You can reach us via the Contact page (quick enquiry or detailed consultation) or chat directly on WhatsApp. We usually respond within one business day.",
+    triggers: ["contact", "reach", "email", "phone", "whatsapp", "call", "speak", "talk", "linkedin", "youtube", "social"],
+    answer: "You can reach us via:\n• 📞 Phone / WhatsApp: +91 78450 72426\n• 💬 WhatsApp chat on the Contact page\n• 💼 LinkedIn: linkedin.com/company/143995162\n• ▶️ YouTube: @JaneGracyDavid\n\nWe typically respond within one business day.",
     links: [{ label: "Contact page", to: "/contact" }],
   },
   {
@@ -272,8 +272,13 @@ const tree: Record<string, TreeNode> = {
     options: [{ label: "Partner with us", to: "/contact" }, { label: "Chat on WhatsApp", wa: "education" }],
   },
   contact: {
-    text: "📩 You're on the Contact page. Send a quick enquiry, book a detailed consultation, or leave feedback below. How can we help you today?",
-    options: [{ label: "See pricing info", next: "pricing" }, { label: "Chat on WhatsApp", wa: "general" }],
+    text: "📩 You're on the Contact page. Send a quick enquiry, book a detailed consultation, or connect via WhatsApp, phone (+91 78450 72426), LinkedIn or YouTube. How can we help?",
+    options: [
+      { label: "See pricing info", next: "pricing" },
+      { label: "Chat on WhatsApp", wa: "general" },
+      { label: "LinkedIn page", to: "/contact" },
+      { label: "YouTube channel", to: "/contact" },
+    ],
   },
   feedback: {
     text: "💬 Thanks for taking the time to give feedback! Our product team reads every message. You can also use the feedback form right here on this page.",
