@@ -804,6 +804,32 @@ function saveYouTubeLead_(payload) {
     var videoId = String(p.video_id || "");
     var videoUrl = videoId ? "https://www.youtube.com/watch?v=" + videoId : String(p.video_url || "");
 
+    // ── Jira Task Creation (if is_enquiry and no Jira key provided upstream) ──
+    var jiraKeyPrimary   = String(p.jira_key_primary   || "");
+    var jiraKeySecondary = String(p.jira_key_secondary || "");
+
+    if (p.is_enquiry && !jiraKeyPrimary && JIRA_CONFIG.ENABLED) {
+      try {
+        // Build a comment-like object for ytCreateJiraLead_
+        var commentObj = {
+          id: String(p.comment_id || ""),
+          authorDisplayName: String(p.author_name || "YouTube Viewer"),
+          authorChannelUrl:  String(p.author_channel_url || ""),
+          text:              String(p.comment_text || ""),
+          publishedAt:       String(p.published_at || ""),
+          videoId:           videoId,
+          replies: (p.reply_text ? [{ author: "Reply", text: p.reply_text, publishedAt: "" }] : [])
+        };
+        var videoTitle = String(p.video_title || ("Physiomatics Video (" + videoId + ")"));
+        var jiraRes = ytCreateJiraLead_(commentObj, videoTitle);
+        jiraKeyPrimary   = jiraRes.primaryKey   || "";
+        jiraKeySecondary = jiraRes.secondaryKey || "";
+        log_("saveYouTubeLead_", "INFO", "Jira tasks created for YouTube lead: primary=" + jiraKeyPrimary + " secondary=" + jiraKeySecondary);
+      } catch (jiraErr) {
+        log_("saveYouTubeLead_", "WARN", "Jira creation failed for YouTube lead " + p.comment_id + ": " + String(jiraErr.message || jiraErr));
+      }
+    }
+
     appendValues_(sheet, [
       new Date().toISOString(),                       // synced_at
       String(p.comment_id || ""),                     // comment_id
@@ -819,13 +845,13 @@ function saveYouTubeLead_(payload) {
       String(p.like_count !== undefined ? p.like_count : ""),  // like_count
       p.is_enquiry ? "TRUE" : "FALSE",                // is_enquiry
       "youtube_comment",                              // lead_source
-      String(p.jira_key_primary || ""),               // jira_key_primary
-      String(p.jira_key_secondary || ""),             // jira_key_secondary
+      jiraKeyPrimary,                                 // jira_key_primary
+      jiraKeySecondary,                               // jira_key_secondary
       String(p.sync_status || "new")                  // sync_status
     ]);
 
-    log_("saveYouTubeLead_", "SUCCESS", "YouTube lead stored: " + p.comment_id + " by " + p.author_name);
-    return json_({ success: true, stored: true, comment_id: p.comment_id, author: p.author_name });
+    log_("saveYouTubeLead_", "SUCCESS", "YouTube lead stored: " + p.comment_id + " by " + p.author_name + (jiraKeyPrimary ? " [Jira: " + jiraKeyPrimary + "]" : ""));
+    return json_({ success: true, stored: true, comment_id: p.comment_id, author: p.author_name, jira_key: jiraKeyPrimary });
   } catch (err) {
     log_("saveYouTubeLead_", "ERROR", String(err.message || err));
     return json_({ success: false, message: String(err.message || err) });
