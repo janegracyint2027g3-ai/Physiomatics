@@ -3439,3 +3439,189 @@ function DEBUG_LINKEDIN_API() {
 
   Logger.log("\n=== Debug Complete. Copy the output above and share it. ===");
 }
+
+/* ============================================================================
+   DEBUG_YOUTUBE_PIPELINE  — Run this in Apps Script to diagnose why YouTube
+   leads are NOT appearing in Jira or Telegram.
+   ============================================================================ */
+function DEBUG_YOUTUBE_PIPELINE() {
+  Logger.log("==============================================================");
+  Logger.log("  PHYSIOMATICS — YOUTUBE PIPELINE DIAGNOSTIC");
+  Logger.log("  Run at: " + new Date().toISOString());
+  Logger.log("==============================================================\n");
+
+  // ── STEP 1: Check Script Properties / Config ────────────────────────────
+  Logger.log("--- STEP 1: Configuration Check ---");
+  var ytClientId     = PropertiesService.getScriptProperties().getProperty("YOUTUBE_CLIENT_ID")     || YOUTUBE_CONFIG.CLIENT_ID     || "";
+  var ytClientSecret = PropertiesService.getScriptProperties().getProperty("YOUTUBE_CLIENT_SECRET") || YOUTUBE_CONFIG.CLIENT_SECRET || "";
+  var ytRefreshToken = PropertiesService.getScriptProperties().getProperty("YOUTUBE_REFRESH_TOKEN") || YOUTUBE_CONFIG.REFRESH_TOKEN || "";
+  var jiraToken      = getJiraApiToken_();
+  var telegramToken  = getTelegramBotToken_();
+  var telegramChat   = getTelegramChatId_();
+
+  Logger.log("YOUTUBE_CLIENT_ID     : " + (ytClientId     ? "SET (" + ytClientId.substring(0,12) + "...)" : "❌ MISSING"));
+  Logger.log("YOUTUBE_CLIENT_SECRET : " + (ytClientSecret ? "SET (" + ytClientSecret.substring(0,6)  + "...)" : "❌ MISSING"));
+  Logger.log("YOUTUBE_REFRESH_TOKEN : " + (ytRefreshToken ? "SET (" + ytRefreshToken.substring(0,12) + "...)" : "❌ MISSING"));
+  Logger.log("JIRA_API_TOKEN        : " + (jiraToken      ? "SET (" + jiraToken.substring(0,10)      + "...)" : "❌ MISSING"));
+  Logger.log("TELEGRAM_BOT_TOKEN    : " + (telegramToken  ? "SET (" + telegramToken.substring(0,10)  + "...)" : "❌ MISSING"));
+  Logger.log("TELEGRAM_CHAT_ID      : " + (telegramChat   ? telegramChat : "❌ MISSING"));
+  Logger.log("YOUTUBE_VIDEO_IDS     : " + (YOUTUBE_CONFIG.MONITOR_VIDEO_IDS || "❌ MISSING"));
+  Logger.log("JIRA_HOST             : " + getJiraHost_());
+  Logger.log("JIRA_PROJECT_KEY      : " + getJiraProjectKey_());
+  Logger.log("");
+
+  if (!ytClientId || !ytClientSecret || !ytRefreshToken) {
+    Logger.log("❌ FATAL: YouTube OAuth credentials missing. Cannot continue.\n");
+    Logger.log("FIX: Go to Apps Script → Project Settings → Script Properties");
+    Logger.log("     Add: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN");
+    return;
+  }
+
+  // ── STEP 2: Get YouTube Access Token ────────────────────────────────────
+  Logger.log("--- STEP 2: YouTube OAuth Token ---");
+  var accessToken;
+  try {
+    accessToken = getYouTubeAccessToken_();
+    Logger.log("✅ Access token obtained: " + accessToken.substring(0, 20) + "...");
+  } catch (e) {
+    Logger.log("❌ FAILED to get YouTube access token: " + e);
+    Logger.log("FIX: Your YOUTUBE_REFRESH_TOKEN may be expired or revoked.");
+    Logger.log("     Re-authorise at: https://developers.google.com/oauthplayground");
+    return;
+  }
+  Logger.log("");
+
+  // ── STEP 3: Fetch Comments from YouTube ─────────────────────────────────
+  Logger.log("--- STEP 3: Fetch YouTube Comments ---");
+  var videoIds = (YOUTUBE_CONFIG.MONITOR_VIDEO_IDS || "").split(",").map(function(s){ return s.trim(); }).filter(Boolean);
+  Logger.log("Monitoring " + videoIds.length + " video(s): " + videoIds.join(", "));
+
+  var allComments = [];
+  videoIds.forEach(function(videoId) {
+    try {
+      var title = getYouTubeVideoTitle_(accessToken, videoId);
+      Logger.log("Video [" + videoId + "] title: " + title);
+      var comments = fetchYouTubeComments_(accessToken, videoId);
+      Logger.log("  → Fetched " + comments.length + " comment(s)");
+      comments.forEach(function(c) { c._videoTitle = title; c._videoId = videoId; });
+      allComments = allComments.concat(comments);
+    } catch(e) {
+      Logger.log("  ❌ Error fetching comments for " + videoId + ": " + e);
+    }
+  });
+
+  if (allComments.length === 0) {
+    Logger.log("⚠️  No comments found. Either the video has 0 comments or the token has no permission.");
+    Logger.log("    Check: YouTube Data API v3 is enabled in Google Cloud Console.");
+    Logger.log("    Check: OAuth scope includes https://www.googleapis.com/auth/youtube.force-ssl");
+    Logger.log("");
+  } else {
+    Logger.log("Total comments fetched: " + allComments.length);
+  }
+  Logger.log("");
+
+  // ── STEP 4: Enquiry Detection ────────────────────────────────────────────
+  Logger.log("--- STEP 4: Enquiry Detection ---");
+  var enquiries = allComments.filter(function(c) { return ytIsEnquiry_(c.text); });
+  Logger.log("Comments classified as ENQUIRY: " + enquiries.length + " / " + allComments.length);
+  if (allComments.length > 0 && enquiries.length === 0) {
+    Logger.log("⚠️  No enquiries detected. Sample comment texts:");
+    allComments.slice(0, 3).forEach(function(c, i) {
+      Logger.log("  [" + i + "] " + (c.text || "").substring(0, 120));
+    });
+    Logger.log("  Tip: Comments need words like: price, demo, contact, clinic, help, etc.");
+  }
+  enquiries.slice(0, 3).forEach(function(c, i) {
+    Logger.log("  Enquiry [" + i + "]: " + c.authorDisplayName + " — " + (c.text || "").substring(0, 80));
+  });
+  Logger.log("");
+
+  // ── STEP 5: Jira Connection Test ─────────────────────────────────────────
+  Logger.log("--- STEP 5: Jira Connection ---");
+  if (!jiraToken) {
+    Logger.log("❌ JIRA_API_TOKEN missing. Jira will be skipped.");
+    Logger.log("FIX: Add JIRA_API_TOKEN in Script Properties (or update JIRA_CONFIG.API_TOKEN)");
+  } else {
+    try {
+      var jiraUser = jiraFetch_("/rest/api/2/myself", "get");
+      Logger.log("✅ Jira connected as: " + (jiraUser.displayName || jiraUser.emailAddress || "unknown"));
+    } catch(e) {
+      Logger.log("❌ Jira connection FAILED: " + e);
+      Logger.log("FIX: Check JIRA_API_TOKEN, JIRA_HOST, and JIRA_PROJECT_KEY");
+    }
+  }
+  Logger.log("");
+
+  // ── STEP 6: Test Jira Task Creation with a mock YouTube lead ─────────────
+  Logger.log("--- STEP 6: Jira Task Creation (Mock YouTube Lead) ---");
+  if (jiraToken) {
+    try {
+      var mockComment = {
+        id: "debug_yt_" + Date.now(),
+        authorDisplayName: "Debug Test Viewer",
+        authorChannelUrl: "https://www.youtube.com/channel/debug",
+        text: "I am interested in a demo of Physiomatics for my clinic. Can you share contact details?",
+        publishedAt: new Date().toISOString(),
+        videoId: videoIds[0] || "eRGcQo4qWiM",
+        replies: []
+      };
+      var jiraRes = ytCreateJiraLead_(mockComment, "DEBUG TEST — Physiomatics Video");
+      Logger.log("✅ Jira task created!");
+      Logger.log("   Primary key  : " + (jiraRes.primaryKey   || "none"));
+      Logger.log("   Secondary key: " + (jiraRes.secondaryKey || "none"));
+    } catch(e) {
+      Logger.log("❌ Jira task creation FAILED: " + e);
+      Logger.log("FIX: Ensure project key '" + getJiraProjectKey_() + "' exists and API token has Create Issue permission.");
+    }
+  } else {
+    Logger.log("⏭️  Skipped — no Jira token.");
+  }
+  Logger.log("");
+
+  // ── STEP 7: Telegram Test ─────────────────────────────────────────────────
+  Logger.log("--- STEP 7: Telegram Alert ---");
+  if (!telegramToken || !telegramChat) {
+    Logger.log("❌ Telegram BOT_TOKEN or CHAT_ID missing. Alerts will be skipped.");
+    Logger.log("FIX: Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in Script Properties.");
+  } else {
+    try {
+      var tMsg = "🔬 <b>Physiomatics YouTube Debug</b>\n\n" +
+        "✅ Pipeline diagnostic running.\n" +
+        "Comments found: <b>" + allComments.length + "</b>\n" +
+        "Enquiries detected: <b>" + enquiries.length + "</b>\n" +
+        "🕐 " + new Date().toISOString();
+      var tOk = sendTelegramMessage_(tMsg);
+      Logger.log(tOk ? "✅ Telegram message sent successfully." : "❌ Telegram message failed (check bot token / chat ID).");
+    } catch(e) {
+      Logger.log("❌ Telegram error: " + e);
+    }
+  }
+  Logger.log("");
+
+  // ── STEP 8: Sheet Check ───────────────────────────────────────────────────
+  Logger.log("--- STEP 8: YouTube_Raw_Leads Sheet Check ---");
+  try {
+    var ss = getSpreadsheet();
+    var ytSheet = getTab(ss, "YouTube_Raw_Leads");
+    var lastRow = ytSheet.getLastRow();
+    Logger.log("YouTube_Raw_Leads rows (incl. header): " + lastRow);
+    if (lastRow > 1) {
+      var sample = ytSheet.getRange(lastRow, 1, 1, 17).getValues()[0];
+      Logger.log("Latest row:");
+      Logger.log("  synced_at     : " + sample[0]);
+      Logger.log("  comment_id    : " + sample[1]);
+      Logger.log("  author_name   : " + sample[6]);
+      Logger.log("  is_enquiry    : " + sample[12]);
+      Logger.log("  jira_primary  : " + sample[14]);
+      Logger.log("  jira_secondary: " + sample[15]);
+      Logger.log("  sync_status   : " + sample[16]);
+    }
+  } catch(e) {
+    Logger.log("❌ Sheet read error: " + e);
+  }
+  Logger.log("");
+
+  Logger.log("==============================================================");
+  Logger.log("  DIAGNOSTIC COMPLETE — Check each ❌ above and apply the FIX");
+  Logger.log("==============================================================");
+}
