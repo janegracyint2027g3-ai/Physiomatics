@@ -18,6 +18,7 @@ export const Route = createFileRoute("/feedback")({
 
 import { captureVercelLead } from "@/lib/vercelAnalytics";
 import { trackClarityEvent, setClarityTag } from "@/lib/clarity";
+import { sendToGoogleSheet } from "@/lib/googleSheets";
 
 function FeedbackPage() {
   const [feedback, setFeedback] = useState("");
