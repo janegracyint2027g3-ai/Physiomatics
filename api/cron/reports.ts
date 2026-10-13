@@ -183,10 +183,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       telegramSent = await sendTelegramReport(tgToken, tgChatId, tgMsg);
     }
 
+    // Trigger Google Apps Script Executive Digest Email dispatch
+    let emailReportSent = false;
+    const sheetsUrl =
+      process.env.GOOGLE_SHEETS_URL ||
+      process.env.VITE_GOOGLE_SHEETS_URL ||
+      "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
+
+    try {
+      const emailRes = await fetch(`${sheetsUrl}?action=run_digest&interval=${encodeURIComponent(interval)}`, {
+        signal: AbortSignal.timeout(20000),
+      });
+      emailReportSent = emailRes.ok;
+      console.log(`[Cron] Google Apps Script report email triggered (${interval}): status ${emailRes.status}`);
+    } catch (sheetCronErr: any) {
+      console.warn(`[Cron] Apps Script report email trigger notice (${interval}):`, sheetCronErr?.message || sheetCronErr);
+    }
+
     results[interval] = {
       period: dateStr,
       jira_task: jiraKey || "skipped_or_failed",
       telegram_sent: telegramSent,
+      email_sent: emailReportSent,
     };
   }
 

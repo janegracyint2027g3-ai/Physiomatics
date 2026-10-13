@@ -210,6 +210,7 @@ async function syncToJiraServer(
         "Content-Type": "application/json",
         Accept: "application/json",
       },
+      signal: AbortSignal.timeout(8000),
       body: JSON.stringify({
         fields: {
           project: { key: projectKey },
@@ -235,36 +236,38 @@ async function syncToJiraServer(
     const parentKey = parentData.key;
     console.log(`[Jira] ✓ Created parent Task ${parentKey}`);
 
-    // Spawn subtasks asynchronously — do NOT await (non-blocking)
-    (async () => {
-      for (const sub of LEAD_SUBTASKS) {
-        try {
-          await fetch(`https://${primaryHost}/rest/api/3/issue`, {
-            method: "POST",
-            headers: {
-              Authorization: authHeader,
-              "Content-Type": "application/json",
-              Accept: "application/json",
+    // Create all 8 subtasks in parallel with Promise.allSettled
+    const subtaskPromises = LEAD_SUBTASKS.map((sub) =>
+      fetch(`https://${primaryHost}/rest/api/3/issue`, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+        body: JSON.stringify({
+          fields: {
+            project: { key: projectKey },
+            parent: { key: parentKey },
+            summary: `${sub.summary} [${parentKey}]`,
+            description: {
+              type: "doc",
+              version: 1,
+              content: [{ type: "paragraph", content: [{ type: "text", text: sub.description }] }],
             },
-            body: JSON.stringify({
-              fields: {
-                project: { key: projectKey },
-                parent: { key: parentKey },
-                summary: `${sub.summary} [${parentKey}]`,
-                description: {
-                  type: "doc",
-                  version: 1,
-                  content: [{ type: "paragraph", content: [{ type: "text", text: sub.description }] }],
-                },
-                issuetype: { name: "Sub-task" },
-                labels: ["physiomatics-subtask"],
-              },
-            }),
-          });
-        } catch (_) {}
-      }
-      console.log(`[Jira] ✓ All 8 subtasks created for ${parentKey}`);
-    })().catch(() => {});
+            issuetype: { name: "Sub-task" },
+            labels: ["physiomatics-subtask"],
+          },
+        }),
+      }).catch((err) => {
+        console.warn(`[Jira] Subtask "${sub.summary}" error:`, err?.message);
+        return null;
+      })
+    );
+
+    await Promise.allSettled(subtaskPromises);
+    console.log(`[Jira] ✓ All 8 subtasks created for ${parentKey}`);
 
     return { success: true, issueKey: parentKey };
   } catch (err: any) {
@@ -315,7 +318,10 @@ async function syncToGoogleSheetsServer(
       report_file_url: String(lead.document_url || ""),
     });
 
-    const res = await fetch(`${sheetsUrl}?${params.toString()}`, { method: "GET" });
+    const res = await fetch(`${sheetsUrl}?${params.toString()}`, {
+      method: "GET",
+      signal: AbortSignal.timeout(15000),
+    });
     console.log(`[Sheets] ✓ Sent lead. Status: ${res.status}`);
     return { success: true };
   } catch (err: any) {
@@ -365,6 +371,7 @@ async function syncToAirtableServer(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(8000),
       body: JSON.stringify({ records: [{ fields }], typecast: true }),
     });
 
@@ -472,76 +479,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`🚀 [Lead] Processing: ${record.lead_id} (${record.lead_type}) for "${record.name}"`);
 
-    // ── STEP 1: Send Telegram FIRST (fast, ~1-2s) ──────────────────────────
-    // We notify BEFORE the slow integrations so the alert is never missed.
+    // ── STEP 1: Jira Parent & Subtasks creation ────────────────────────────
+    // Creates Jira parent issue and all 8 subtasks in parallel (~1-2s).
+    let jiraStatus: { success: boolean; issueKey?: string; error?: string } = { success: false };
+    try {
+      jiraStatus = await syncToJiraServer(record);
+      if (jiraStatus.success && jiraStatus.issueKey) {
+        console.log(`[Lead] ✓ Jira issue created: ${jiraStatus.issueKey}`);
+      }
+    } catch (jErr: any) {
+      jiraStatus = { success: false, error: jErr?.message || String(jErr) };
+      console.warn("[Lead] Jira notice:", jErr);
+    }
+    const jiraIssueKey = jiraStatus.issueKey;
+
+    // ── STEP 2: Concurrently run Google Sheets, Airtable & Telegram ────────
+    // Google Sheets: appends lead and triggers immediate Form Email alert via Apps Script.
+    // Airtable: logs lead record into Airtable Base.
+    // Telegram: sends instant alert containing the verified Jira issue key link.
     const tgToken = process.env.TELEGRAM_BOT_TOKEN;
     const tgChatId = process.env.TELEGRAM_CHAT_ID;
-    let telegramStatus: { success: boolean; messageId?: number; error?: string } = { success: false };
+    const tgText = buildLeadTelegramMessage(record, jiraIssueKey);
 
-    if (tgToken && tgChatId) {
-      try {
-        const tgText = buildLeadTelegramMessage(record, null); // No Jira key yet — sent instantly
-        const tgRes = await sendTelegramAlert(tgToken, tgChatId, tgText);
-        telegramStatus = { success: tgRes.ok, messageId: tgRes.messageId, error: tgRes.error };
-        if (tgRes.ok) {
-          console.log(`[Lead] ✓ Telegram alert sent (msg_id=${tgRes.messageId})`);
-        } else {
-          console.error(`[Lead] ✗ Telegram failed: ${tgRes.error}`);
-        }
-      } catch (tgErr: any) {
-        telegramStatus = { success: false, error: tgErr?.message || String(tgErr) };
-        console.error("[Lead] Telegram exception:", tgErr);
-      }
-    } else {
-      telegramStatus = { success: false, error: "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set in Vercel env" };
-      console.warn("[Lead] ⚠ Telegram env vars missing. Skipping Telegram notification.");
-    }
+    const [sheetsRes, airtableRes, telegramRes] = await Promise.allSettled([
+      syncToGoogleSheetsServer(record, jiraIssueKey),
+      syncToAirtableServer(record, jiraIssueKey),
+      tgToken && tgChatId
+        ? sendTelegramAlert(tgToken, tgChatId, tgText)
+        : Promise.resolve({ ok: false, error: "Telegram credentials not configured" }),
+    ]);
 
-    // ── STEP 2: Respond to client immediately (prevents browser timeout) ───
-    // Return 200 right away. Backend integrations continue in the background.
-    res.status(200).json({
+    const sheetsStatus =
+      sheetsRes.status === "fulfilled"
+        ? sheetsRes.value
+        : { success: false, error: String(sheetsRes.reason) };
+
+    const airtableStatus =
+      airtableRes.status === "fulfilled"
+        ? airtableRes.value
+        : { success: false, error: String(airtableRes.reason) };
+
+    const tgVal: any =
+      telegramRes.status === "fulfilled"
+        ? telegramRes.value
+        : { ok: false, error: String(telegramRes.reason) };
+
+    const telegramStatus = {
+      success: Boolean(tgVal?.ok),
+      messageId: tgVal?.messageId,
+      error: tgVal?.error,
+    };
+
+    console.log(
+      `[Lead] Done: Jira=${jiraStatus.success ? jiraStatus.issueKey : "failed"}, Sheets=${sheetsStatus.success}, Airtable=${airtableStatus.success}, Telegram=${telegramStatus.success}`
+    );
+
+    // ── STEP 3: Return complete, verified response to client ───────────────
+    return res.status(200).json({
       success: true,
       lead_id: record.lead_id,
-      telegram: telegramStatus,
+      jira_issue_key: jiraIssueKey,
       captured_at: record.timestamp,
-      message: "Lead received. Processing integrations in background.",
+      jira: jiraStatus,
+      sheets: sheetsStatus,
+      airtable: airtableStatus,
+      telegram: telegramStatus,
+      message: "Lead processed across all integrations.",
     });
-
-    // ── STEP 3: Run heavy integrations in background (non-blocking) ─────────
-    // Vercel Node.js runtime keeps running after res.end() until the event
-    // loop drains or maxDuration is hit — so these will complete.
-    (async () => {
-      try {
-        // A. Jira (slowest — creates parent + 8 subtasks sequentially)
-        let jiraIssueKey: string | undefined;
-        try {
-          const jiraStatus = await syncToJiraServer(record);
-          if (jiraStatus.success && jiraStatus.issueKey) {
-            jiraIssueKey = jiraStatus.issueKey;
-            // Send an updated Telegram message with the Jira key
-            if (tgToken && tgChatId && telegramStatus.success) {
-              try {
-                const updateText = `🎫 <b>Jira issue created for "${escapeHtml(record.name)}":</b> <a href="https://${(process.env.JIRA_HOST || "janegracyint2027g3.atlassian.net").replace(/^https?:\/\//, "").replace(/\/$/, "")}/browse/${escapeHtml(jiraIssueKey)}">${escapeHtml(jiraIssueKey)}</a>`;
-                await sendTelegramAlert(tgToken, tgChatId, updateText);
-                console.log(`[Lead] ✓ Telegram Jira follow-up sent for ${jiraIssueKey}`);
-              } catch (_) {}
-            }
-          }
-        } catch (jErr) {
-          console.error("[Lead] Jira background step error:", jErr);
-        }
-
-        // B. Google Sheets + Airtable in parallel
-        await Promise.allSettled([
-          syncToGoogleSheetsServer(record, jiraIssueKey),
-          syncToAirtableServer(record, jiraIssueKey),
-        ]);
-
-        console.log(`[Lead] ✓ All background integrations complete for ${record.lead_id}`);
-      } catch (bgErr) {
-        console.error("[Lead] Background integration error:", bgErr);
-      }
-    })();
   } catch (err: any) {
     console.error("❌ [Lead] Fatal error:", err);
     // Only send error response if we haven't responded yet

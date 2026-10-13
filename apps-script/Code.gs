@@ -329,6 +329,25 @@ function doGet(e) {
       return json_({ success: false, message: String(err.message || err) });
     }
   }
+  if (params.action === "run_digest" || params.action === "report" || params.action === "send_report" || params.action === "daily_report") {
+    try {
+      var interval = params.interval || "Daily";
+      sendPeriodicExecutiveDigest(interval);
+      return json_({ success: true, message: interval + " Executive Digest email dispatched successfully." });
+    } catch (err) {
+      log_("doGet_run_digest", "ERROR", String(err));
+      return json_({ success: false, message: String(err.message || err) });
+    }
+  }
+  if (params.action === "setup_triggers") {
+    try {
+      setupPhysiomaticsTriggers();
+      return json_({ success: true, message: "Triggers configured successfully (Daily 21:00, Weekly Mon 09:00, Monthly 1st 09:00, YouTube hourly)." });
+    } catch (err) {
+      log_("doGet_setup_triggers", "ERROR", String(err));
+      return json_({ success: false, message: String(err.message || err) });
+    }
+  }
   if (params.action || params.event_name || params.event_type) {
     try {
       return processEvent_(params);
@@ -632,28 +651,28 @@ function classifySubmission_(p) {
   // ── Demo / ICP request ───────────────────────────────────────────────────
   if (type === "icp_lead" || event === "icp_lead" ||
       type.indexOf("demo") >= 0 || form.indexOf("demo") >= 0 ||
-      event === "demo_request" || event === "request_demo") {
+      event.indexOf("demo") >= 0 || event === "request_demo") {
     return (p.name && hasContact) ? "demo" : "";
   }
 
   // ── Consultation request (multi-step form) ───────────────────────────────
-  if (type === "consultation" || form.indexOf("consultation") >= 0 ||
-      event === "consultation_submit") {
+  if (type.indexOf("consultation") >= 0 || form.indexOf("consultation") >= 0 ||
+      event.indexOf("consultation") >= 0) {
     return (p.name && hasContact) ? "consultation" : "";
   }
 
   // ── Quick enquiry (short contact form) ───────────────────────────────────
-  if (type === "quick_enquiry" || form.indexOf("quick") >= 0 ||
+  if (type.indexOf("quick") >= 0 || form.indexOf("quick") >= 0 ||
       event === "lead_submission" || event === "contact_submit" ||
-      event === "contact_enquiry") {
+      event === "contact_enquiry" || type.indexOf("enquiry") >= 0) {
     return (p.name && hasContact) ? "quick" : "";
   }
 
   // ── Generic lead (has name + contact, but no specific type clue) ─────────
   if (type.indexOf("contact") >= 0 || event === "lead_submit" ||
-      p.form_status === "submitted") {
-    if (p.name && hasContact) {
-      return (form.indexOf("demo") >= 0 || p.lead_type.indexOf("demo") >= 0) ? "demo" : "quick";
+      p.form_status === "submitted" || p.name) {
+    if (p.name && (hasContact || p.message)) {
+      return (form.indexOf("demo") >= 0 || type.indexOf("demo") >= 0) ? "demo" : "quick";
     }
   }
 
@@ -1051,29 +1070,35 @@ function sendPeriodicExecutiveDigest(intervalName) {
   var tabName = map[intervalName] || "Daily_Summary";
   var sheet = ss.getSheetByName(tabName);
 
-  if (!sheet || sheet.getLastRow() < 2) {
-    log_("sendPeriodicExecutiveDigest", "SKIPPED", "No summary data for " + intervalName);
-    return;
+  var dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "yyyy-MM-dd");
+  var totalEvents = 0, visitors = 0, pageViews = 0, demos = 0, quick = 0;
+  var consults = 0, chatbot = 0, feedback = 0, leads = 0;
+  var convRate = "0.0%";
+  var avgDuration = "0";
+  var data = [];
+
+  if (sheet && sheet.getLastRow() >= 2) {
+    data = sheet.getDataRange().getDisplayValues();
+    var header = data[0];
+    var latest = data[1] || [];
+
+    // Map header indexes
+    var idx = function(name) { return header.indexOf(name); };
+    dateStr     = latest[0] || dateStr;
+    totalEvents = Number(latest[idx("Total_Events")]) || 0;
+    visitors    = Number(latest[idx("Unique_Visitors")]) || 0;
+    pageViews   = Number(latest[idx("Page_Views")]) || 0;
+    demos       = Number(latest[idx("Demo_Requests")]) || 0;
+    quick       = Number(latest[idx("Quick_Enquiries")]) || 0;
+    consults    = Number(latest[idx("Consultations")]) || 0;
+    chatbot     = Number(latest[idx("Chatbot_Messages")]) || 0;
+    feedback    = Number(latest[idx("Feedback_Count")]) || 0;
+    leads       = Number(latest[idx("Total_Leads")]) || (demos + quick + consults);
+    convRate    = latest[idx("Conversion_Rate")] || (visitors ? ((leads / visitors) * 100).toFixed(1) + "%" : "0.0%");
+    avgDuration = latest[idx("Avg_Engagement_Sec")] || "0";
+  } else {
+    log_("sendPeriodicExecutiveDigest", "INFO", "Generating zero-state executive report for " + intervalName);
   }
-
-  var data = sheet.getDataRange().getDisplayValues();
-  var header = data[0];
-  var latest = data[1] || [];
-
-  // Map header indexes
-  var idx = function(name) { return header.indexOf(name); };
-  var dateStr     = latest[0] || "Latest";
-  var totalEvents = Number(latest[idx("Total_Events")]) || 0;
-  var visitors    = Number(latest[idx("Unique_Visitors")]) || 0;
-  var pageViews   = Number(latest[idx("Page_Views")]) || 0;
-  var demos       = Number(latest[idx("Demo_Requests")]) || 0;
-  var quick       = Number(latest[idx("Quick_Enquiries")]) || 0;
-  var consults    = Number(latest[idx("Consultations")]) || 0;
-  var chatbot     = Number(latest[idx("Chatbot_Messages")]) || 0;
-  var feedback    = Number(latest[idx("Feedback_Count")]) || 0;
-  var leads       = Number(latest[idx("Total_Leads")]) || (demos + quick + consults);
-  var convRate    = latest[idx("Conversion_Rate")] || (visitors ? ((leads / visitors) * 100).toFixed(1) + "%" : "0.0%");
-  var avgDuration = latest[idx("Avg_Engagement_Sec")] || "0";
 
   // Build horizontal progress bar for Lead Distribution
   var maxLead = Math.max(demos, quick, consults, feedback, 1);
@@ -1094,16 +1119,20 @@ function sendPeriodicExecutiveDigest(intervalName) {
 
   // Recent historical rows (up to 5 past intervals) for mini trend chart
   var trendRowsHtml = "";
-  for (var r = 1; r < Math.min(data.length, 6); r++) {
-    var row = data[r];
-    trendRowsHtml +=
-      "<tr style='border-bottom:1px solid #f1f5f9;font-size:13px;'>" +
-        "<td style='padding:8px 10px;font-weight:600;color:#1e293b;'>" + html_(row[0]) + "</td>" +
-        "<td style='padding:8px 10px;color:#2563eb;text-align:center;font-weight:700;'>" + html_(row[idx("Unique_Visitors")]) + "</td>" +
-        "<td style='padding:8px 10px;color:#475569;text-align:center;'>" + html_(row[idx("Page_Views")]) + "</td>" +
-        "<td style='padding:8px 10px;color:#059669;text-align:center;font-weight:700;'>" + html_(row[idx("Total_Leads")]) + "</td>" +
-        "<td style='padding:8px 10px;color:#7c3aed;text-align:center;font-weight:700;'>" + html_(row[idx("Conversion_Rate")]) + "</td>" +
-      "</tr>";
+  if (data.length > 1) {
+    for (var r = 1; r < Math.min(data.length, 6); r++) {
+      var row = data[r];
+      trendRowsHtml +=
+        "<tr style='border-bottom:1px solid #f1f5f9;font-size:13px;'>" +
+          "<td style='padding:8px 10px;font-weight:600;color:#1e293b;'>" + html_(row[0]) + "</td>" +
+          "<td style='padding:8px 10px;color:#2563eb;text-align:center;font-weight:700;'>" + html_(row[idx("Unique_Visitors")]) + "</td>" +
+          "<td style='padding:8px 10px;color:#475569;text-align:center;'>" + html_(row[idx("Page_Views")]) + "</td>" +
+          "<td style='padding:8px 10px;color:#059669;text-align:center;font-weight:700;'>" + html_(row[idx("Total_Leads")]) + "</td>" +
+          "<td style='padding:8px 10px;color:#7c3aed;text-align:center;font-weight:700;'>" + html_(row[idx("Conversion_Rate")]) + "</td>" +
+        "</tr>";
+    }
+  } else {
+    trendRowsHtml = "<tr><td colspan='5' style='padding:12px;text-align:center;color:#94a3b8;font-size:12px;'>No historical periods recorded yet.</td></tr>";
   }
 
   var ssUrl = "";
@@ -1747,6 +1776,10 @@ function jiraFetch_(path, method, payload) {
  */
 function createJiraLeadTaskWithSubtasks_(p) {
   if (!JIRA_CONFIG.ENABLED) return null;
+  if (p.jira_issue_key || p.jira_key) {
+    log_("createJiraLeadTaskWithSubtasks_", "INFO", "Jira task already created upstream: " + (p.jira_issue_key || p.jira_key));
+    return p.jira_issue_key || p.jira_key;
+  }
   var hosts = getJiraHosts_();
   var projectKey = getJiraProjectKey_();
   if (!hosts.length || !projectKey) {
