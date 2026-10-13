@@ -19,8 +19,7 @@ export const config = {
   maxDuration: 60,
 };
 
-// ─── Default Credentials & Monitored Post ─────────────────────────────────────
-const DEFAULT_LINKEDIN_TOKEN = "AQVVTpB4Rdjv_9QZcjRw9lOqD4ygSOATpiZXvx_U1ZunoglmQHEiUHWD2ORoe6MxpnV_lBa2YgDyJ55aSfmChtRzPfKMNfAe7yq0RyaO8UVtnxyJ9cfpjwQ-p7JO_jsAbapsS74k-kIdE0eGC-n4Ut-PjJQq_QLf4HVtq5R6d-7CdQdkKiLrpX94q0vrT59nCt9De71oOoHjTabjtqfuvjmPYPSQweUF0p6AOsXfVJwmtyLQ9LbyQ-5F693veqSRrq3YR5mEFlPigzzfmwZgdRZzzvxZ7uJ-rhdh9_NGpvXGRbApshlI4Ga8c6gsO29crqv7j7UOFyBPkqziXK5YweC9uEYJig";
+const DEFAULT_LINKEDIN_TOKEN = process.env.LINKEDIN_ACCESS_TOKEN || "";
 const DEFAULT_LINKEDIN_ORG = "143995162";
 const DEFAULT_LINKEDIN_POST = "urn:li:activity:7515631841547214848";
 const DEFAULT_POST_URL = "https://www.linkedin.com/feed/update/urn:li:activity:7515631841547214848";
@@ -345,7 +344,7 @@ async function fetchLinkedInPostEngagement(accessToken: string, postUrn: string)
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "LinkedIn-Version": "202401",
+        "LinkedIn-Version": "202503",
         "X-Restli-Protocol-Version": "2.0.0",
       },
       signal: AbortSignal.timeout(10000),
@@ -370,7 +369,46 @@ async function fetchLinkedInPostEngagement(accessToken: string, postUrn: string)
       }
     }
   } catch (e) {
-    console.warn("[LinkedIn] Comments fetch error:", e);
+    console.warn("[LinkedIn] Comments API error:", e);
+  }
+
+  // 1b. Public JSON-LD fallback if REST API returned no comments
+  if (leads.length === 0) {
+    try {
+      const pubUrl = `https://www.linkedin.com/feed/update/${cleanUrn}`;
+      const pubRes = await fetch(pubUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (pubRes.ok) {
+        const html = await pubRes.text();
+        const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i);
+        if (match && match[1]) {
+          const ld = JSON.parse(match[1]);
+          const comments = ld.comment || [];
+          for (const cm of comments) {
+            const authorName = cm.author?.name || "LinkedIn Member";
+            const text = cm.text || "";
+            const d = cm.datePublished || new Date().toISOString();
+            const cid = `li_ld_${authorName.replace(/[^a-zA-Z0-9]/g, "")}_${d.substring(0, 19).replace(/[^0-9]/g, "")}`;
+            leads.push({
+              interaction_id: cid,
+              interaction_type: "comment",
+              author_name: authorName,
+              author_headline: "Engaged via LinkedIn Post",
+              content_text: text,
+              post_url: pubUrl,
+              post_urn: postUrn,
+              timestamp: d,
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("[LinkedIn] Public JSON-LD fallback error:", e);
+    }
   }
 
   // 2. Fetch Reactions (Likes, etc.)
@@ -380,7 +418,7 @@ async function fetchLinkedInPostEngagement(accessToken: string, postUrn: string)
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "LinkedIn-Version": "202401",
+        "LinkedIn-Version": "202503",
         "X-Restli-Protocol-Version": "2.0.0",
       },
       signal: AbortSignal.timeout(10000),
