@@ -19,6 +19,12 @@ export const config = {
   maxDuration: 60,
 };
 
+// ─── Default Credentials & Monitored Post ─────────────────────────────────────
+const DEFAULT_LINKEDIN_TOKEN = "AQVVTpB4Rdjv_9QZcjRw9lOqD4ygSOATpiZXvx_U1ZunoglmQHEiUHWD2ORoe6MxpnV_lBa2YgDyJ55aSfmChtRzPfKMNfAe7yq0RyaO8UVtnxyJ9cfpjwQ-p7JO_jsAbapsS74k-kIdE0eGC-n4Ut-PjJQq_QLf4HVtq5R6d-7CdQdkKiLrpX94q0vrT59nCt9De71oOoHjTabjtqfuvjmPYPSQweUF0p6AOsXfVJwmtyLQ9LbyQ-5F693veqSRrq3YR5mEFlPigzzfmwZgdRZzzvxZ7uJ-rhdh9_NGpvXGRbApshlI4Ga8c6gsO29crqv7j7UOFyBPkqziXK5YweC9uEYJig";
+const DEFAULT_LINKEDIN_ORG = "143995162";
+const DEFAULT_LINKEDIN_POST = "urn:li:activity:7515631841547214848";
+const DEFAULT_POST_URL = "https://www.linkedin.com/feed/update/urn:li:activity:7515631841547214848";
+
 // ─── 1. In-Memory Deduplication ──────────────────────────────────────────────
 const recentInteractions = new Map<string, number>();
 const DEDUP_WINDOW_MS = 60000; // 1 minute window
@@ -475,18 +481,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // GET: Health check & configuration status
   if (req.method === "GET") {
-    const hasToken = Boolean(process.env.LINKEDIN_ACCESS_TOKEN);
-    const hasOrgId = Boolean(process.env.LINKEDIN_ORGANIZATION_ID);
-    const hasPost = Boolean(process.env.LINKEDIN_MONITOR_POST_URNS || req.query.post_urn);
+    const token = process.env.LINKEDIN_ACCESS_TOKEN || DEFAULT_LINKEDIN_TOKEN;
+    const postUrn = String(req.query.post_urn || process.env.LINKEDIN_MONITOR_POST_URNS || DEFAULT_LINKEDIN_POST);
+    const hasToken = Boolean(token);
+    const hasOrgId = Boolean(process.env.LINKEDIN_ORGANIZATION_ID || DEFAULT_LINKEDIN_ORG);
+    const hasPost = Boolean(postUrn);
 
     // If sync=true requested in query
     if (req.query.sync === "true" && hasToken) {
-      const token = process.env.LINKEDIN_ACCESS_TOKEN || "";
-      const postUrn = String(req.query.post_urn || process.env.LINKEDIN_MONITOR_POST_URNS || "");
-      if (!postUrn) {
-        return res.status(400).json({ error: "Missing post_urn parameter or LINKEDIN_MONITOR_POST_URNS" });
-      }
-
       const leads = await fetchLinkedInPostEngagement(token, postUrn);
       const results = [];
       for (const lead of leads) {

@@ -101,10 +101,11 @@ function getYouTubeRefreshToken_() {
 // ── LinkedIn Auto-Sync Configuration ─────────────────────────────────────────
 var LINKEDIN_CONFIG = {
   ENABLED: true,
-  // Script Properties: LINKEDIN_ACCESS_TOKEN, LINKEDIN_ORGANIZATION_ID, LINKEDIN_MONITOR_POST_URNS
-  ACCESS_TOKEN:      PropertiesService.getScriptProperties().getProperty("LINKEDIN_ACCESS_TOKEN")      || "",
-  ORGANIZATION_ID:   PropertiesService.getScriptProperties().getProperty("LINKEDIN_ORGANIZATION_ID")   || "",
-  MONITOR_POST_URNS: PropertiesService.getScriptProperties().getProperty("LINKEDIN_MONITOR_POST_URNS") || "",
+  ACCESS_TOKEN:      PropertiesService.getScriptProperties().getProperty("LINKEDIN_ACCESS_TOKEN")      || "AQVVTpB4Rdjv_9QZcjRw9lOqD4ygSOATpiZXvx_U1ZunoglmQHEiUHWD2ORoe6MxpnV_lBa2YgDyJ55aSfmChtRzPfKMNfAe7yq0RyaO8UVtnxyJ9cfpjwQ-p7JO_jsAbapsS74k-kIdE0eGC-n4Ut-PjJQq_QLf4HVtq5R6d-7CdQdkKiLrpX94q0vrT59nCt9De71oOoHjTabjtqfuvjmPYPSQweUF0p6AOsXfVJwmtyLQ9LbyQ-5F693veqSRrq3YR5mEFlPigzzfmwZgdRZzzvxZ7uJ-rhdh9_NGpvXGRbApshlI4Ga8c6gsO29crqv7j7UOFyBPkqziXK5YweC9uEYJig",
+  ORGANIZATION_ID:   PropertiesService.getScriptProperties().getProperty("LINKEDIN_ORGANIZATION_ID")   || "143995162",
+  MONITOR_POST_URNS: PropertiesService.getScriptProperties().getProperty("LINKEDIN_MONITOR_POST_URNS") || "urn:li:activity:7515631841547214848",
+  POST_URL:          "https://www.linkedin.com/feed/update/urn:li:activity:7515631841547214848",
+  COMPANY_URL:       "https://www.linkedin.com/company/143995162/admin/",
   MAX_RESULTS: 100
 };
 
