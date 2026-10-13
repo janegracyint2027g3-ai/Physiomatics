@@ -1220,8 +1220,137 @@ function sendPeriodicExecutiveDigest(intervalName) {
     log_("sendPeriodicExecutiveDigest", "INFO", "Generating zero-state executive report for " + intervalName);
   }
 
-  // Build horizontal progress bar for Lead Distribution
-  var maxLead = Math.max(demos, quick, consults, feedback, 1);
+  // ── 1. Pull YouTube Lead Counts ──────────────────────────────────────────
+  var ytLeads = 0, ytEnquiries = 0;
+  var ytSheet = null;
+  try {
+    ytSheet = ss.getSheetByName("YouTube_Raw_Leads");
+    if (ytSheet && ytSheet.getLastRow() > 1) {
+      var ytData = ytSheet.getRange(2, 1, ytSheet.getLastRow() - 1, Math.min(ytSheet.getLastColumn(), 17)).getValues();
+      ytLeads = ytData.length;
+      ytEnquiries = ytData.filter(function(r) { return String(r[12]).toUpperCase() === "TRUE"; }).length;
+    }
+  } catch(e) { log_("digest_yt", "WARN", String(e)); }
+
+  // ── 2. Pull LinkedIn Lead Counts ─────────────────────────────────────────
+  var liLeads = 0, liEnquiries = 0;
+  var liSheet = null;
+  try {
+    liSheet = ss.getSheetByName("LinkedIn_Raw_Leads");
+    if (liSheet && liSheet.getLastRow() > 1) {
+      var liData = liSheet.getRange(2, 1, liSheet.getLastRow() - 1, Math.min(liSheet.getLastColumn(), 17)).getValues();
+      liLeads = liData.length;
+      liEnquiries = liData.filter(function(r) { return String(r[10]).toUpperCase() === "TRUE"; }).length;
+    }
+  } catch(e) { log_("digest_li", "WARN", String(e)); }
+
+  // ── 3. Pull Telegram Leads & Dispatched Alerts Count ─────────────────────
+  var telegramLeads = 0;
+  var telegramSentAlerts = 0;
+  try {
+    // Check Lead_Management
+    var lmSheet = ss.getSheetByName("Lead_Management");
+    if (lmSheet && lmSheet.getLastRow() > 1) {
+      var lmData = lmSheet.getDataRange().getValues();
+      var lmH = lmData[0];
+      var lmSrcCol = lmH.indexOf("lead_source");
+      var lmTelCol = lmH.indexOf("telegram_status");
+      for (var r = 1; r < lmData.length; r++) {
+        var rowVal = lmData[r];
+        if (lmSrcCol !== -1 && String(rowVal[lmSrcCol] || "").toLowerCase().indexOf("telegram") !== -1) {
+          telegramLeads++;
+        }
+        if (lmTelCol !== -1 && String(rowVal[lmTelCol] || "").toLowerCase() === "sent") {
+          telegramSentAlerts++;
+        }
+      }
+    }
+    // Check LinkedIn raw leads
+    if (liSheet && liSheet.getLastRow() > 1) {
+      var liH = liSheet.getRange(1, 1, 1, liSheet.getLastColumn()).getValues()[0];
+      var liTelCol = liH.indexOf("telegram_status");
+      if (liTelCol !== -1) {
+        var liTelData = liSheet.getRange(2, liTelCol + 1, liSheet.getLastRow() - 1, 1).getValues();
+        var sentCount = liTelData.filter(function(r) { return String(r[0]).toLowerCase() === "sent"; }).length;
+        telegramSentAlerts += sentCount;
+      }
+    }
+    // YouTube qualified enquiries trigger Telegram alert
+    telegramSentAlerts += ytEnquiries;
+    // Telegram lead display figure: either specific telegram leads or total delivered leads
+    if (telegramLeads === 0) {
+      telegramLeads = telegramSentAlerts;
+    }
+  } catch(e) { log_("digest_telegram", "WARN", String(e)); }
+
+  // ── 4. Most Repeated Lead Email IDs ──────────────────────────────────────
+  var emailFreq = {};
+  var emailNames = {};
+  var emailSources = {};
+  var leadSheets = ["Lead_Management", "Demo_Requests", "Quick_Enquiries", "Consultation_Requests", "Feedback"];
+  leadSheets.forEach(function(sheetName) {
+    try {
+      var ls = ss.getSheetByName(sheetName);
+      if (!ls || ls.getLastRow() < 2) return;
+      var lsData = ls.getDataRange().getValues();
+      var lsHeaders = lsData[0];
+      var emailCol = lsHeaders.indexOf("email");
+      var nameCol = lsHeaders.indexOf("name");
+      if (emailCol === -1) return;
+      for (var i = 1; i < lsData.length; i++) {
+        var em = String(lsData[i][emailCol] || "").trim().toLowerCase();
+        if (em && em.indexOf("@") > 0 && em.indexOf(".") > 0) {
+          emailFreq[em] = (emailFreq[em] || 0) + 1;
+          if (nameCol !== -1 && lsData[i][nameCol] && !emailNames[em]) {
+            emailNames[em] = String(lsData[i][nameCol]).trim();
+          }
+          if (!emailSources[em]) {
+            emailSources[em] = sheetName.replace(/_/g, " ");
+          }
+        }
+      }
+    } catch(e) {}
+  });
+
+  // Also check email regex patterns inside social comments
+  var emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+  [ytSheet, liSheet].forEach(function(s) {
+    try {
+      if (!s || s.getLastRow() < 2) return;
+      var sData = s.getDataRange().getValues();
+      for (var i = 1; i < sData.length; i++) {
+        var textRow = sData[i].join(" ");
+        var matches = textRow.match(emailRegex);
+        if (matches) {
+          matches.forEach(function(matchedEmail) {
+            var cleanEm = matchedEmail.trim().toLowerCase();
+            emailFreq[cleanEm] = (emailFreq[cleanEm] || 0) + 1;
+            if (!emailSources[cleanEm]) emailSources[cleanEm] = "Social Comment";
+          });
+        }
+      }
+    } catch(e) {}
+  });
+
+  // Sort and select top 5
+  var topEmails = Object.keys(emailFreq)
+    .map(function(em) {
+      return {
+        email: em,
+        count: emailFreq[em],
+        name: emailNames[em] || "Lead Visitor",
+        source: emailSources[em] || "Web Form"
+      };
+    })
+    .filter(function(e) { return e.count > 0; })
+    .sort(function(a, b) { return b.count - a.count; })
+    .slice(0, 5);
+
+  // ── Total leads including all omnichannels ────────────────────────────────
+  var totalAllLeads = leads + ytEnquiries + liEnquiries;
+
+  // ── Build HTML Helper: Progress Bar ──────────────────────────────────────
+  var maxLead = Math.max(demos, quick, consults, ytEnquiries, liEnquiries, feedback, 1);
   var barRow = function(name, count, color) {
     var pct = Math.min(100, Math.round((count / maxLead) * 100));
     return (
@@ -1237,92 +1366,190 @@ function sendPeriodicExecutiveDigest(intervalName) {
     );
   };
 
-  // Recent historical rows (up to 5 past intervals) for mini trend chart
+  // ── Recent Historical Trend Rows ─────────────────────────────────────────
   var trendRowsHtml = "";
   if (data.length > 1) {
+    var hidx = function(name) { return data[0].indexOf(name); };
     for (var r = 1; r < Math.min(data.length, 6); r++) {
       var row = data[r];
       trendRowsHtml +=
         "<tr style='border-bottom:1px solid #f1f5f9;font-size:13px;'>" +
           "<td style='padding:8px 10px;font-weight:600;color:#1e293b;'>" + html_(row[0]) + "</td>" +
-          "<td style='padding:8px 10px;color:#2563eb;text-align:center;font-weight:700;'>" + html_(row[idx("Unique_Visitors")]) + "</td>" +
-          "<td style='padding:8px 10px;color:#475569;text-align:center;'>" + html_(row[idx("Page_Views")]) + "</td>" +
-          "<td style='padding:8px 10px;color:#059669;text-align:center;font-weight:700;'>" + html_(row[idx("Total_Leads")]) + "</td>" +
-          "<td style='padding:8px 10px;color:#7c3aed;text-align:center;font-weight:700;'>" + html_(row[idx("Conversion_Rate")]) + "</td>" +
+          "<td style='padding:8px 10px;color:#2563eb;text-align:center;font-weight:700;'>" + html_(row[hidx("Unique_Visitors")]) + "</td>" +
+          "<td style='padding:8px 10px;color:#475569;text-align:center;'>" + html_(row[hidx("Page_Views")]) + "</td>" +
+          "<td style='padding:8px 10px;color:#059669;text-align:center;font-weight:700;'>" + html_(row[hidx("Total_Leads")]) + "</td>" +
+          "<td style='padding:8px 10px;color:#7c3aed;text-align:center;font-weight:700;'>" + html_(row[hidx("Conversion_Rate")]) + "</td>" +
         "</tr>";
     }
   } else {
     trendRowsHtml = "<tr><td colspan='5' style='padding:12px;text-align:center;color:#94a3b8;font-size:12px;'>No historical periods recorded yet.</td></tr>";
   }
 
+  // ── Top Repeated Emails Dashboard Table HTML ─────────────────────────────
+  var topEmailsHtml = "";
+  if (topEmails.length > 0) {
+    topEmailsHtml =
+      "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:20px;'>" +
+        "<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;'>" +
+          "<h3 style='margin:0;font-size:15px;color:#0f172a;font-weight:700;'>🔁 Most Repeated / Active Lead Email IDs</h3>" +
+          "<span style='font-size:11px;color:#64748b;font-weight:600;background:#f1f5f9;padding:3px 8px;border-radius:12px;'>High Intent Priority</span>" +
+        "</div>" +
+        "<table style='width:100%;border-collapse:collapse;'>" +
+          "<thead>" +
+            "<tr style='background:#f8fafc;border-bottom:2px solid #e2e8f0;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;'>" +
+              "<th style='padding:8px 10px;text-align:left;'>Rank</th>" +
+              "<th style='padding:8px 10px;text-align:left;'>Lead Name &amp; Email</th>" +
+              "<th style='padding:8px 10px;text-align:left;'>Channel</th>" +
+              "<th style='padding:8px 10px;text-align:center;'>Submissions</th>" +
+            "</tr>" +
+          "</thead>" +
+          "<tbody>";
+
+    topEmails.forEach(function(e, i) {
+      var rankBadge = i === 0 ? "🥇 #1" : i === 1 ? "🥈 #2" : i === 2 ? "🥉 #3" : ("#" + (i + 1));
+      var badgeBg = i === 0 ? "#fef3c7" : i === 1 ? "#f1f5f9" : i === 2 ? "#ffedd5" : "#f8fafc";
+      var badgeTextColor = i === 0 ? "#b45309" : i === 1 ? "#475569" : i === 2 ? "#c2410c" : "#64748b";
+      var countTagColor = e.count >= 3 ? "#dc2626" : e.count >= 2 ? "#d97706" : "#2563eb";
+
+      topEmailsHtml +=
+        "<tr style='border-bottom:1px solid #f1f5f9;font-size:13px;'>" +
+          "<td style='padding:10px 10px;'><span style='background:" + badgeBg + ";color:" + badgeTextColor + ";font-size:11px;font-weight:800;padding:3px 8px;border-radius:12px;'>" + rankBadge + "</span></td>" +
+          "<td style='padding:10px 10px;'>" +
+            "<div style='color:#0f172a;font-weight:700;'>" + html_(e.name) + "</div>" +
+            "<div style='color:#2563eb;font-size:12px;font-weight:500;'><a href='mailto:" + html_(e.email) + "' style='color:#2563eb;text-decoration:none;'>" + html_(e.email) + "</a></div>" +
+          "</td>" +
+          "<td style='padding:10px 10px;color:#64748b;font-size:12px;font-weight:600;'>" + html_(e.source) + "</td>" +
+          "<td style='padding:10px 10px;text-align:center;'>" +
+            "<span style='background:" + countTagColor + ";color:#ffffff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;'>" + e.count + "x Leads</span>" +
+          "</td>" +
+        "</tr>";
+    });
+
+    topEmailsHtml += "</tbody></table></div>";
+  } else {
+    topEmailsHtml =
+      "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:20px;text-align:center;color:#64748b;font-size:13px;'>" +
+        "🔁 <strong>Most Repeated Lead Emails:</strong> No duplicate leads recorded yet for this period." +
+      "</div>";
+  }
+
   var ssUrl = "";
   try { ssUrl = ss.getUrl(); } catch (e) { ssUrl = CONFIG.WEBSITE; }
 
+  // ── Executive HTML Dashboard Body ────────────────────────────────────────
   var htmlBody =
     "<!DOCTYPE html><html><head><meta charset='utf-8'></head><body style='margin:0;padding:24px;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;'>" +
-      "<div style='max-width:640px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,0.06);border:1px solid #e2e8f0;'>" +
+      "<div style='max-width:680px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.06);border:1px solid #e2e8f0;'>" +
 
-        // Header with gradient
+        // Header with Modern Navy Gradient
         "<div style='background:linear-gradient(135deg,#0284c7 0%,#0f172a 100%);padding:28px 24px;color:#ffffff;'>" +
-          "<div style='display:inline-block;padding:3px 10px;background:rgba(255,255,255,0.2);color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:20px;margin-bottom:8px;'>" +
+          "<div style='display:inline-block;padding:4px 12px;background:rgba(255,255,255,0.2);color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:20px;margin-bottom:8px;'>" +
             intervalName + " Executive Digest" +
           "</div>" +
           "<h1 style='margin:0;font-size:24px;font-weight:800;letter-spacing:-0.5px;'>Physiomatics Performance Dashboard</h1>" +
           "<p style='margin:6px 0 0 0;color:#bae6fd;font-size:13px;'>Reporting Period: <strong>" + dateStr + "</strong> &bull; Asia/Kolkata (IST)</p>" +
         "</div>" +
 
-        // Metric KPI Grid (4 Cards)
-        "<div style='padding:20px 24px 10px 24px;background:#ffffff;'>" +
-          "<div style='display:table;width:100%;margin-bottom:14px;'>" +
-            // KPI 1: Visitors
-            "<div style='display:table-cell;width:50%;padding-right:8px;padding-bottom:12px;vertical-align:top;'>" +
+        "<div style='padding:22px 24px 12px 24px;background:#ffffff;'>" +
+
+          // ── KPI Row 1: Visitors & Total Omnichannel Leads ──────────────────
+          "<div style='display:table;width:100%;margin-bottom:12px;'>" +
+            // Visitors Card
+            "<div style='display:table-cell;width:50%;padding-right:6px;vertical-align:top;'>" +
               "<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;'>" +
-                "<div style='color:#15803d;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>Unique Visitors</div>" +
+                "<div style='color:#15803d;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>👥 Unique Visitors</div>" +
                 "<div style='color:#166534;font-size:28px;font-weight:800;margin-top:4px;'>" + visitors + "</div>" +
-                "<div style='color:#15803d;font-size:12px;margin-top:2px;'> " + pageViews + " total page views</div>" +
+                "<div style='color:#15803d;font-size:12px;margin-top:2px;'>" + pageViews + " total page views</div>" +
               "</div>" +
             "</div>" +
-            // KPI 2: Total Leads
-            "<div style='display:table-cell;width:50%;padding-left:8px;padding-bottom:12px;vertical-align:top;'>" +
+            // Total Leads Card
+            "<div style='display:table-cell;width:50%;padding-left:6px;vertical-align:top;'>" +
               "<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;'>" +
-                "<div style='color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>Total Leads</div>" +
-                "<div style='color:#1e40af;font-size:28px;font-weight:800;margin-top:4px;'>" + leads + "</div>" +
-                "<div style='color:#1d4ed8;font-size:12px;margin-top:2px;'>Conversion: <strong>" + convRate + "</strong></div>" +
+                "<div style='color:#1d4ed8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>🎯 Omnichannel Leads</div>" +
+                "<div style='color:#1e40af;font-size:28px;font-weight:800;margin-top:4px;'>" + totalAllLeads + "</div>" +
+                "<div style='color:#1d4ed8;font-size:12px;margin-top:2px;'>Web: <strong>" + leads + "</strong> &bull; Social: <strong>" + (ytEnquiries + liEnquiries) + "</strong> &bull; Conv: <strong>" + convRate + "</strong></div>" +
               "</div>" +
             "</div>" +
           "</div>" +
 
-          "<div style='display:table;width:100%;margin-bottom:20px;'>" +
-            // KPI 3: Engagement
-            "<div style='display:table-cell;width:50%;padding-right:8px;vertical-align:top;'>" +
+          // ── KPI Row 2: Telegram Leads & YouTube Leads ──────────────────────
+          "<div style='display:table;width:100%;margin-bottom:12px;'>" +
+            // Telegram Leads Card
+            "<div style='display:table-cell;width:50%;padding-right:6px;vertical-align:top;'>" +
+              "<div style='background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:16px;'>" +
+                "<div style='color:#0284c7;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>📱 Telegram Leads</div>" +
+                "<div style='color:#0369a1;font-size:28px;font-weight:800;margin-top:4px;'>" + telegramLeads + "</div>" +
+                "<div style='color:#0284c7;font-size:12px;margin-top:2px;'>" + telegramSentAlerts + " instant bot alerts delivered</div>" +
+              "</div>" +
+            "</div>" +
+            // YouTube Leads Card
+            "<div style='display:table-cell;width:50%;padding-left:6px;vertical-align:top;'>" +
+              "<div style='background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px;'>" +
+                "<div style='color:#b91c1c;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>▶️ YouTube Leads</div>" +
+                "<div style='color:#991b1b;font-size:28px;font-weight:800;margin-top:4px;'>" + ytEnquiries + "</div>" +
+                "<div style='color:#b91c1c;font-size:12px;margin-top:2px;'>" + ytLeads + " comments tracked &bull; " + ytEnquiries + " qualified</div>" +
+              "</div>" +
+            "</div>" +
+          "</div>" +
+
+          // ── KPI Row 3: LinkedIn Leads & Web Forms ──────────────────────────
+          "<div style='display:table;width:100%;margin-bottom:12px;'>" +
+            // LinkedIn Leads Card
+            "<div style='display:table-cell;width:50%;padding-right:6px;vertical-align:top;'>" +
+              "<div style='background:#f0f7ff;border:1px solid #c7d2fe;border-radius:12px;padding:16px;'>" +
+                "<div style='color:#3730a3;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>💼 LinkedIn Leads</div>" +
+                "<div style='color:#312e81;font-size:28px;font-weight:800;margin-top:4px;'>" + liEnquiries + "</div>" +
+                "<div style='color:#3730a3;font-size:12px;margin-top:2px;'>" + liLeads + " interactions &bull; " + liEnquiries + " qualified</div>" +
+              "</div>" +
+            "</div>" +
+            // Web Inquiries Card
+            "<div style='display:table-cell;width:50%;padding-left:6px;vertical-align:top;'>" +
               "<div style='background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:16px;'>" +
-                "<div style='color:#7e22ce;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>Avg Engagement</div>" +
-                "<div style='color:#6b21a8;font-size:28px;font-weight:800;margin-top:4px;'>" + avgDuration + "s</div>" +
-                "<div style='color:#7e22ce;font-size:12px;margin-top:2px;'>" + totalEvents + " live interactions</div>" +
+                "<div style='color:#7e22ce;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>⚡ Web Inquiries</div>" +
+                "<div style='color:#6b21a8;font-size:28px;font-weight:800;margin-top:4px;'>" + leads + "</div>" +
+                "<div style='color:#7e22ce;font-size:12px;margin-top:2px;'>Demos: " + demos + " &bull; Consults: " + consults + " &bull; Quick: " + quick + "</div>" +
               "</div>" +
             "</div>" +
-            // KPI 4: Inquiries & Chat
-            "<div style='display:table-cell;width:50%;padding-left:8px;vertical-align:top;'>" +
+          "</div>" +
+
+          // ── KPI Row 4: AI Chatbot & Avg Engagement ─────────────────────────
+          "<div style='display:table;width:100%;margin-bottom:20px;'>" +
+            // AI Chat & Feedback Card
+            "<div style='display:table-cell;width:50%;padding-right:6px;vertical-align:top;'>" +
               "<div style='background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;'>" +
-                "<div style='color:#b45309;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>AI Chat & Feedback</div>" +
+                "<div style='color:#b45309;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>🤖 AI Chat &amp; Feedback</div>" +
                 "<div style='color:#92400e;font-size:28px;font-weight:800;margin-top:4px;'>" + (chatbot + feedback) + "</div>" +
-                "<div style='color:#b45309;font-size:12px;margin-top:2px;'>" + chatbot + " chats &bull; " + feedback + " feedback</div>" +
+                "<div style='color:#b45309;font-size:12px;margin-top:2px;'>" + chatbot + " chats &bull; " + feedback + " feedback reviews</div>" +
+              "</div>" +
+            "</div>" +
+            // Avg Engagement Card
+            "<div style='display:table-cell;width:50%;padding-left:6px;vertical-align:top;'>" +
+              "<div style='background:#fdf2f8;border:1px solid #fbcfe8;border-radius:12px;padding:16px;'>" +
+                "<div style='color:#9d174d;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;'>⏱️ Avg Engagement</div>" +
+                "<div style='color:#831843;font-size:28px;font-weight:800;margin-top:4px;'>" + avgDuration + "s</div>" +
+                "<div style='color:#9d174d;font-size:12px;margin-top:2px;'>" + totalEvents + " live interaction events</div>" +
               "</div>" +
             "</div>" +
           "</div>" +
 
-          // Visual Funnel & Lead Breakdown Chart
+          // ── Visual Channel & Funnel Breakdown Chart ───────────────────────
           "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:20px;'>" +
-            "<h3 style='margin:0 0 14px 0;font-size:15px;color:#0f172a;font-weight:700;'>📊 Lead & Conversion Breakdown</h3>" +
+            "<h3 style='margin:0 0 14px 0;font-size:15px;color:#0f172a;font-weight:700;'>📊 Omnichannel Lead &amp; Conversion Breakdown</h3>" +
             barRow("🎯 Demo / ICP Requests", demos, "#7c3aed") +
-            barRow("💬 Consultation Requests", consults, "#059669") +
+            barRow("💬 Clinical Consultations", consults, "#059669") +
             barRow("⚡ Quick Enquiries", quick, "#0284c7") +
+            barRow("📱 Telegram Lead Dispatches", telegramLeads, "#0891b2") +
+            barRow("▶️ YouTube Comment Enquiries", ytEnquiries, "#dc2626") +
+            barRow("💼 LinkedIn Profile Enquiries", liEnquiries, "#3730a3") +
             barRow("🤖 AI Chatbot Inquiries", chatbot, "#f59e0b") +
-            barRow("⭐ Customer Feedback", feedback, "#ec4899") +
+            barRow("⭐ Patient Feedback", feedback, "#ec4899") +
           "</div>" +
 
-          // Trend Table
-          "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:24px;'>" +
+          // ── Most Repeated Lead Email IDs Dashboard ────────────────────────
+          topEmailsHtml +
+
+          // ── Historical Trend Table ─────────────────────────────────────────
+          "<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:22px;'>" +
             "<h3 style='margin:0 0 12px 0;font-size:15px;color:#0f172a;font-weight:700;'>📈 Recent Performance History</h3>" +
             "<table style='width:100%;border-collapse:collapse;'>" +
               "<thead>" +
@@ -1340,43 +1567,47 @@ function sendPeriodicExecutiveDigest(intervalName) {
             "</table>" +
           "</div>" +
 
-          // CTA Action Buttons
+          // ── Executive Quick Actions CTA Buttons ───────────────────────────
           "<div style='text-align:center;margin-bottom:12px;'>" +
-            "<a href='" + ssUrl + "' style='display:inline-block;padding:12px 24px;background:#0284c7;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;margin-right:8px;'>Open Live Google Sheet</a>" +
-            "<a href='https://airtable.com/apptNJUsbdqh4dxvS' style='display:inline-block;padding:12px 24px;background:#059669;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;margin-right:8px;'>Open Airtable Base</a>" +
-            "<a href='https://janegracyint2027g3.atlassian.net/jira/core/projects/PHY/board' style='display:inline-block;padding:12px 24px;background:#7c3aed;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;margin-right:8px;'>Open Jira Board</a>" +
-            "<a href='" + CONFIG.WEBSITE + "' style='display:inline-block;padding:12px 24px;background:#f1f5f9;color:#334155;text-decoration:none;border-radius:8px;font-size:14px;font-weight:700;border:1px solid #cbd5e1;'>Visit Website</a>" +
+            "<a href='" + ssUrl + "' style='display:inline-block;padding:12px 20px;background:#0284c7;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;margin:4px;'>📊 Live Google Sheet</a>" +
+            "<a href='https://airtable.com/apptNJUsbdqh4dxvS' style='display:inline-block;padding:12px 20px;background:#059669;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;margin:4px;'>🗂️ Airtable Base</a>" +
+            "<a href='https://janegracyint2027g3.atlassian.net/jira/core/projects/PHY/board' style='display:inline-block;padding:12px 20px;background:#7c3aed;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;margin:4px;'>📋 Jira PHY Board</a>" +
+            "<a href='" + CONFIG.WEBSITE + "' style='display:inline-block;padding:12px 20px;background:#f1f5f9;color:#334155;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;border:1px solid #cbd5e1;margin:4px;'>🌐 Visit Website</a>" +
           "</div>" +
 
         "</div>" +
 
         // Footer
         "<div style='background:#f8fafc;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px;'>" +
-          "Physiomatics Website Intelligence System &bull; Automatically saved to Google Sheets, Airtable & Jira" +
+          "Physiomatics Intelligence System &bull; Google Sheets &bull; Jira &bull; Airtable &bull; Telegram &bull; YouTube &bull; LinkedIn" +
         "</div>" +
 
       "</div>" +
     "</body></html>";
 
+  // ── Plain Body for Text Email Fallback ───────────────────────────────────
   var plainBody = [
     "[" + intervalName + " Summary] Physiomatics Website Report",
     "Period: " + dateStr,
     "Unique Visitors: " + visitors,
     "Total Page Views: " + pageViews,
-    "Total Leads: " + leads + " (" + convRate + ")",
-    "Demo Requests: " + demos,
-    "Consultations: " + consults,
-    "Quick Enquiries: " + quick,
+    "Total Leads (Omnichannel): " + totalAllLeads + " (Conv: " + convRate + ")",
+    "  ↳ Telegram Leads: " + telegramLeads + " (" + telegramSentAlerts + " alerts delivered)",
+    "  ↳ YouTube Leads: " + ytEnquiries + " (" + ytLeads + " comments total)",
+    "  ↳ LinkedIn Leads: " + liEnquiries + " (" + liLeads + " interactions total)",
+    "  ↳ Web Forms: " + leads + " (Demos: " + demos + ", Consults: " + consults + ", Quick: " + quick + ")",
     "Chatbot Messages: " + chatbot,
     "Avg Engagement: " + avgDuration + "s",
+    (topEmails.length > 0 ? "Most Repeated Lead Emails: " + topEmails.map(function(e){ return e.email + " (" + e.count + "x)"; }).join(", ") : ""),
     "Sheet URL: " + ssUrl
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
+  // ── Send Email Digest to Executive Recipients ────────────────────────────
   (EMAIL_CONFIG.reportEmails || [EMAIL_CONFIG.adminEmail]).forEach(function (to) {
     try {
       MailApp.sendEmail({
         to: to,
-        subject: "📊 [Physiomatics] " + intervalName + " Executive Digest — " + visitors + " Visitors, " + leads + " Leads (" + convRate + ")",
+        subject: "📊 [Physiomatics] " + intervalName + " Digest — " + visitors + " Visitors, " + totalAllLeads + " Leads (" + convRate + ")",
         body: plainBody,
         htmlBody: htmlBody,
         name: EMAIL_CONFIG.name,
@@ -1385,25 +1616,74 @@ function sendPeriodicExecutiveDigest(intervalName) {
     } catch (err) { log_("sendPeriodicExecutiveDigest", "ERROR", String(err)); }
   });
 
-  // Forward digest report to Jira as an operational task
+  // ── Send Telegram Digest to Bot / Group ──────────────────────────────────
+  try {
+    var topEmailText = topEmails.length > 0
+      ? "\n\n🔁 <b>Most Repeated Lead Emails:</b>\n" + topEmails.map(function(e, i) {
+          return (i + 1) + ". <code>" + e.email + "</code> (" + e.name + ") — <b>" + e.count + "x</b> [" + e.source + "]";
+        }).join("\n")
+      : "";
+
+    var tgramMsg =
+      "📊 <b>Physiomatics " + intervalName + " Performance Digest</b>\n" +
+      "📅 Period: <b>" + dateStr + "</b> (Asia/Kolkata)\n" +
+      "━━━━━━━━━━━━━━━━━━\n" +
+      "👥 <b>Visitors:</b> " + visitors + "  |  📄 <b>Page Views:</b> " + pageViews + "\n" +
+      "🎯 <b>Total Leads:</b> " + totalAllLeads + "  |  📈 <b>Conv Rate:</b> " + convRate + "\n" +
+      "━━━━━━━━━━━━━━━━━━\n" +
+      "📱 <b>Omnichannel Lead Breakdown:</b>\n" +
+      "   📱 <b>Telegram Leads:</b> <b>" + telegramLeads + "</b> (" + telegramSentAlerts + " alerts delivered)\n" +
+      "   ▶️ <b>YouTube Leads:</b> <b>" + ytEnquiries + "</b> enquiries (" + ytLeads + " comments)\n" +
+      "   💼 <b>LinkedIn Leads:</b> <b>" + liEnquiries + "</b> enquiries (" + liLeads + " interactions)\n" +
+      "   🎯 <b>Demo Requests:</b> <b>" + demos + "</b>\n" +
+      "   💬 <b>Consultations:</b> <b>" + consults + "</b>\n" +
+      "   ⚡ <b>Quick Enquiries:</b> <b>" + quick + "</b>\n" +
+      "   🤖 <b>Chatbot Chats:</b> <b>" + chatbot + "</b>  |  ⭐ Feedback: <b>" + feedback + "</b>\n" +
+      "━━━━━━━━━━━━━━━━━━\n" +
+      "⏱️ <b>Avg Engagement:</b> " + avgDuration + "s  |  🔄 <b>Events:</b> " + totalEvents +
+      topEmailText + "\n\n" +
+      "🔗 <a href='" + ssUrl + "'>Google Sheet</a>  |  " +
+      "<a href='https://janegracyint2027g3.atlassian.net/jira/core/projects/PHY/board'>Jira Board</a>  |  " +
+      "<a href='https://airtable.com/apptNJUsbdqh4dxvS'>Airtable</a>";
+
+    sendTelegramMessage_(tgramMsg);
+    log_("sendPeriodicExecutiveDigest", "INFO", "Telegram " + intervalName + " digest delivered.");
+  } catch (tErr) {
+    log_("sendPeriodicExecutiveDigest_telegram", "WARN", String(tErr));
+  }
+
+  // ── Forward Digest Report to Jira ────────────────────────────────────────
   try {
     createJiraReportTask_({
       interval: intervalName,
       period: dateStr,
       visitors: visitors,
       pageViews: pageViews,
-      leads: leads,
+      leads: totalAllLeads,
       conversionRate: convRate,
       avgEngagementSec: avgDuration,
       demos: demos,
       consultations: consults,
       quickEnquiries: quick,
       chatbotMessages: chatbot,
+      telegramLeads: telegramLeads,
+      youtubeLeads: ytEnquiries,
+      linkedinLeads: liEnquiries,
+      topEmails: topEmails,
       sheetUrl: ssUrl
     });
   } catch (jiraErr) {
     log_("sendPeriodicExecutiveDigest_jira", "WARN", String(jiraErr));
   }
+}
+
+/**
+ * Convenient test runner for Apps Script Editor:
+ * Run this function directly to test Daily Report generation, Email dispatch, and Telegram delivery.
+ */
+function TEST_SendDailyReport() {
+  sendPeriodicExecutiveDigest("Daily");
+  return "Daily report test completed successfully. Check your Email and Telegram!";
 }
 
 function dailyReport()   { sendPeriodicExecutiveDigest("Daily"); }
@@ -2025,19 +2305,27 @@ function createJiraReportTask_(r) {
   hosts.forEach(function(host) {
     try {
       var summary = "📊 [Physiomatics " + r.interval + " Digest] " + r.period + " — " + r.visitors + " Visitors, " + r.leads + " Leads (" + r.conversionRate + ")";
+      var topEmailSummary = (r.topEmails && r.topEmails.length > 0)
+        ? "\nTop Repeated Lead Emails:\n" + r.topEmails.map(function(e, i) { return "  " + (i + 1) + ". " + e.email + " (" + e.name + ") — " + e.count + "x [" + e.source + "]"; }).join("\n")
+        : "";
+
       var descText = [
         "Physiomatics " + r.interval + " Performance Digest",
         "Period: " + r.period,
         "Unique Visitors: " + r.visitors,
         "Total Page Views: " + r.pageViews,
-        "Total Leads: " + r.leads + " (" + r.conversionRate + ")",
-        "Demo / ICP Requests: " + r.demos,
-        "Consultation Requests: " + r.consultations,
-        "Quick Enquiries: " + r.quickEnquiries,
-        "AI Chatbot Inquiries: " + r.chatbotMessages,
+        "Total Omnichannel Leads: " + r.leads + " (" + r.conversionRate + ")",
+        "  • Telegram Leads: " + (r.telegramLeads || 0),
+        "  • YouTube Enquiries: " + (r.youtubeLeads || 0),
+        "  • LinkedIn Enquiries: " + (r.linkedinLeads || 0),
+        "  • Demo / ICP Requests: " + r.demos,
+        "  • Consultation Requests: " + r.consultations,
+        "  • Quick Enquiries: " + r.quickEnquiries,
+        "  • AI Chatbot Inquiries: " + r.chatbotMessages,
         "Avg Engagement Duration: " + r.avgEngagementSec + "s",
+        topEmailSummary,
         "Live Google Sheet: " + (r.sheetUrl || CONFIG.WEBSITE)
-      ].join("\n");
+      ].filter(Boolean).join("\n");
 
       var payload = {
         fields: {
