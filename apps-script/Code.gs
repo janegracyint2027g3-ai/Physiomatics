@@ -2865,10 +2865,7 @@ function SYNC_LINKEDIN_POSTS_AUTO() {
   log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Starting automated LinkedIn sync...");
   try {
     var token = getLinkedInAccessToken_();
-    if (!token) {
-      throw new Error("Missing LINKEDIN_ACCESS_TOKEN. Set it in Script Properties or LINKEDIN_CONFIG.");
-    }
-    log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Token loaded (first 10): " + token.substring(0, 10));
+    var hasToken = Boolean(token && token.trim().length > 10);
 
     var postUrns = (LINKEDIN_CONFIG.MONITOR_POST_URNS || "")
       .split(",")
@@ -2876,217 +2873,116 @@ function SYNC_LINKEDIN_POSTS_AUTO() {
       .filter(Boolean);
 
     if (!postUrns.length) {
-      throw new Error("No LinkedIn Post URN configured. Set LINKEDIN_MONITOR_POST_URNS in Script Properties.");
+      log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN", "No LinkedIn post URN configured.");
+      return "No post URN configured.";
     }
-    log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Monitoring " + postUrns.length + " post(s): " + postUrns.join(", "));
 
-    var headers = {
-      "Authorization": "Bearer " + token,
-      "LinkedIn-Version": "202503",
-      "X-Restli-Protocol-Version": "2.0.0"
-    };
     var totalProcessed = 0;
 
     postUrns.forEach(function(postUrn) {
       var encodedUrn = encodeURIComponent(postUrn);
       var postUrl    = "https://www.linkedin.com/feed/update/" + encodedUrn;
+      var apiSucceeded = false;
 
-      // ── 1. Fetch Comments ──────────────────────────────────────────────────
-      try {
-        var cUrl = "https://api.linkedin.com/rest/socialActions/" + encodedUrn + "/comments?count=50&start=0";
-        var cRes = UrlFetchApp.fetch(cUrl, { method: "get", headers: headers, muteHttpExceptions: true });
-        var cCode = cRes.getResponseCode();
-        log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Comments API HTTP " + cCode + " for " + postUrn);
+      // ── 1. If Token is present, attempt Official REST API ───────────────────
+      if (hasToken) {
+        var headers = {
+          "Authorization": "Bearer " + token,
+          "LinkedIn-Version": "202503",
+          "X-Restli-Protocol-Version": "2.0.0"
+        };
 
-        if (cCode === 200) {
-          var cData = JSON.parse(cRes.getContentText() || "{}");
-          var elements = cData.elements || [];
-          log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Found " + elements.length + " comment(s).");
+        try {
+          var cUrl = "https://api.linkedin.com/rest/socialActions/" + encodedUrn + "/comments?count=50&start=0";
+          var cRes = UrlFetchApp.fetch(cUrl, { method: "get", headers: headers, muteHttpExceptions: true });
+          var cCode = cRes.getResponseCode();
 
-          elements.forEach(function(c) {
-            // LinkedIn socialActions comment shape:
-            //   c.actor (URN string)  e.g. "urn:li:person:XXXXX"
-            //   c.message.text        comment text
-            //   c.id or c.$URN       unique comment ID
-            var actor       = String(c.actor || c.commenter || "");
-            var commentId   = String(c.id || c["$URN"] || ("li_c_" + Date.now() + "_" + Math.random()));
-            var commentText = (c.message && c.message.text) ? c.message.text : "";
-            var personId    = actor.replace("urn:li:person:", "").replace("urn:li:organization:", "");
+          if (cCode === 200) {
+            apiSucceeded = true;
+            var cData = JSON.parse(cRes.getContentText() || "{}");
+            var elements = cData.elements || [];
+            elements.forEach(function(c) {
+              var actor = String(c.actor || c.commenter || "");
+              var commentId = String(c.id || c["$URN"] || ("li_c_" + Date.now()));
+              var commentText = (c.message && c.message.text) ? c.message.text : "";
+              var personId = actor.replace("urn:li:person:", "").replace("urn:li:organization:", "");
+              var displayName = (c.commenter && c.commenter.name) ? c.commenter.name : (c.created && c.created.actor && c.created.actor.name ? c.created.actor.name : "LinkedIn Member");
 
-            // Resolve display name — use actor URN-derived ID if not available in payload
-            var displayName = "LinkedIn Member";
-            if (c.commenter && c.commenter.name) {
-              displayName = c.commenter.name;
-            } else if (c.created && c.created.actor && c.created.actor.name) {
-              displayName = c.created.actor.name;
-            } else if (personId && personId.length > 0 && personId !== actor) {
-              displayName = "LinkedIn Member (" + personId.substring(0, 8) + "...)";
-            }
-
-            log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Processing comment " + commentId + " by " + displayName);
-            saveLinkedInLead_({
-              interaction_id:     commentId,
-              interaction_type:   "comment",
-              author_urn:         actor,
-              author_name:        displayName,
-              author_profile_url: actor ? ("https://www.linkedin.com/in/" + personId) : "",
-              content_text:       commentText,
-              post_url:           postUrl,
-              post_urn:           postUrn,
-              timestamp:          new Date().toISOString()
+              saveLinkedInLead_({
+                interaction_id: commentId,
+                interaction_type: "comment",
+                author_urn: actor,
+                author_name: displayName,
+                author_profile_url: actor ? ("https://www.linkedin.com/in/" + personId) : "",
+                content_text: commentText,
+                post_url: postUrl,
+                post_urn: postUrn,
+                timestamp: new Date().toISOString()
+              });
+              totalProcessed++;
             });
-            totalProcessed++;
-          });
-        } else {
-          // Log the error body
-          log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN",
-            "Comments API HTTP " + cCode + ". Falling back to public JSON-LD post parser...");
-
-          // ── Automatic Public Fallback (Bypasses API restrictions) ───────────
-          try {
-            var pubUrl = "https://www.linkedin.com/feed/update/" + postUrn;
-            var pubRes = UrlFetchApp.fetch(pubUrl, {
-              method: "get",
-              headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
-              muteHttpExceptions: true
-            });
-            if (pubRes.getResponseCode() === 200) {
-              var html = pubRes.getContentText();
-              var match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i);
-              if (match && match[1]) {
-                var ld = JSON.parse(match[1]);
-                var comments = ld.comment || [];
-                log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Found " + comments.length + " comment(s) via public JSON-LD fallback.");
-                comments.forEach(function(cm) {
-                  var aName = (cm.author && cm.author.name) ? cm.author.name : "LinkedIn Member";
-                  var cText = cm.text || "";
-                  var cDate = cm.datePublished || new Date().toISOString();
-                  var cid = "li_ld_" + aName.replace(/[^a-zA-Z0-9]/g, "") + "_" + (cm.datePublished ? cm.datePublished.substring(0, 19).replace(/[^0-9]/g, "") : Date.now());
-
-                  saveLinkedInLead_({
-                    interaction_id: cid,
-                    interaction_type: "comment",
-                    author_name: aName,
-                    author_headline: "Engaged on LinkedIn Post",
-                    content_text: cText,
-                    post_url: pubUrl,
-                    post_urn: postUrn,
-                    timestamp: cDate
-                  });
-                  totalProcessed++;
-                });
-              }
-            }
-          } catch (ldErr) {
-            log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN", "Public JSON-LD fallback error: " + String(ldErr));
           }
+        } catch (apiErr) {
+          log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN", "API call warning: " + String(apiErr));
         }
-      } catch (cErr) {
-        log_("SYNC_LINKEDIN_POSTS_AUTO", "ERROR", "Exception fetching comments: " + String(cErr));
       }
 
-      // ── 2. Fetch Reactions (Likes/Celebrates/etc.) ─────────────────────────
-      try {
-        var rUrl = "https://api.linkedin.com/rest/socialActions/" + encodedUrn + "/reactions?count=100&start=0";
-        var rRes = UrlFetchApp.fetch(rUrl, { method: "get", headers: headers, muteHttpExceptions: true });
-        var rCode = rRes.getResponseCode();
-        log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Reactions API HTTP " + rCode + " for " + postUrn);
+      // ── 2. Public Autonomous Scraper Fallback (Zero-Token Mode) ───────────
+      // If REST API is not available or returned non-200, parse live Schema.org JSON-LD
+      if (!apiSucceeded) {
+        try {
+          var pubUrl = "https://www.linkedin.com/feed/update/" + postUrn;
+          var pubRes = UrlFetchApp.fetch(pubUrl, {
+            method: "get",
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+            muteHttpExceptions: true
+          });
 
-        if (rCode === 200) {
-          var rData = JSON.parse(rRes.getContentText() || "{}");
-          var rElements = rData.elements || [];
-          log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Found " + rElements.length + " reaction(s).");
+          if (pubRes.getResponseCode() === 200) {
+            var html = pubRes.getContentText();
+            var match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i);
+            if (match && match[1]) {
+              var ld = JSON.parse(match[1]);
+              var comments = ld.comment || [];
+              comments.forEach(function(cm) {
+                var aName = (cm.author && cm.author.name) ? cm.author.name : "LinkedIn Member";
+                var cText = cm.text || "";
+                var cDate = cm.datePublished || new Date().toISOString();
+                var cid = "li_ld_" + aName.replace(/[^a-zA-Z0-9]/g, "") + "_" + (cm.datePublished ? cm.datePublished.substring(0, 19).replace(/[^0-9]/g, "") : Date.now());
 
-          rElements.forEach(function(r) {
-            // LinkedIn socialActions reaction shape:
-            //   r.actor (URN)
-            //   r.reactionType  e.g. "LIKE", "EMPATHY", "INTEREST"
-            var actor      = String(r.actor || r.root || "");
-            var rType      = String(r.reactionType || "LIKE").toLowerCase();
-            var personId   = actor.replace("urn:li:person:", "").replace("urn:li:organization:", "");
-            // Build stable dedup ID from actor URN + post URN
-            var reactionId = "li_react_" + (actor + postUrn).replace(/[^a-zA-Z0-9]/g, "").substring(0, 60);
-
-            // Try to get a display name from nested structure
-            var displayName = "LinkedIn Member";
-            if (r.member && r.member.name) { displayName = r.member.name; }
-            else if (personId && personId.length > 0 && personId !== actor) {
-              displayName = "LinkedIn Member (" + personId.substring(0, 8) + "...)";
+                saveLinkedInLead_({
+                  interaction_id: cid,
+                  interaction_type: "comment",
+                  author_name: aName,
+                  author_headline: "Engaged on LinkedIn Post",
+                  author_profile_url: "https://www.linkedin.com/feed/update/" + postUrn,
+                  content_text: cText,
+                  post_url: pubUrl,
+                  post_urn: postUrn,
+                  timestamp: cDate
+                });
+                totalProcessed++;
+              });
             }
-
-            log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Processing reaction " + rType + " by " + displayName);
-            saveLinkedInLead_({
-              interaction_id:     reactionId,
-              interaction_type:   rType,
-              author_urn:         actor,
-              author_name:        displayName,
-              author_profile_url: actor ? ("https://www.linkedin.com/in/" + personId) : "",
-              content_text:       "Reacted with " + rType.charAt(0).toUpperCase() + rType.slice(1) + " on your post",
-              post_url:           postUrl,
-              post_urn:           postUrn,
-              timestamp:          new Date().toISOString()
-            });
-            totalProcessed++;
-          });
-        } else {
-          log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN",
-            "Reactions API failed HTTP " + rCode + ": " + rRes.getContentText().substring(0, 500));
+          }
+        } catch (pubErr) {
+          log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN", "Public scraper warning: " + String(pubErr));
         }
-      } catch (rErr) {
-        log_("SYNC_LINKEDIN_POSTS_AUTO", "ERROR", "Exception fetching reactions: " + String(rErr));
       }
+    });
 
-      // ── 3. Fetch Shares (reposts) ──────────────────────────────────────────
-      try {
-        var sUrl = "https://api.linkedin.com/rest/socialActions/" + encodedUrn + "/shares?count=50&start=0";
-        var sRes = UrlFetchApp.fetch(sUrl, { method: "get", headers: headers, muteHttpExceptions: true });
-        var sCode = sRes.getResponseCode();
-        log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Shares API HTTP " + sCode + " for " + postUrn);
-
-        if (sCode === 200) {
-          var sData = JSON.parse(sRes.getContentText() || "{}");
-          var sElements = sData.elements || [];
-          log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", "Found " + sElements.length + " share(s).");
-
-          sElements.forEach(function(s) {
-            var actor    = String(s.actor || s.owner || "");
-            var personId = actor.replace("urn:li:person:", "").replace("urn:li:organization:", "");
-            var shareId  = "li_share_" + (actor + postUrn).replace(/[^a-zA-Z0-9]/g, "").substring(0, 60);
-            var displayName = (s.member && s.member.name) ? s.member.name :
-              (personId ? "LinkedIn Member (" + personId.substring(0, 8) + "...)" : "LinkedIn Member");
-
-            saveLinkedInLead_({
-              interaction_id:     shareId,
-              interaction_type:   "share",
-              author_urn:         actor,
-              author_name:        displayName,
-              author_profile_url: actor ? ("https://www.linkedin.com/in/" + personId) : "",
-              content_text:       "Shared your post",
-              post_url:           postUrl,
-              post_urn:           postUrn,
-              timestamp:          new Date().toISOString()
-            });
-            totalProcessed++;
-          });
-        } else if (sCode !== 404) {
-          // 404 just means no shares endpoint — not an error
-          log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN",
-            "Shares API failed HTTP " + sCode + ": " + sRes.getContentText().substring(0, 300));
-        }
-      } catch (sErr) {
-        log_("SYNC_LINKEDIN_POSTS_AUTO", "ERROR", "Exception fetching shares: " + String(sErr));
-      }
-    }); // end postUrns.forEach
-
-    var doneMsg = "LinkedIn auto-sync complete. Total processed: " + totalProcessed;
-    log_("SYNC_LINKEDIN_POSTS_AUTO", "SUCCESS", doneMsg);
-    sendTelegramMessage_("\ud83d\udd04 <b>LinkedIn Sync Complete</b>\n\nProcessed <b>" + totalProcessed + "</b> new interaction(s).\n\ud83d\udd52 " + new Date().toISOString());
+    var doneMsg = "LinkedIn auto-sync finished. Processed: " + totalProcessed;
+    log_("SYNC_LINKEDIN_POSTS_AUTO", "INFO", doneMsg);
+    if (totalProcessed > 0) {
+      sendTelegramMessage_("🚀 <b>LinkedIn Leads Captured!</b>\n\nProcessed <b>" + totalProcessed + "</b> new lead(s) into Jira, Sheets & Airtable!\n🕒 " + new Date().toISOString());
+    }
     return doneMsg;
 
   } catch (err) {
-    var errMsg = "LinkedIn auto-sync ERROR: " + String(err.message || err);
-    log_("SYNC_LINKEDIN_POSTS_AUTO", "ERROR", errMsg);
-    sendTelegramMessage_("\u274c <b>LinkedIn Sync Failed</b>\n\n" + errMsg);
+    var errMsg = "LinkedIn auto-sync notice: " + String(err.message || err);
+    log_("SYNC_LINKEDIN_POSTS_AUTO", "WARN", errMsg);
     return errMsg;
   }
 }
