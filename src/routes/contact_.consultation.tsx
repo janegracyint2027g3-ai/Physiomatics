@@ -26,10 +26,29 @@ function ConsultationPage() {
           <p className="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
             If you are looking to integrate Physiomatics into an existing clinic workflow or educational curriculum, we can schedule a consultation to discuss your specific requirements and our planned roadmap capabilities.
           </p>
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             <Button asChild variant="hero">
               <Link to="/contact">Submit Consultation Request <ArrowRight className="size-4 ml-2" /></Link>
             </Button>
+            <Button asChild variant="whatsapp">
+              <a href="https://wa.me/917845072426?text=Hello%20Physiomatics%2C%20I'd%20like%20to%20discuss%20a%20clinical%20consultation." target="_blank" rel="noreferrer">
+                WhatsApp (+91 78450 72426)
+              </a>
+            </Button>
+          </div>
+
+          <div className="mt-10 pt-6 border-t flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+            <a href="tel:+917845072426" className="hover:text-primary transition-colors">
+              📞 +91 78450 72426
+            </a>
+            <span>•</span>
+            <a href="https://www.youtube.com/@JaneGracyDavid" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+              ▶️ YouTube: @JaneGracyDavid
+            </a>
+            <span>•</span>
+            <a href="https://www.linkedin.com/company/143995162/admin/" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+              💼 LinkedIn: Physiomatics
+            </a>
           </div>
         </div>
       </section>

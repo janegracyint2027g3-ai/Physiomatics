@@ -3,14 +3,21 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { MessageCircle, X, Bot, Send, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { whatsappLink, WA_MESSAGES } from "@/lib/site";
+import { 
+  whatsappLink, 
+  WA_MESSAGES, 
+  PHONE_TEL, 
+  PHONE_NUMBER_DISPLAY, 
+  YOUTUBE_URL, 
+  LINKEDIN_URL 
+} from "@/lib/site";
 import { sendToGoogleSheet } from "@/lib/googleSheets";
 import { trackClarityEvent, setClarityTag } from "@/lib/clarity";
 
 // ─── Physiomatics knowledge base ────────────────────────────────────────────
 // All answers the chatbot can give without a live AI API.
 // Keys are arrays of trigger words/phrases; values are the reply.
-const KB: { triggers: string[]; answer: string; links?: { label: string; to: string }[] }[] = [
+const KB: { triggers: string[]; answer: string; links?: { label: string; to?: string; href?: string }[] }[] = [
   {
     triggers: ["what is physiomatics", "what does physiomatics do", "about physiomatics", "tell me about", "physiomatics"],
     answer: "Physiomatics is an AI-assisted physiotherapy training platform that uses computer-vision to detect body landmarks, measure joint angles and count repetitions — all from a recorded video. Clinics, caregivers and patients can monitor exercises remotely without expensive hardware.",
@@ -72,9 +79,15 @@ const KB: { triggers: string[]; answer: string; links?: { label: string; to: str
     links: [{ label: "Contact for DPA", to: "/contact" }],
   },
   {
-    triggers: ["contact", "reach", "email", "phone", "whatsapp", "call", "speak", "talk", "linkedin", "youtube", "social"],
-    answer: "You can reach us via:\n• 📞 Phone / WhatsApp: +91 78450 72426\n• 💬 WhatsApp chat on the Contact page\n• 💼 LinkedIn: linkedin.com/company/143995162\n• ▶️ YouTube: @JaneGracyDavid\n\nWe typically respond within one business day.",
-    links: [{ label: "Contact page", to: "/contact" }],
+    triggers: ["contact", "reach", "email", "phone", "whatsapp", "call", "speak", "talk", "linkedin", "youtube", "social", "connect", "number"],
+    answer: `You can reach and connect with us directly via:\n• 📞 Phone: ${PHONE_NUMBER_DISPLAY}\n• 💬 WhatsApp: ${PHONE_NUMBER_DISPLAY}\n• 💼 LinkedIn: ${LINKEDIN_URL}\n• ▶️ YouTube: ${YOUTUBE_URL}\n\nWe respond promptly to all messages and calls!`,
+    links: [
+      { label: `💬 WhatsApp (${PHONE_NUMBER_DISPLAY})`, href: whatsappLink(WA_MESSAGES.general) },
+      { label: `📞 Call (${PHONE_NUMBER_DISPLAY})`, href: PHONE_TEL },
+      { label: "▶️ YouTube Channel", href: YOUTUBE_URL },
+      { label: "💼 LinkedIn Page", href: LINKEDIN_URL },
+      { label: "Contact page", to: "/contact" },
+    ],
   },
   {
     triggers: ["feedback", "suggestion", "improve", "feature request"],
@@ -122,7 +135,16 @@ function findAnswer(input: string): typeof KB[0] | null {
 }
 
 // ─── Guided flow (button-based tree) ────────────────────────────────────────
-type TreeNode = { text: string; options: { label: string; next?: string; to?: string; wa?: keyof typeof WA_MESSAGES }[] };
+type TreeNode = { 
+  text: string; 
+  options: { 
+    label: string; 
+    next?: string; 
+    to?: string; 
+    href?: string; 
+    wa?: keyof typeof WA_MESSAGES 
+  }[] 
+};
 const tree: Record<string, TreeNode> = {
   start: {
     text: "Hi! I'm the Physiomatics AI guide. Ask me anything, or pick who you are:",
@@ -132,6 +154,17 @@ const tree: Record<string, TreeNode> = {
       { label: "Injury rehabilitation", next: "rehab" },
       { label: "Sports academy / Coach", next: "sports" },
       { label: "Pricing & demo", next: "pricing" },
+      { label: `📞 Direct Connect & Contact (${PHONE_NUMBER_DISPLAY})`, next: "contact_connect" },
+    ],
+  },
+  contact_connect: {
+    text: `Here is how you can connect with us directly:\n• 📞 Phone: ${PHONE_NUMBER_DISPLAY}\n• 💬 WhatsApp: ${PHONE_NUMBER_DISPLAY}\n• 💼 LinkedIn: Physiomatics\n• ▶️ YouTube: @JaneGracyDavid`,
+    options: [
+      { label: `💬 WhatsApp (${PHONE_NUMBER_DISPLAY})`, wa: "general" },
+      { label: `📞 Call (${PHONE_NUMBER_DISPLAY})`, href: PHONE_TEL },
+      { label: "▶️ YouTube: @JaneGracyDavid", href: YOUTUBE_URL },
+      { label: "💼 LinkedIn Company Page", href: LINKEDIN_URL },
+      { label: "Open Contact Form", to: "/contact" },
     ],
   },
   clinic: {
@@ -272,12 +305,13 @@ const tree: Record<string, TreeNode> = {
     options: [{ label: "Partner with us", to: "/contact" }, { label: "Chat on WhatsApp", wa: "education" }],
   },
   contact: {
-    text: "📩 You're on the Contact page. Send a quick enquiry, book a detailed consultation, or connect via WhatsApp, phone (+91 78450 72426), LinkedIn or YouTube. How can we help?",
+    text: `📩 You're on the Contact page. Send an enquiry, book a consultation, or connect directly via WhatsApp (${PHONE_NUMBER_DISPLAY}), phone, LinkedIn or YouTube. How can we help?`,
     options: [
+      { label: `💬 WhatsApp (${PHONE_NUMBER_DISPLAY})`, wa: "general" },
+      { label: `📞 Call (${PHONE_NUMBER_DISPLAY})`, href: PHONE_TEL },
+      { label: "▶️ YouTube Channel", href: YOUTUBE_URL },
+      { label: "💼 LinkedIn Page", href: LINKEDIN_URL },
       { label: "See pricing info", next: "pricing" },
-      { label: "Chat on WhatsApp", wa: "general" },
-      { label: "LinkedIn page", to: "/contact" },
-      { label: "YouTube channel", to: "/contact" },
     ],
   },
   feedback: {
@@ -311,7 +345,7 @@ const tree: Record<string, TreeNode> = {
 };
 
 // ─── Message type ────────────────────────────────────────────────────────────
-type Msg = { type: "user" | "bot"; text: string; links?: { label: string; to: string }[] };
+type Msg = { type: "user" | "bot"; text: string; links?: { label: string; to?: string; href?: string }[] | undefined };
 
 export function Assistant() {
   const [open, setOpen] = useState(false);
@@ -398,7 +432,7 @@ export function Assistant() {
 
   // On node change, reset messages to the node greeting
   useEffect(() => {
-    const n = tree[node] || tree["start"];
+    const n = tree[node] || tree["start"]!;
     setMessages([{ type: "bot", text: n.text }]);
   }, [node]);
 
@@ -455,7 +489,7 @@ export function Assistant() {
     }, 600);
   };
 
-  const n = tree[node] || tree["start"];
+  const n = tree[node] || tree["start"]!;
 
   return (
     <>
@@ -464,7 +498,8 @@ export function Assistant() {
         <a
           href={whatsappLink(WA_MESSAGES.general)}
           target="_blank" rel="noreferrer"
-          aria-label="Chat on WhatsApp"
+          aria-label={`Chat on WhatsApp (${PHONE_NUMBER_DISPLAY})`}
+          title={`WhatsApp: ${PHONE_NUMBER_DISPLAY}`}
           className="grid size-14 place-items-center rounded-full bg-whatsapp text-whatsapp-foreground shadow-lift hover:scale-105 transition-transform"
         >
           <MessageCircle className="size-6" />
@@ -492,6 +527,45 @@ export function Assistant() {
               </button>
             </div>
 
+            {/* Direct Connect Quick Strip */}
+            <div className="bg-muted/70 border-b px-3 py-2 flex items-center justify-between gap-1 overflow-x-auto text-[11px]">
+              <span className="font-semibold text-foreground/80 shrink-0">Connect:</span>
+              <a
+                href={whatsappLink(WA_MESSAGES.general)}
+                target="_blank"
+                rel="noreferrer"
+                title={`WhatsApp: ${PHONE_NUMBER_DISPLAY}`}
+                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-medium hover:bg-emerald-500/25 transition-colors shrink-0"
+              >
+                💬 7845072426
+              </a>
+              <a
+                href={PHONE_TEL}
+                title={`Call: ${PHONE_NUMBER_DISPLAY}`}
+                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors shrink-0"
+              >
+                📞 Call
+              </a>
+              <a
+                href={YOUTUBE_URL}
+                target="_blank"
+                rel="noreferrer"
+                title="YouTube: @JaneGracyDavid"
+                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 font-medium hover:bg-red-500/20 transition-colors shrink-0"
+              >
+                ▶️ YouTube
+              </a>
+              <a
+                href={LINKEDIN_URL}
+                target="_blank"
+                rel="noreferrer"
+                title="LinkedIn: Physiomatics"
+                className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 font-medium hover:bg-blue-500/20 transition-colors shrink-0"
+              >
+                💼 LinkedIn
+              </a>
+            </div>
+
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 text-sm">
               {messages.map((msg, i) => (
@@ -509,14 +583,26 @@ export function Assistant() {
                   {msg.type === "bot" && msg.links && (
                     <div className="flex flex-wrap gap-1.5 mt-1 ml-1">
                       {msg.links.map((l) => (
-                        <Link
-                          key={l.to}
-                          to={l.to as "/"}
-                          onClick={() => setOpen(false)}
-                          className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
-                        >
-                          {l.label} <ChevronRight className="size-3" />
-                        </Link>
+                        l.href ? (
+                          <a
+                            key={l.label}
+                            href={l.href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                          >
+                            {l.label} <ChevronRight className="size-3" />
+                          </a>
+                        ) : (
+                          <Link
+                            key={l.label}
+                            to={(l.to || "/contact") as "/"}
+                            onClick={() => setOpen(false)}
+                            className="inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                          >
+                            {l.label} <ChevronRight className="size-3" />
+                          </Link>
+                        )
                       ))}
                     </div>
                   )}
@@ -539,9 +625,15 @@ export function Assistant() {
                       <Button key={o.label} asChild variant="outline" className="justify-start text-xs h-9 rounded-xl">
                         <Link to={o.to as "/"} onClick={() => setOpen(false)}>{o.label}</Link>
                       </Button>
+                    ) : o.href ? (
+                      <Button key={o.label} asChild variant="outline" className="justify-start text-xs h-9 rounded-xl hover:border-primary">
+                        <a href={o.href} target="_blank" rel="noreferrer">{o.label}</a>
+                      </Button>
                     ) : (
                       <Button key={o.label} asChild variant="whatsapp" className="justify-start text-xs h-9 rounded-xl">
-                        <a href={whatsappLink(WA_MESSAGES[o.wa!])} target="_blank" rel="noreferrer">{o.label}</a>
+                        <a href={whatsappLink(WA_MESSAGES[o.wa!])} target="_blank" rel="noreferrer">
+                          {o.label.includes(PHONE_NUMBER_DISPLAY) || o.label.includes("78450") ? o.label : `${o.label} (${PHONE_NUMBER_DISPLAY})`}
+                        </a>
                       </Button>
                     )
                   )}

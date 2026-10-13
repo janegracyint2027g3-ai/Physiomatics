@@ -204,7 +204,7 @@ function CaregiversICPPage() {
             </p>
             <Button asChild variant="outline" className="w-full text-xs">
               <a href={whatsappLink("Hello Physiomatics team, I am a family caregiver and have questions about using the platform.")} target="_blank" rel="noreferrer">
-                Chat With Support
+                WhatsApp Support (7845072426)
               </a>
             </Button>
           </div>

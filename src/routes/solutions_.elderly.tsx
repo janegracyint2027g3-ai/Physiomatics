@@ -73,7 +73,7 @@ function ElderlyCarePage() {
             </Button>
             <Button asChild className="w-full justify-between" variant="outline">
               <a href={whatsappLink(WA_MESSAGES.elderly)} target="_blank" rel="noreferrer">
-                <PhoneCall className="size-4" /> Chat on WhatsApp
+                <PhoneCall className="size-4" /> WhatsApp (7845072426)
               </a>
             </Button>
           </div>

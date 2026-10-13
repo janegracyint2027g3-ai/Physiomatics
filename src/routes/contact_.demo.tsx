@@ -50,11 +50,25 @@ function DemoPage() {
                 Enquiry Form <ArrowRight className="size-4 ml-2" />
               </Link>
             </Button>
-            <Button asChild variant="outline">
+            <Button asChild variant="whatsapp">
               <a href={whatsappLink(WA_MESSAGES.demo)} target="_blank" rel="noreferrer">
-                Book via WhatsApp
+                Book via WhatsApp (+91 78450 72426)
               </a>
             </Button>
+          </div>
+
+          <div className="mt-10 pt-6 border-t flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+            <a href="tel:+917845072426" className="hover:text-primary transition-colors">
+              📞 +91 78450 72426
+            </a>
+            <span>•</span>
+            <a href="https://www.youtube.com/@JaneGracyDavid" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+              ▶️ YouTube: @JaneGracyDavid
+            </a>
+            <span>•</span>
+            <a href="https://www.linkedin.com/company/143995162/admin/" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+              💼 LinkedIn: Physiomatics
+            </a>
           </div>
         </div>
       </section>

@@ -258,7 +258,7 @@ function Home() {
               <p className="text-ink-foreground/80 text-lg mb-10 max-w-md">Join clinicians and patients who are already using AI to track movement and improve recovery outcomes.</p>
               <div className="flex flex-wrap gap-4">
                 <Button asChild variant="hero" size="lg" className="rounded-full shadow-lg shadow-primary/20"><Link to="/contact">Book a Demo</Link></Button>
-                <Button asChild variant="outline" size="lg" className="rounded-full bg-transparent border-white/20 hover:bg-white/10 text-white"><a href={whatsappLink(WA_MESSAGES.demo)} target="_blank" rel="noreferrer">Chat on WhatsApp</a></Button>
+                <Button asChild variant="outline" size="lg" className="rounded-full bg-transparent border-white/20 hover:bg-white/10 text-white"><a href={whatsappLink(WA_MESSAGES.demo)} target="_blank" rel="noreferrer">Chat on WhatsApp (7845072426)</a></Button>
               </div>
             </div>
             

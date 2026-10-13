@@ -123,7 +123,7 @@ export function IcpLeadForm({
       </Button>
 
       <p className="text-[11px] text-muted-foreground text-center">
-        No credit card required. Free 30-min setup.
+        Opens direct in WhatsApp (+91 78450 72426). Free 30-min setup.
       </p>
     </form>
   );

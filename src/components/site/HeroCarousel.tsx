@@ -54,7 +54,7 @@ const slides: SlideItem[] = [
     description: 'Geriatric-certified guidance, gentle companionship routines, medication reminders, and mobility support for safe independent living.',
     ctaPrimary: 'Book Elderly Care',
     linkPrimary: '/icp/elderly-care',
-    ctaSecondary: 'Chat on WhatsApp',
+    ctaSecondary: 'Chat on WhatsApp (7845072426)',
     linkSecondary: whatsappLink(WA_MESSAGES.elderly),
     isExternalSecondary: true,
     trust: 'Certified Guidance • Seated Routines • < 20m Dispatch Support',

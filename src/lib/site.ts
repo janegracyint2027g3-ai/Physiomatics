@@ -1,5 +1,10 @@
 // Set a real WhatsApp business number (digits only, with country code) to route chats directly.
 export const WHATSAPP_NUMBER = "917845072426";
+export const PHONE_NUMBER_DISPLAY = "+91 78450 72426";
+export const PHONE_NUMBER_RAW = "7845072426";
+export const PHONE_TEL = "tel:+917845072426";
+export const YOUTUBE_URL = "https://www.youtube.com/@JaneGracyDavid";
+export const LINKEDIN_URL = "https://www.linkedin.com/company/143995162/admin/";
 
 export function whatsappLink(message: string) {
   const base = WHATSAPP_NUMBER ? `https://wa.me/${WHATSAPP_NUMBER}` : "https://wa.me/";

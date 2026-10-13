@@ -79,7 +79,7 @@ function Solutions() {
 
             <div className="mt-auto flex flex-wrap gap-3 pt-4 border-t">
               <Button asChild><Link to="/contact">Talk to Us</Link></Button>
-              <Button asChild variant="whatsapp"><a href={whatsappLink(WA_MESSAGES[i.wa])} target="_blank" rel="noreferrer">Chat on WhatsApp</a></Button>
+              <Button asChild variant="whatsapp"><a href={whatsappLink(WA_MESSAGES[i.wa])} target="_blank" rel="noreferrer">WhatsApp (7845072426)</a></Button>
             </div>
           </article>
         ))}

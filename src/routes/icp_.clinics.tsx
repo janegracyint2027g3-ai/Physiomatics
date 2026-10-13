@@ -173,7 +173,7 @@ function ClinicsICPPage() {
             </div>
             <h3 className="text-xl font-bold mb-1">Request Your Clinic Demo</h3>
             <p className="text-sm text-muted-foreground mb-5">
-              Takes 30 seconds. We'll reach you on WhatsApp to schedule a walkthrough for clinic owners.
+              Takes 30 seconds. We'll reach you on WhatsApp (+91 78450 72426) to schedule a walkthrough for clinic owners.
             </p>
             <IcpLeadForm
               segment="Physiotherapy Clinic"

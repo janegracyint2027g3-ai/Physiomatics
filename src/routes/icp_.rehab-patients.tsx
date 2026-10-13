@@ -182,11 +182,11 @@ function RehabPatientsICPPage() {
           <div className="rounded-3xl border bg-muted/40 p-6">
             <h4 className="font-semibold mb-2">Have questions about your injury?</h4>
             <p className="text-xs text-muted-foreground mb-4">
-              Physiomatics supports recovery under physical therapist supervision. Message our support desk on WhatsApp for assistance.
+              Physiomatics supports recovery under physical therapist supervision. Message our support desk on WhatsApp (+91 78450 72426) for assistance.
             </p>
             <Button asChild variant="outline" className="w-full text-xs">
               <a href={whatsappLink("Hi Physiomatics, I am recovering from an injury and want to ask about using the tool.")} target="_blank" rel="noreferrer">
-                Ask Questions on WhatsApp
+                Ask Questions on WhatsApp (7845072426)
               </a>
             </Button>
           </div>

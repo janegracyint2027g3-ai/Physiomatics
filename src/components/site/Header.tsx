@@ -588,8 +588,8 @@ export function Header() {
             sidebarEyebrow="GET IN TOUCH"
             sidebarDesc="Multiple ways to reach our clinical and technical teams."
             items={contactMenu}
-            ctaText="Want an immediate response on WhatsApp?"
-            ctaButtonText="Chat on WhatsApp →"
+            ctaText="Want an immediate response on WhatsApp (7845072426)?"
+            ctaButtonText="WhatsApp: 7845072426 →"
             ctaLink="/contact/enquiry"
             align="right"
           />

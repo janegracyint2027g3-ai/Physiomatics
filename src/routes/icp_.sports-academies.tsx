@@ -186,7 +186,7 @@ function SportsAcademiesICPPage() {
             </div>
             <h3 className="text-xl font-bold mb-1">Request Your Academy Demo</h3>
             <p className="text-sm text-muted-foreground mb-5">
-              Takes 30 seconds. Our sports science team will contact you to pilot the platform.
+              Takes 30 seconds. Our sports science team will reach you on WhatsApp (+91 78450 72426) to pilot the platform.
             </p>
             <IcpLeadForm
               segment="Sports Academy"

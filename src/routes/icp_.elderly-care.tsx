@@ -178,7 +178,7 @@ function ElderlyCareICPPage() {
             </div>
             <h3 className="text-xl font-bold mb-1">Get a Senior Care Walkthrough</h3>
             <p className="text-sm text-muted-foreground mb-5">
-              Share your details and we'll guide you through the platform for elderly & senior care.
+              Share your details and we'll reach you on WhatsApp (+91 78450 72426) to guide you through the platform for elderly & senior care.
             </p>
             <IcpLeadForm
               segment="Elderly Care / Senior Facility"
