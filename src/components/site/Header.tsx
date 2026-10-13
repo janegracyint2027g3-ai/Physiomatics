@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Menu, 
   X, 
@@ -29,7 +29,9 @@ import {
   Target,
   Sparkles,
   Calendar,
-  Mail
+  Mail,
+  Phone,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -40,7 +42,9 @@ import {
   howItWorksMenu, 
   aboutMenu, 
   contactMenu,
-  MenuItem 
+  MenuItem,
+  whatsappLink,
+  WA_MESSAGES
 } from "@/lib/site";
 
 // Icon mapping helper
@@ -69,6 +73,8 @@ const iconMap: Record<string, any> = {
   Sparkles,
   Calendar,
   Mail,
+  Phone,
+  Zap,
 };
 
 function renderIcon(name?: string, className: string = "size-5") {
@@ -76,13 +82,7 @@ function renderIcon(name?: string, className: string = "size-5") {
   return IconComponent ? <IconComponent className={className} /> : <Activity className={className} />;
 }
 
-/* 
-  Contrasting Luxury Megamenu:
-  - Supports 'align': "left" | "center" | "right" so items near the viewport edges don't overflow!
-  - Left Panel: Deep black (#0a0a0c) with warm gold/purple subtle accents and selected tab styling
-  - Right Panel: Clean off-white/cream luxury background with purple borders and badge tags
-  - Bottom Bar: Contrasting call-to-action strip with direct action button
-*/
+/* ─── CONTRAST MEGAMENU (multi-category) ─────────────────────────────────── */
 function ContrastMegamenu({
   label,
   to,
@@ -107,7 +107,8 @@ function ContrastMegamenu({
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
 
-  const activeCategory = categories[activeTab] || categories[0];
+  const activeCategory = categories[activeTab] ?? categories[0];
+  if (!activeCategory) return null;
 
   const positionClasses = 
     align === "left" 
@@ -122,34 +123,52 @@ function ContrastMegamenu({
       onMouseEnter={() => setOpen(true)} 
       onMouseLeave={() => setOpen(false)}
     >
+      {/* Trigger button */}
       <button
-        className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-foreground/85 hover:text-foreground hover:bg-primary/5 transition-colors"
+        className={`group flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
+          open 
+            ? "bg-[#592787]/10 text-[#592787]" 
+            : "text-[#1a0a2e]/75 hover:text-[#592787] hover:bg-[#592787]/8"
+        }`}
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
       >
-        {label} <ChevronDown className={`size-4 transition-transform duration-200 ${open ? "rotate-180 text-primary" : ""}`} />
+        {label}
+        <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180 text-[#592787]" : "text-[#592787]/50"}`} />
       </button>
+      {/* Animated underline */}
+      <span className={`absolute bottom-0 left-3.5 right-3.5 h-[2px] rounded-full bg-gradient-to-r from-[#592787] to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`} />
 
       {open && (
-        <div className={`absolute ${positionClasses} top-full z-50 w-[54rem] max-w-[calc(100vw-2rem)] pt-3 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
-          <div className="overflow-hidden rounded-[2rem] border border-border/80 bg-[#fbfaf8] text-foreground shadow-2xl ring-1 ring-black/10">
+        <div className={`absolute ${positionClasses} top-full z-50 w-[56rem] max-w-[calc(100vw-2rem)] pt-3.5 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
+          <div className="overflow-hidden rounded-[1.75rem] shadow-[0_24px_80px_-12px_rgba(89,39,135,0.25)] ring-1 ring-[#592787]/12">
+            
             {/* Top Grid: Contrast Split */}
-            <div className="grid grid-cols-[240px_1fr] min-h-[360px]">
+            <div className="grid grid-cols-[250px_1fr] min-h-[380px]">
               
-              {/* LEFT COLUMN: Premium Black & Purple Velvet Panel */}
-              <div className="bg-[#0f0b15] p-6 text-white flex flex-col justify-between border-r border-[#261d33]">
+              {/* LEFT COLUMN: Deep Purple-Black Panel */}
+              <div
+                className="flex flex-col justify-between p-6 text-white border-r border-[#592787]/20"
+                style={{ background: "linear-gradient(160deg, #1a0a2e 0%, #0d0520 60%, #061020 100%)" }}
+              >
                 <div>
-                  <div className="text-[10px] font-bold tracking-[0.2em] text-[#c4a572] uppercase font-sans">
-                    {sidebarEyebrow}
+                  <div className="flex items-center gap-2 mb-5">
+                    <div className="size-1.5 rounded-full bg-[#5AA9AC] animate-pulse" />
+                    <div className="text-[9px] font-bold tracking-[0.22em] text-[#5AA9AC]/80 uppercase">
+                      {sidebarEyebrow}
+                    </div>
                   </div>
-                  <h3 className="mt-1 font-display text-2xl font-semibold tracking-tight text-white mb-6">
+                  <h3 className="font-display text-2xl font-bold tracking-tight text-white mb-2">
                     {sidebarTitle || label}
                   </h3>
+                  <p className="text-[11px] text-white/40 leading-relaxed mb-6">
+                    Choose a category to explore
+                  </p>
 
-                  {/* Navigation Category Items (Left Sidebar) */}
-                  <div className="space-y-1.5">
+                  {/* Navigation Category Items */}
+                  <div className="space-y-1">
                     {categories.map((cat, idx) => {
                       const isActive = activeTab === idx;
                       return (
@@ -158,14 +177,14 @@ function ContrastMegamenu({
                           type="button"
                           onMouseEnter={() => setActiveTab(idx)}
                           onClick={() => setActiveTab(idx)}
-                          className={`group flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-xs font-medium transition-all ${
+                          className={`group flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-xs font-medium transition-all duration-150 ${
                             isActive
-                              ? "bg-[#251838] text-white shadow-inner font-semibold border border-purple-500/30"
-                              : "text-zinc-400 hover:bg-[#1a1326] hover:text-white"
+                              ? "bg-gradient-to-r from-[#592787]/80 to-[#3a7fb5]/60 text-white font-semibold shadow-inner border border-[#592787]/40"
+                              : "text-white/50 hover:bg-white/8 hover:text-white/80"
                           }`}
                         >
                           <span className="truncate">{cat.label}</span>
-                          <ChevronRight className={`size-3.5 transition-transform ${isActive ? "text-[#c4a572] translate-x-0.5" : "text-zinc-600 group-hover:text-zinc-400"}`} />
+                          <ChevronRight className={`size-3 transition-all ${isActive ? "text-[#5AA9AC] translate-x-0.5" : "text-white/20 group-hover:text-white/40"}`} />
                         </button>
                       );
                     })}
@@ -173,11 +192,11 @@ function ContrastMegamenu({
                 </div>
 
                 {/* Left Bottom Link */}
-                <div className="pt-6 border-t border-[#261d33]">
+                <div className="pt-5 border-t border-white/10">
                   <Link 
                     to={to as any} 
                     onClick={() => setOpen(false)}
-                    className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors group"
+                    className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/80 transition-colors group"
                   >
                     <span>View all {label.toLowerCase()}</span>
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
@@ -185,37 +204,40 @@ function ContrastMegamenu({
                 </div>
               </div>
 
-              {/* RIGHT COLUMN: Light Crisp Panel With Contrasting Cards */}
-              <div className="p-7 bg-[#fdfcf9] flex flex-col justify-between">
+              {/* RIGHT COLUMN: Clean White Panel */}
+              <div className="p-7 bg-white flex flex-col justify-between">
                 <div>
                   {/* Category Header */}
-                  <div className="flex items-center justify-between pb-4 mb-5 border-b border-zinc-200/80">
-                    <div className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#7336ad] font-sans">
-                      {activeCategory.label.toUpperCase()}
+                  <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#592787]/10">
+                    <div className="flex items-center gap-2">
+                      <div className="size-1 rounded-full bg-[#592787]" />
+                      <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#592787] font-sans">
+                        {activeCategory.label}
+                      </div>
                     </div>
-                    <span className="text-xs text-zinc-400 font-medium">
-                      {activeCategory.items.length} items
+                    <span className="text-[10px] text-zinc-400 font-medium bg-zinc-50 border border-zinc-100 rounded-full px-2 py-0.5">
+                      {activeCategory.items.length} options
                     </span>
                   </div>
 
                   {/* Grid of Cards */}
-                  <div className="grid grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-2 gap-3">
                     {activeCategory.items.map((item) => (
                       <Link
                         key={item.label}
                         to={item.to as any}
                         onClick={() => setOpen(false)}
-                        className="group flex items-start gap-3.5 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md hover:ring-1 hover:ring-primary/20"
+                        className="group flex items-start gap-3 rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#592787]/30 hover:shadow-[0_8px_24px_-4px_rgba(89,39,135,0.15)] hover:ring-1 hover:ring-[#592787]/15"
                       >
-                        <div className="mt-0.5 shrink-0 rounded-xl bg-purple-50 p-2.5 text-[#592787] border border-purple-100 group-hover:bg-[#592787] group-hover:text-white transition-colors duration-200">
-                          {renderIcon(item.icon, "size-4.5")}
+                        <div className="mt-0.5 shrink-0 rounded-xl bg-[#592787]/8 p-2.5 text-[#592787] border border-[#592787]/12 group-hover:bg-[#592787] group-hover:text-white group-hover:border-[#592787] transition-all duration-200">
+                          {renderIcon(item.icon, "size-4")}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="font-semibold text-sm text-zinc-900 group-hover:text-[#592787] transition-colors leading-snug">
                             {item.label}
                           </div>
                           {item.tag && (
-                            <div className="text-[10px] font-bold tracking-wider text-zinc-400 uppercase mt-0.5 font-sans">
+                            <div className="inline-flex items-center text-[9px] font-bold tracking-wider text-[#5AA9AC] uppercase mt-0.5 font-sans bg-[#5AA9AC]/8 border border-[#5AA9AC]/20 rounded-full px-1.5 py-px">
                               {item.tag}
                             </div>
                           )}
@@ -228,13 +250,13 @@ function ContrastMegamenu({
                   </div>
                 </div>
 
-                {/* Right Bottom Footer Link */}
-                <div className="pt-5 mt-5 border-t border-zinc-200/80 flex items-center justify-between text-xs text-zinc-500">
+                {/* Right Bottom Footer */}
+                <div className="pt-5 mt-5 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-400">
                   <span>Direct practice access</span>
                   <Link 
                     to={to as any} 
                     onClick={() => setOpen(false)}
-                    className="font-medium text-[#592787] hover:underline flex items-center gap-1 group"
+                    className="font-semibold text-[#592787] hover:text-[#3d1860] flex items-center gap-1 group transition-colors"
                   >
                     <span>Browse all {label}</span>
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
@@ -243,12 +265,15 @@ function ContrastMegamenu({
               </div>
             </div>
 
-            {/* BOTTOM FOOTER BAR: Contrasting Light Sand Strip */}
-            <div className="flex items-center justify-between px-8 py-3.5 bg-[#f5f1ea] border-t border-zinc-200/80">
-              <span className="text-xs text-zinc-700 font-medium">
+            {/* BOTTOM FOOTER BAR */}
+            <div
+              className="flex items-center justify-between px-8 py-3.5 border-t border-[#592787]/10"
+              style={{ background: "linear-gradient(90deg, #faf8ff 0%, #f0f9fb 100%)" }}
+            >
+              <span className="text-xs text-zinc-600 font-medium">
                 {ctaText}
               </span>
-              <Button asChild size="sm" className="rounded-full bg-[#3d2719] hover:bg-[#2c1b10] text-[#fbf7f0] text-xs h-8 px-4 font-semibold shadow-sm">
+              <Button asChild size="sm" className="rounded-full text-xs h-8 px-5 font-semibold shadow-sm bg-gradient-to-r from-[#592787] to-[#3a7fb5] hover:from-[#3d1860] hover:to-[#2a5f8a] text-white border-0">
                 <Link to={ctaLink as any} onClick={() => setOpen(false)}>
                   {ctaButtonText}
                 </Link>
@@ -262,11 +287,12 @@ function ContrastMegamenu({
   );
 }
 
-// Compact Megamenu for Single-category lists (Platform, Resources, About, How It Works)
+/* ─── COMPACT MEGAMENU (single-category) ─────────────────────────────────── */
 function CompactMegamenu({
   label,
   to,
   sidebarEyebrow = "OVERVIEW",
+  sidebarDesc,
   items,
   ctaText = "Ready to explore live?",
   ctaButtonText = "Try Free Live Demo →",
@@ -276,6 +302,7 @@ function CompactMegamenu({
   label: string;
   to: string;
   sidebarEyebrow?: string;
+  sidebarDesc?: string;
   items: readonly MenuItem[];
   ctaText?: string;
   ctaButtonText?: string;
@@ -284,7 +311,6 @@ function CompactMegamenu({
 }) {
   const [open, setOpen] = useState(false);
 
-  // When align is "left", align directly under button or left edge of navbar
   const positionClasses = 
     align === "left" 
       ? "left-0 translate-x-0" 
@@ -298,40 +324,63 @@ function CompactMegamenu({
       onMouseEnter={() => setOpen(true)} 
       onMouseLeave={() => setOpen(false)}
     >
+      {/* Trigger button */}
       <button
-        className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-foreground/85 hover:text-foreground hover:bg-primary/5 transition-colors"
+        className={`group flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
+          open 
+            ? "bg-[#592787]/10 text-[#592787]" 
+            : "text-[#1a0a2e]/75 hover:text-[#592787] hover:bg-[#592787]/8"
+        }`}
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
       >
-        {label} <ChevronDown className={`size-4 transition-transform duration-200 ${open ? "rotate-180 text-primary" : ""}`} />
+        {label}
+        <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180 text-[#592787]" : "text-[#592787]/50"}`} />
       </button>
+      {/* Animated underline */}
+      <span className={`absolute bottom-0 left-3.5 right-3.5 h-[2px] rounded-full bg-gradient-to-r from-[#592787] to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`} />
 
       {open && (
-        <div className={`absolute ${positionClasses} top-full z-50 w-[50rem] max-w-[calc(100vw-2rem)] pt-3 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
-          <div className="overflow-hidden rounded-[2rem] border border-border/80 bg-[#fbfaf8] text-foreground shadow-2xl ring-1 ring-black/10">
-            {/* Top Grid: Split Panel */}
-            <div className="grid grid-cols-[220px_1fr] min-h-[320px]">
-              {/* Left Dark Purple / Black Panel */}
-              <div className="bg-[#0f0b15] p-6 text-white flex flex-col justify-between border-r border-[#261d33]">
+        <div className={`absolute ${positionClasses} top-full z-50 w-[52rem] max-w-[calc(100vw-2rem)] pt-3.5 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
+          <div className="overflow-hidden rounded-[1.75rem] shadow-[0_24px_80px_-12px_rgba(89,39,135,0.25)] ring-1 ring-[#592787]/12">
+            
+            {/* Top Grid */}
+            <div className="grid grid-cols-[230px_1fr] min-h-[320px]">
+              
+              {/* Left Dark Purple-Black Panel */}
+              <div
+                className="flex flex-col justify-between p-6 text-white border-r border-[#592787]/20"
+                style={{ background: "linear-gradient(160deg, #1a0a2e 0%, #0d0520 60%, #061020 100%)" }}
+              >
                 <div>
-                  <div className="text-[10px] font-bold tracking-[0.2em] text-[#c4a572] uppercase font-sans">
-                    {sidebarEyebrow}
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="size-1.5 rounded-full bg-[#5AA9AC] animate-pulse" />
+                    <div className="text-[9px] font-bold tracking-[0.22em] text-[#5AA9AC]/80 uppercase">
+                      {sidebarEyebrow}
+                    </div>
                   </div>
-                  <h3 className="mt-1 font-display text-2xl font-semibold tracking-tight text-white mb-4">
+                  <h3 className="font-display text-2xl font-bold tracking-tight text-white mb-3">
                     {label}
                   </h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
-                    AI-assisted video kinematics, precision angular tracking, and structured recovery guidance.
+                  <p className="text-xs text-white/40 leading-relaxed">
+                    {sidebarDesc || "AI-assisted video kinematics, precision angular tracking, and structured recovery guidance."}
                   </p>
+
+                  {/* Decorative dots */}
+                  <div className="mt-6 flex gap-1.5">
+                    {[0,1,2].map(i => (
+                      <div key={i} className="size-1.5 rounded-full" style={{ background: i === 0 ? "#592787" : i === 1 ? "#5AA9AC" : "#592787", opacity: i === 2 ? 0.3 : 0.7 }} />
+                    ))}
+                  </div>
                 </div>
 
-                <div className="pt-6 border-t border-[#261d33]">
+                <div className="pt-5 border-t border-white/10">
                   <Link 
                     to={to as any} 
                     onClick={() => setOpen(false)}
-                    className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors group"
+                    className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/80 transition-colors group"
                   >
                     <span>View all {label.toLowerCase()}</span>
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
@@ -339,33 +388,36 @@ function CompactMegamenu({
                 </div>
               </div>
 
-              {/* Right Crisp Panel */}
-              <div className="p-7 bg-[#fdfcf9] flex flex-col justify-between">
+              {/* Right Panel */}
+              <div className="p-6 bg-white flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between pb-3 mb-4 border-b border-zinc-200/80">
-                    <div className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#7336ad] font-sans">
-                      CORE CAPABILITIES
+                  <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#592787]/10">
+                    <div className="flex items-center gap-2">
+                      <div className="size-1 rounded-full bg-[#592787]" />
+                      <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#592787] font-sans">
+                        CORE CAPABILITIES
+                      </div>
                     </div>
-                    <span className="text-xs text-zinc-400 font-medium">{items.length} items</span>
+                    <span className="text-[10px] text-zinc-400 font-medium bg-zinc-50 border border-zinc-100 rounded-full px-2 py-px">{items.length} items</span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-2 gap-2.5">
                     {items.map((item) => (
                       <Link
                         key={item.label}
                         to={item.to as any}
                         onClick={() => setOpen(false)}
-                        className="group flex items-start gap-3 rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"
+                        className="group flex items-start gap-3 rounded-2xl border border-zinc-100 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#592787]/30 hover:shadow-[0_8px_24px_-4px_rgba(89,39,135,0.15)] hover:ring-1 hover:ring-[#592787]/15"
                       >
-                        <div className="mt-0.5 shrink-0 rounded-xl bg-purple-50 p-2 text-[#592787] border border-purple-100 group-hover:bg-[#592787] group-hover:text-white transition-colors duration-200">
-                          {renderIcon(item.icon, "size-4")}
+                        <div className="mt-0.5 shrink-0 rounded-xl bg-[#592787]/8 p-2 text-[#592787] border border-[#592787]/12 group-hover:bg-[#592787] group-hover:text-white group-hover:border-[#592787] transition-all duration-200">
+                          {renderIcon(item.icon, "size-3.5")}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="font-semibold text-sm text-zinc-900 group-hover:text-[#592787] transition-colors leading-snug">
                             {item.label}
                           </div>
                           {item.tag && (
-                            <div className="text-[10px] font-bold tracking-wider text-zinc-400 uppercase mt-0.5 font-sans">
+                            <div className="inline-flex items-center text-[9px] font-bold tracking-wider text-[#5AA9AC] uppercase mt-0.5 font-sans bg-[#5AA9AC]/8 border border-[#5AA9AC]/20 rounded-full px-1.5 py-px">
                               {item.tag}
                             </div>
                           )}
@@ -378,12 +430,12 @@ function CompactMegamenu({
                   </div>
                 </div>
 
-                <div className="pt-4 mt-4 border-t border-zinc-200/80 flex items-center justify-between text-xs text-zinc-500">
+                <div className="pt-4 mt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-400">
                   <span>Client-side pose telemetry</span>
                   <Link 
                     to={to as any} 
                     onClick={() => setOpen(false)}
-                    className="font-medium text-[#592787] hover:underline flex items-center gap-1 group"
+                    className="font-semibold text-[#592787] hover:text-[#3d1860] flex items-center gap-1 group transition-colors"
                   >
                     <span>Browse all</span>
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
@@ -393,11 +445,12 @@ function CompactMegamenu({
             </div>
 
             {/* Bottom Strip */}
-            <div className="flex items-center justify-between px-8 py-3.5 bg-[#f5f1ea] border-t border-zinc-200/80">
-              <span className="text-xs text-zinc-700 font-medium">
-                {ctaText}
-              </span>
-              <Button asChild size="sm" className="rounded-full bg-[#3d2719] hover:bg-[#2c1b10] text-[#fbf7f0] text-xs h-8 px-4 font-semibold shadow-sm">
+            <div
+              className="flex items-center justify-between px-7 py-3.5 border-t border-[#592787]/10"
+              style={{ background: "linear-gradient(90deg, #faf8ff 0%, #f0f9fb 100%)" }}
+            >
+              <span className="text-xs text-zinc-600 font-medium">{ctaText}</span>
+              <Button asChild size="sm" className="rounded-full text-xs h-8 px-5 font-semibold shadow-sm bg-gradient-to-r from-[#592787] to-[#3a7fb5] hover:from-[#3d1860] hover:to-[#2a5f8a] text-white border-0">
                 <Link to={ctaLink as any} onClick={() => setOpen(false)}>
                   {ctaButtonText}
                 </Link>
@@ -410,30 +463,58 @@ function CompactMegamenu({
   );
 }
 
+/* ─── MAIN HEADER ─────────────────────────────────────────────────────────── */
 export function Header() {
   const [mobile, setMobile] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 16);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
-      <div className="container-page flex h-16 items-center justify-between gap-4">
+    <header
+      className={`sticky top-0 z-40 transition-all duration-300 ${
+        scrolled
+          ? "border-b border-[#592787]/12 bg-white/95 backdrop-blur-xl shadow-[0_4px_32px_-8px_rgba(89,39,135,0.12)]"
+          : "border-b border-transparent bg-white/80 backdrop-blur-md"
+      }`}
+    >
+      {/* Top gradient accent bar */}
+      <div className="h-[2px] w-full bg-gradient-to-r from-[#592787] via-[#3a7fb5] to-[#5AA9AC]" />
+
+      <div className="container-page flex h-[3.75rem] items-center justify-between gap-4">
+        
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-2.5 font-display text-xl font-bold tracking-tight shrink-0" aria-label="Physiomatics home">
-          <img
-            src="/logo-64.png"
-            alt="Physiomatics"
-            className="size-8 rounded-full object-cover shadow-sm ring-1 ring-border/40"
-            loading="eager"
-          />
-          <span>Physiomatics</span>
+        <Link 
+          to="/" 
+          className="flex items-center gap-2.5 font-display text-xl font-bold tracking-tight shrink-0 group"
+          aria-label="Physiomatics home"
+        >
+          <div className="relative">
+            <img
+              src="/logo-64.png"
+              alt="Physiomatics"
+              className="size-8 rounded-full object-cover shadow-sm ring-2 ring-[#592787]/20 group-hover:ring-[#592787]/50 transition-all duration-200"
+              loading="eager"
+            />
+            <div className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-gradient-to-br from-[#592787] to-[#5AA9AC] border-[1.5px] border-white" />
+          </div>
+          <span className="bg-gradient-to-r from-[#1a0a2e] to-[#592787] bg-clip-text text-transparent group-hover:from-[#592787] group-hover:to-[#3a7fb5] transition-all duration-300">
+            Physiomatics
+          </span>
         </Link>
 
-        {/* Desktop Navigation with Proper Alignments to stay in frame */}
-        <nav className="hidden items-center lg:flex" aria-label="Main">
-          {/* About Menu: Align "left" so it stays neatly within the screen and doesn't get clipped on the left! */}
+        {/* Desktop Navigation */}
+        <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main">
+          
           <CompactMegamenu 
             label="About" 
             to="/about" 
             sidebarEyebrow="WHO WE ARE" 
+            sidebarDesc="Our mission, team, and clinical research behind precision physiotherapy."
             items={aboutMenu}
             ctaText="Interested in our clinical research and mission?"
             ctaButtonText="Read Mission →"
@@ -441,11 +522,11 @@ export function Header() {
             align="left"
           />
 
-          {/* Platform Menu: Align "left" */}
           <CompactMegamenu 
             label="Platform" 
             to="/platform" 
             sidebarEyebrow="CORE ARCHITECTURE" 
+            sidebarDesc="AI-powered video analysis infrastructure built for clinical-grade accuracy."
             items={platformMenu}
             ctaText="Try our browser-based AI video analysis instantly."
             ctaButtonText="Test in Browser →"
@@ -453,7 +534,6 @@ export function Header() {
             align="left"
           />
 
-          {/* Solutions Menu: Center */}
           <ContrastMegamenu 
             label="Solutions" 
             to="/solutions" 
@@ -466,11 +546,11 @@ export function Header() {
             align="center"
           />
 
-          {/* How It Works Menu: Center */}
           <CompactMegamenu 
             label="How It Works" 
             to="/how-it-works" 
-            sidebarEyebrow="HOW IT WORKS" 
+            sidebarEyebrow="HOW IT WORKS"
+            sidebarDesc="On-device AI, goniometric tracking, and secure data pipelines explained."
             items={howItWorksMenu}
             ctaText="Learn how on-device AI safeguards patient privacy."
             ctaButtonText="View Security Whitepaper →"
@@ -478,11 +558,11 @@ export function Header() {
             align="center"
           />
 
-          {/* Resources Menu: Center / Right */}
           <CompactMegamenu 
             label="Resources" 
             to="/resources" 
-            sidebarEyebrow="KNOWLEDGE BASE" 
+            sidebarEyebrow="KNOWLEDGE BASE"
+            sidebarDesc="Clinical exercise library, goniometric standards, and research papers."
             items={resourcesMenu}
             ctaText="Explore our verified clinical exercises and goniometric angles."
             ctaButtonText="Browse Library →"
@@ -490,7 +570,6 @@ export function Header() {
             align="center"
           />
 
-          {/* ICP Profiles Menu: Align "right" so it never overflows off the right edge */}
           <ContrastMegamenu 
             label="ICP Profiles" 
             to="/icp" 
@@ -503,11 +582,11 @@ export function Header() {
             align="right"
           />
 
-          {/* Contact Menu: Align "right" */}
           <CompactMegamenu 
             label="Contact" 
             to="/contact" 
-            sidebarEyebrow="GET IN TOUCH" 
+            sidebarEyebrow="GET IN TOUCH"
+            sidebarDesc="Multiple ways to reach our clinical and technical teams."
             items={contactMenu}
             ctaText="Want an immediate response on WhatsApp?"
             ctaButtonText="Chat on WhatsApp →"
@@ -518,50 +597,82 @@ export function Header() {
 
         {/* Desktop Quick Actions */}
         <div className="hidden items-center gap-2 lg:flex shrink-0">
-          <Button asChild variant="ghost" size="sm" className="rounded-full text-xs">
+          <Button 
+            asChild 
+            variant="ghost" 
+            size="sm" 
+            className="rounded-full text-xs font-semibold text-[#592787] hover:bg-[#592787]/8 hover:text-[#3d1860]"
+          >
             <Link to="/analyze">Try analysis</Link>
           </Button>
-          <Button asChild size="sm" className="rounded-full px-5 text-xs font-semibold shadow-sm">
+          <Button 
+            asChild 
+            size="sm" 
+            className="rounded-full px-5 text-xs font-bold shadow-sm bg-gradient-to-r from-[#592787] to-[#3a7fb5] hover:from-[#3d1860] hover:to-[#2a5f8a] text-white border-0 transition-all duration-200 hover:shadow-[0_4px_16px_-4px_rgba(89,39,135,0.5)]"
+          >
             <Link to="/contact">Book a Demo</Link>
           </Button>
         </div>
 
         {/* Mobile Menu Trigger */}
         <button 
-          className="lg:hidden p-2 text-foreground" 
+          className="lg:hidden p-2 rounded-xl text-[#592787] hover:bg-[#592787]/8 transition-colors" 
           aria-label="Toggle menu" 
           aria-expanded={mobile} 
           onClick={() => setMobile((m) => !m)}
         >
-          {mobile ? <X className="size-6" /> : <Menu className="size-6" />}
+          {mobile 
+            ? <X className="size-5" /> 
+            : <Menu className="size-5" />
+          }
         </button>
       </div>
 
       {/* Mobile Menu Dropdown */}
       {mobile && (
-        <nav className="container-page grid gap-1 border-t py-4 lg:hidden max-h-[80vh] overflow-y-auto bg-background" aria-label="Mobile">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3 pt-2">Menu</div>
-          {[
-            { to: "/about", label: "About" },
-            { to: "/platform", label: "Platform" },
-            { to: "/solutions", label: "Solutions" },
-            { to: "/how-it-works", label: "How It Works" },
-            { to: "/resources", label: "Resources" },
-            { to: "/icp", label: "ICP Profiles" },
-            { to: "/contact", label: "Contact" },
-          ].map((l) => (
-            <Link 
-              key={l.to} 
-              to={l.to as any} 
-              onClick={() => setMobile(false)} 
-              className="rounded-xl px-3 py-2.5 text-base font-medium hover:bg-accent flex items-center justify-between"
-            >
-              <span>{l.label}</span>
-              <ChevronRight className="size-4 text-muted-foreground" />
-            </Link>
-          ))}
-          <div className="pt-2">
-            <Button asChild className="w-full rounded-full">
+        <nav
+          className="container-page border-t border-[#592787]/10 py-4 lg:hidden max-h-[80vh] overflow-y-auto"
+          style={{ background: "linear-gradient(180deg, #faf8ff 0%, #f0f9fb 100%)" }}
+          aria-label="Mobile"
+        >
+          {/* Section Label */}
+          <div className="flex items-center gap-2 mb-3 px-2">
+            <div className="size-1 rounded-full bg-[#592787]" />
+            <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#592787]/70">Navigation</div>
+          </div>
+
+          <div className="space-y-0.5">
+            {[
+              { to: "/about", label: "About", icon: "Users" },
+              { to: "/platform", label: "Platform", icon: "ScanLine" },
+              { to: "/solutions", label: "Solutions", icon: "Layers" },
+              { to: "/how-it-works", label: "How It Works", icon: "Workflow" },
+              { to: "/resources", label: "Resources", icon: "BookOpen" },
+              { to: "/icp", label: "ICP Profiles", icon: "Target" },
+              { to: "/contact", label: "Contact", icon: "Mail" },
+            ].map((l) => (
+              <Link 
+                key={l.to} 
+                to={l.to as any} 
+                onClick={() => setMobile(false)} 
+                className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-[#1a0a2e]/80 hover:bg-[#592787]/8 hover:text-[#592787] transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="size-7 rounded-lg bg-[#592787]/8 border border-[#592787]/12 flex items-center justify-center text-[#592787] group-hover:bg-[#592787] group-hover:text-white transition-all">
+                    {renderIcon(l.icon, "size-3.5")}
+                  </div>
+                  <span>{l.label}</span>
+                </div>
+                <ChevronRight className="size-4 text-[#592787]/30 group-hover:text-[#592787]/60 transition-colors" />
+              </Link>
+            ))}
+          </div>
+
+          <div className="pt-4 mt-3 border-t border-[#592787]/10 space-y-2">
+            <Button asChild variant="outline" className="w-full rounded-xl text-sm font-semibold border-[#592787]/30 text-[#592787] hover:bg-[#592787]/8">
+              <Link to="/analyze" onClick={() => setMobile(false)}>Try Live Analysis</Link>
+            </Button>
+            <Button asChild className="w-full rounded-xl text-sm font-bold bg-gradient-to-r from-[#592787] to-[#3a7fb5] hover:from-[#3d1860] hover:to-[#2a5f8a] text-white border-0">
               <Link to="/contact" onClick={() => setMobile(false)}>Book a Demo</Link>
             </Button>
           </div>
