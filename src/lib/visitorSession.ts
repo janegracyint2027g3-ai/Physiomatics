@@ -12,7 +12,7 @@
 
 // ─── Storage Configuration & Keys ───────────────────────────────────────────
 const SESSION_INACTIVITY_MS = 30 * 60 * 1000; // 30 minutes
-const WELCOME_COOLDOWN_MS = 12 * 60 * 60 * 1000; // 12 hours between explicit dismissals across sessions
+// No cooldown — popups show on every visit as requested
 
 export const STORAGE_KEYS = {
   visitorId:      "physiomatics_visitor_id",
@@ -148,7 +148,7 @@ export const MEANINGFUL_ROUTES: Record<
 /** Normalize route pathname (remove trailing slashes, hash, queries) */
 export function normalizePath(path: string): string {
   if (!path) return "/";
-  let cleaned = path.split("?")[0].split("#")[0].trim();
+  let cleaned = (path.split("?")[0] ?? path).split("#")[0]?.trim() ?? path;
   while (cleaned.length > 1 && cleaned.endsWith("/")) {
     cleaned = cleaned.slice(0, -1);
   }
@@ -227,33 +227,26 @@ export function getLastActivity(): VisitorActivityRecord | null {
   }
 }
 
-// ─── Welcome Back Notification State & Frequency ────────────────────────────
+// ─── Welcome Back Notification State ────────────────────────────────────────
+/**
+ * Always show on every page load — both welcome + last-visited popups.
+ * The only gate is the in-memory flag set after this page load's show,
+ * so navigating between tabs/pages doesn't spam, but a fresh load always shows.
+ */
 export function shouldShowWelcomeNotification(): boolean {
-  // 1. Session gate: show only once per session tab
-  const shownThisSession = safeGet(true, SESSION_KEYS.welcomeShown);
-  if (shownThisSession === "1") return false;
-
-  // 2. Cooldown check: if visitor explicitly dismissed recently, honor cooldown
-  const dismissedAtStr = safeGet(false, STORAGE_KEYS.dismissedAt);
-  if (dismissedAtStr) {
-    const dismissedAt = parseInt(dismissedAtStr, 10);
-    if (!isNaN(dismissedAt) && Date.now() - dismissedAt < WELCOME_COOLDOWN_MS) {
-      return false;
-    }
-  }
-
-  return true;
+  // Gate: only once per browser tab lifetime (sessionStorage clears on tab close)
+  const shownThisTab = safeGet(true, SESSION_KEYS.welcomeShown);
+  return shownThisTab !== "1";
 }
 
-/** Mark welcome notification as shown for this session */
+/** Mark welcome notification as shown for this tab */
 export function markWelcomeShown(): void {
   safeSet(true, SESSION_KEYS.welcomeShown, "1");
 }
 
-/** Visitor dismissed welcome notification explicitly */
+/** Visitor dismissed — just clear for this tab, no long-term cooldown */
 export function dismissWelcomeNotification(): void {
   safeSet(true, SESSION_KEYS.welcomeShown, "1");
-  safeSet(false, STORAGE_KEYS.dismissedAt, Date.now().toString());
 }
 
 // ─── Message Generation ─────────────────────────────────────────────────────
