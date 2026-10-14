@@ -29,6 +29,7 @@ import {
   Target,
   Sparkles,
   Calendar,
+  CalendarCheck2,
   Mail,
   Phone,
   Zap,
@@ -72,6 +73,7 @@ const iconMap: Record<string, any> = {
   Target,
   Sparkles,
   Calendar,
+  CalendarCheck2,
   Mail,
   Phone,
   Zap,
@@ -610,7 +612,7 @@ export function Header() {
             size="sm" 
             className="rounded-full px-5 text-xs font-bold text-white border-0 shadow-lg shadow-[#5AA9AC]/25 bg-gradient-to-r from-[#5AA9AC] to-[#409194] hover:from-[#67babb] hover:to-[#4aa2a5] hover:shadow-[0_4px_20px_rgba(90,169,172,0.5)] hover:scale-105 transition-all duration-200 h-9"
           >
-            <Link to="/contact">Book a Demo</Link>
+            <Link to="/book">Book a Consultation</Link>
           </Button>
         </div>
 
@@ -672,7 +674,7 @@ export function Header() {
               <Link to="/analyze" onClick={() => setMobile(false)}>Try Live Analysis</Link>
             </Button>
             <Button asChild className="w-full rounded-xl text-sm font-bold bg-[#5AA9AC] hover:bg-[#48989b] text-white border-0 shadow-md">
-              <Link to="/contact" onClick={() => setMobile(false)}>Book a Demo</Link>
+              <Link to="/book" onClick={() => setMobile(false)}>Book a Consultation</Link>
             </Button>
           </div>
         </nav>

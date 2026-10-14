@@ -130,6 +130,7 @@ export const aboutMenu: readonly MenuItem[] = [
 ];
 
 export const contactMenu: readonly MenuItem[] = [
+  { to: "/book", label: "Book a Consultation", desc: "5-step booking wizard — select your consultation type and schedule.", tag: "APPOINTMENT BOOKING", icon: "CalendarCheck2" },
   { to: "/contact/demo", label: "Book a Demo", desc: "Get an interactive guided tour with our specialists.", tag: "LIVE WALKTHROUGH", icon: "Calendar" },
   { to: "/contact/enquiry", label: "Quick Enquiry", desc: "Send an instant inquiry to our product team.", tag: "DIRECT INQUIRY", icon: "Mail" },
   { to: "/contact/consultation", label: "Clinical Consultation", desc: "Detailed integration & deployment discussion.", tag: "SPECIALIST REVIEW", icon: "Stethoscope" },
