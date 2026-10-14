@@ -185,7 +185,7 @@ function MissionPage() {
       <section className="container-page pb-20">
         <div className="rounded-3xl bg-gradient-to-r from-[#1a0a2e] to-[#2c134d] p-10 sm:p-14 text-white text-center shadow-xl max-w-4xl mx-auto">
           <Target className="size-12 text-[#5AA9AC] mx-auto mb-4" />
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Experience Our Movement Platform</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Experience Our Movement Platform</h2>
           <p className="mt-3 text-white/80 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
             Test on-device pose estimation right in your browser or explore our library of evidence-backed exercises.
           </p>
@@ -193,10 +193,10 @@ function MissionPage() {
             <Button asChild variant="hero">
               <Link to="/analyze">Try Video Movement Analysis <ArrowRight className="size-4 ml-2" /></Link>
             </Button>
-            <Button asChild variant="outline" className="border-white/30 text-white hover:bg-white/10">
+            <Button asChild variant="outline-inverse">
               <Link to="/resources/library">Browse Exercise Library</Link>
             </Button>
-            <Button asChild variant="outline" className="border-white/30 text-white hover:bg-white/10">
+            <Button asChild variant="outline-inverse">
               <Link to="/safety">Read Safety Disclaimers</Link>
             </Button>
           </div>

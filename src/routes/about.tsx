@@ -241,7 +241,7 @@ function About() {
       <section className="container-page pb-20">
         <div className="rounded-3xl bg-gradient-to-r from-[#1a0a2e] to-[#2c134d] p-10 sm:p-14 text-white text-center shadow-xl max-w-4xl mx-auto">
           <Sparkles className="size-12 text-[#5AA9AC] mx-auto mb-4" />
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Experience Real-Time Movement Intelligence</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Experience Real-Time Movement Intelligence</h2>
           <p className="mt-3 text-white/80 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
             Test on-device movement tracking in your browser or schedule a clinical walkthrough with our team.
           </p>
@@ -254,7 +254,7 @@ function About() {
                 Speak on WhatsApp ({PHONE_NUMBER_DISPLAY})
               </a>
             </Button>
-            <Button asChild variant="outline" className="border-white/30 text-white hover:bg-white/10">
+            <Button asChild variant="outline-inverse">
               <Link to="/contact">Get in Touch</Link>
             </Button>
           </div>

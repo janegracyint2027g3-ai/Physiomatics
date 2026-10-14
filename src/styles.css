@@ -148,6 +148,13 @@
     font-weight: 700;
     color: var(--color-primary);
   }
+  .text-white :is(h1, h2, h3),
+  .text-ink-foreground :is(h1, h2, h3),
+  [class*="bg-ink"] :is(h1, h2, h3),
+  [class*="from-[#1a0a2e]"] :is(h1, h2, h3),
+  [class*="bg-[#1a0a2e]"] :is(h1, h2, h3) {
+    color: inherit;
+  }
   :focus-visible {
     outline: 3px solid var(--color-ring);
     outline-offset: 2px;

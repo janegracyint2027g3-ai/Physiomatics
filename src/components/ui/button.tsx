@@ -15,7 +15,13 @@ const buttonVariants = cva(
         ink: "bg-ink text-ink-foreground hover:bg-ink/90",
         destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
-          "border border-input bg-card shadow-sm hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-card text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground",
+        "outline-inverse":
+          "border border-white/30 bg-transparent text-white shadow-sm hover:bg-white/15 hover:text-white hover:border-white/60",
+        outlineInverse:
+          "border border-white/30 bg-transparent text-white shadow-sm hover:bg-white/15 hover:text-white hover:border-white/60",
+        "outline-white":
+          "border border-white/30 bg-transparent text-white shadow-sm hover:bg-white/15 hover:text-white hover:border-white/60",
         secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
@@ -41,9 +47,20 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
+    // If an outline variant is used with white styling (e.g. on dark cards), automatically treat it as outline-inverse
+    // to prevent white-on-white text or purple hover text on dark backgrounds.
+    let resolvedVariant = variant;
+    if (
+      variant === "outline" &&
+      typeof className === "string" &&
+      (className.includes("text-white") || className.includes("border-white") || className.includes("bg-transparent"))
+    ) {
+      resolvedVariant = "outline-inverse";
+    }
+
     const Comp = asChild ? Slot : "button";
     return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+      <Comp className={cn(buttonVariants({ variant: resolvedVariant, size, className }))} ref={ref} {...props} />
     );
   },
 );

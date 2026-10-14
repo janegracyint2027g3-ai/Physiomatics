@@ -246,7 +246,7 @@ function CareersPage() {
         <div className="rounded-3xl bg-gradient-to-r from-[#1a0a2e] to-[#2c134d] p-10 sm:p-14 text-white shadow-xl text-center max-w-4xl mx-auto relative overflow-hidden">
           <div className="relative z-10">
             <Briefcase className="size-12 text-[#5AA9AC] mx-auto mb-4" />
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Do Not See Your Exact Role?</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Do Not See Your Exact Role?</h2>
             <p className="mt-3 text-white/80 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
               We frequently collaborate with practicing physical therapists, medical writers, computer vision researchers, and clinical interns. Reach out directly with your portfolio or CV.
             </p>

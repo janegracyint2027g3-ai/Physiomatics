@@ -326,7 +326,7 @@ function ICPHubPage() {
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-coral mb-4">
               <ShieldCheck className="size-4" /> On-Device Computer Vision
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-white">
               No App Downloads. Zero Video Storage. Complete Privacy.
             </h2>
             <p className="text-white/80 leading-relaxed mb-8">
@@ -336,7 +336,7 @@ function ICPHubPage() {
               <Button asChild variant="hero" size="lg" className="rounded-full">
                 <Link to="/contact">Book a Customized ICP Demo</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="rounded-full border-white/20 text-white hover:bg-white/10">
+              <Button asChild variant="outline-inverse" size="lg" className="rounded-full">
                 <Link to="/analyze">Try Browser Analysis Live</Link>
               </Button>
             </div>
