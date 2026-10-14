@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
   YOUTUBE_URL, 
   LINKEDIN_URL 
 } from "@/lib/site";
-import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus, CalendarCheck, Calendar, Paperclip, FileText, UploadCloud, X, Loader2 } from "lucide-react";
+import { CheckCircle2, ChevronRight, ChevronLeft, Star, MessageSquarePlus, CalendarCheck, Calendar, CalendarDays, Paperclip, FileText, UploadCloud, X, Loader2 } from "lucide-react";
 import { sendToGoogleSheet, uploadReportDocument } from "@/lib/googleSheets";
 import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/clarity";
 import { captureVercelLead } from "@/lib/vercelAnalytics";
@@ -482,14 +482,35 @@ function Contact() {
               Pick your preferred date and time from our live calendar. A Google Meet link and calendar invitation will be issued to you instantly.
             </p>
 
-            <div className="py-4 flex justify-center">
+            <div className="py-4 flex flex-col items-center gap-3">
               <GoogleCalendarButton
-                label="Book an appointment"
+                label="Book via Google Calendar"
                 source="contact_appointment_tab"
                 useNativeGoogleWidget={false}
                 size="lg"
                 className="px-8 py-6 text-base font-bold shadow-lg"
               />
+
+              <div className="flex items-center gap-3 my-2 w-full max-w-xs">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground font-semibold">OR ON THE WEBSITE</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="rounded-xl border-primary/30 text-primary hover:bg-primary/5 font-semibold"
+              >
+                <Link to="/book">
+                  <CalendarDays className="mr-2 size-4" />
+                  Website Consultation Wizard (with Email Notification)
+                </Link>
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Pick a date, time, and consultation type on-site — includes email confirmation and booking ref.
+              </p>
             </div>
 
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t pt-6 text-left">

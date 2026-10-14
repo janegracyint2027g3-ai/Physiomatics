@@ -207,6 +207,12 @@ var TAB_HEADERS = {
     "source_environment", "event_data_json"
   ],
   // ── Lead / form tabs ───────────────────────────────────────────────────
+  Appointment_Bookings: [
+    "received_at", "booking_ref", "name", "email", "phone", "organization",
+    "role", "consultation_type", "goal", "preferred_date", "preferred_time",
+    "format", "timezone", "language", "message", "geo_city", "geo_country",
+    "jira_key", "calendar_event_status", "email_status", "status", "source_environment"
+  ],
   Demo_Requests: [
     "received_at", "lead_id", "visitor_id", "session_id", "name", "email",
     "phone", "organization", "role", "interest", "message", "page_path",
@@ -516,7 +522,8 @@ function processEvent_(rawPayload) {
   var p   = enrichPayload_(rawPayload);
   var kind = classifySubmission_(p);
 
-  if      (kind === "demo")         p.lead_type = "demo_request";
+  if      (kind === "booking")      p.lead_type = "appointment_booking";
+  else if (kind === "demo")         p.lead_type = "demo_request";
   else if (kind === "quick")        p.lead_type = "quick_enquiry";
   else if (kind === "consultation") p.lead_type = "consultation_request";
   else if (kind === "feedback")     p.lead_type = "feedback";
@@ -524,7 +531,8 @@ function processEvent_(rawPayload) {
 
   appendEvent_(ss, p);           // always log to Live_Traffic_Events
 
-  if      (kind === "demo")         { saveDemo_(ss, p);         sendLeadAlert_(p, "New Physiomatics Demo / ICP Request"); }
+  if      (kind === "booking")      { saveAppointmentBooking_(ss, p); sendBookingAlertToAdmin_(p); sendBookingConfirmationToVisitor_(p); createBookingCalendarEvent_(p); }
+  else if (kind === "demo")         { saveDemo_(ss, p);         sendLeadAlert_(p, "New Physiomatics Demo / ICP Request"); }
   else if (kind === "quick")        { saveQuickEnquiry_(ss, p); sendLeadAlert_(p, "New Physiomatics Quick Enquiry"); }
   else if (kind === "consultation") { saveConsultation_(ss, p); sendLeadAlert_(p, "New Physiomatics Consultation Request"); }
   else if (kind === "feedback")     { saveFeedback_(ss, p); }
@@ -625,6 +633,19 @@ function enrichPayload_(raw) {
   if (requirements) {
     p.message = p.message ? p.message + " | Requirements: " + requirements : "Requirements: " + requirements;
   }
+
+  // Appointment Booking specific fields
+  p.booking_ref = str_(first_(p, ["booking_ref", "bookingRef", "ref"], ""));
+  p.consultation_type = str_(first_(p, ["consultation_type", "consultationType"], ""));
+  if (!p.interest && p.consultation_type) p.interest = p.consultation_type;
+  p.goal = str_(first_(p, ["goal", "main_goal", "objective"], ""));
+  if (!p.subject && p.goal) p.subject = p.goal;
+  p.preferred_date = str_(first_(p, ["preferred_date", "preferredDate", "date"], ""));
+  p.preferred_time = str_(first_(p, ["preferred_time", "preferredTime", "time"], ""));
+  p.format = str_(first_(p, ["format", "consultation_format"], "Online"));
+  p.timezone = str_(first_(p, ["timezone", "tz"], p.geo_timezone || "Asia/Kolkata"));
+  p.language = str_(first_(p, ["language", "lang"], "English"));
+  p.jira_key = str_(first_(p, ["jira_key", "jiraKey", "jira_issue_key"], ""));
 
   p.feedback_type    = str_(first_(p, ["feedback_type", "feedbackType", "category"], ""));
   p.rating           = str_(first_(p, ["rating", "score", "stars"], ""));
@@ -740,6 +761,12 @@ function classifySubmission_(p) {
   if (type.indexOf("feedback") >= 0 || form.indexOf("feedback") >= 0 ||
       event === "user_feedback") {
     return p.message ? "feedback" : "";
+  }
+
+  // ── Appointment booking ──────────────────────────────────────────────────
+  if (type === "appointment_booking" || type.indexOf("booking") >= 0 ||
+      event === "booking_submission" || form.indexOf("booking") >= 0) {
+    return (p.name && hasContact) ? "booking" : "";
   }
 
   // ── Demo / ICP request ───────────────────────────────────────────────────
@@ -915,6 +942,38 @@ function saveConsultation_(ss, p) {
   ]);
   saveMasterLead_(ss, p);
   log_("saveConsultation_", "SUCCESS", "Consultation request stored: " + p.lead_id + (p.report_file_url ? " [with report: " + p.report_file_name + "]" : ""));
+}
+
+function saveAppointmentBooking_(ss, p) {
+  p.lead_id  = str_(first_(p, ["booking_ref", "lead_id", "leadId"], "book_" + Utilities.getUuid()));
+  p.lead_type = "appointment_booking";
+
+  appendValues_(getTab(ss, "Appointment_Bookings"), [
+    p.received_at,
+    p.booking_ref || p.lead_id,
+    p.name,
+    p.email,
+    p.phone,
+    p.organization,
+    p.role,
+    p.consultation_type || p.interest,
+    p.goal || p.subject,
+    p.preferred_date || "Flexible",
+    p.preferred_time || "Flexible",
+    p.format || "Online",
+    p.timezone || "Asia/Kolkata",
+    p.language || "English",
+    p.message,
+    p.geo_city,
+    p.geo_country,
+    p.jira_key || "",
+    p.calendar_event_id || "scheduled",
+    "dispatched",
+    "confirmed",
+    p.source_environment
+  ]);
+  saveMasterLead_(ss, p);
+  log_("saveAppointmentBooking_", "SUCCESS", "Appointment booking stored: " + (p.booking_ref || p.lead_id));
 }
 
 function saveFeedback_(ss, p) {
@@ -1181,6 +1240,297 @@ function sendLeadAlert_(p, subject) {
       log_("sendLeadAlert_", "ERROR", String(err));
     }
   });
+}
+
+/**
+ * Sends a high-priority appointment booking alert email to the admin team.
+ */
+function sendBookingAlertToAdmin_(p) {
+  if (!CONFIG.ENABLE_EMAIL_NOTIFICATIONS) return;
+  var recipients = EMAIL_CONFIG.leadEmails || [EMAIL_CONFIG.adminEmail];
+
+  var badgeColor = "#7c3aed";
+  var badgeText = "New Appointment Booking";
+  var ssUrl = "";
+  try { ssUrl = getSpreadsheet().getUrl(); } catch (e) { ssUrl = CONFIG.WEBSITE; }
+
+  var rawPhone = String(p.phone || "").replace(/[^\d]/g, "");
+  var waLeadLink = rawPhone ? "https://wa.me/" + rawPhone : "";
+
+  var fields = [
+    { label: "Booking Reference", val: "<span style='font-family:monospace;font-weight:800;background:#f3e8ff;color:#6b21a8;padding:4px 10px;border-radius:6px;font-size:15px;'>" + html_(p.booking_ref || "PHY-REF") + "</span>", icon: "🔖", strong: true },
+    { label: "Patient / Visitor", val: p.name, icon: "👤", strong: true },
+    { label: "Email Address", val: p.email ? "<a href='mailto:" + html_(p.email) + "' style='color:#7c3aed;text-decoration:none'>" + html_(p.email) + "</a>" : "", icon: "✉️" },
+    { label: "Phone Number", val: p.phone ? "<a href='tel:" + html_(p.phone) + "' style='color:#7c3aed;text-decoration:none'>" + html_(p.phone) + "</a>" : "", icon: "📞" },
+    { label: "Consultation Type", val: p.consultation_type || p.interest, icon: "🩺", strong: true },
+    { label: "Scheduled Date", val: "<span style='background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:4px;font-weight:700;'>" + html_(p.preferred_date || "Flexible") + "</span>", icon: "📆", strong: true },
+    { label: "Scheduled Time", val: "<span style='background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:4px;font-weight:700;'>" + html_((p.preferred_time || "Flexible") + (p.timezone ? " (" + p.timezone + ")" : "")) + "</span>", icon: "⏰", strong: true },
+    { label: "Format", val: p.format || "Online (Google Meet)", icon: "💻" },
+    { label: "Primary Goal", val: p.goal || p.subject, icon: "🎯" },
+    { label: "Language", val: p.language || "English", icon: "🗣" },
+    { label: "Organization / Clinic", val: p.organization, icon: "🏥" },
+    { label: "Role / Job Title", val: p.role, icon: "💼" },
+    { label: "Location", val: [p.geo_city, p.geo_region, p.geo_country].filter(Boolean).join(", "), icon: "📍" },
+    { label: "Jira Issue", val: p.jira_key, icon: "📋" },
+    { label: "Submitted At", val: p.received_at, icon: "🕒" }
+  ];
+
+  var rowsHtml = "";
+  fields.forEach(function(f) {
+    if (!f.val) return;
+    rowsHtml +=
+      "<tr style='border-bottom:1px solid #f1f5f9;'>" +
+        "<td style='padding:12px 14px;color:#64748b;font-size:13px;font-weight:600;white-space:nowrap;width:35%;'>" +
+          f.icon + " " + html_(f.label) +
+        "</td>" +
+        "<td style='padding:12px 14px;color:#0f172a;font-size:14px;" + (f.strong ? "font-weight:700;" : "") + "'>" +
+          (f.label === "Email Address" || f.label === "Phone Number" || f.label === "Booking Reference" || f.label === "Scheduled Date" || f.label === "Scheduled Time" ? f.val : html_(f.val)) +
+        "</td>" +
+      "</tr>";
+  });
+
+  var notesBoxHtml = "";
+  if (p.message) {
+    notesBoxHtml =
+      "<div style='margin-top:20px;padding:16px 18px;background:#faf5ff;border-left:4px solid #7c3aed;border-radius:6px;'>" +
+        "<div style='font-size:12px;font-weight:700;color:#6b21a8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;'>Visitor Notes</div>" +
+        "<div style='font-size:14px;color:#1e293b;line-height:1.6;white-space:pre-wrap;'>" + html_(p.message) + "</div>" +
+      "</div>";
+  }
+
+  var actionButtonsHtml =
+    "<div style='margin-top:26px;display:flex;gap:10px;text-align:center;flex-wrap:wrap;'>" +
+      (p.email ? "<a href='mailto:" + html_(p.email) + "?subject=Re: Physiomatics Appointment Booking [" + html_(p.booking_ref || "") + "]' style='display:inline-block;padding:11px 20px;background:#7c3aed;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;margin-right:8px;margin-bottom:8px;'>Reply by Email</a>" : "") +
+      (waLeadLink ? "<a href='" + waLeadLink + "' style='display:inline-block;padding:11px 20px;background:#059669;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;margin-right:8px;margin-bottom:8px;'>WhatsApp Patient</a>" : "") +
+      "<a href='" + ssUrl + "' style='display:inline-block;padding:11px 20px;background:#f1f5f9;color:#334155;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;border:1px solid #cbd5e1;margin-bottom:8px;'>Open Sheet Bookings</a>" +
+    "</div>";
+
+  var htmlBody =
+    "<!DOCTYPE html><html><head><meta charset='utf-8'></head><body style='margin:0;padding:24px;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;'>" +
+      "<div style='max-width:620px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,0.06);border:1px solid #e2e8f0;'>" +
+        "<div style='background:linear-gradient(135deg,#3b1d60 0%,#1e1035 100%);padding:28px 24px;border-bottom:3px solid #7c3aed;'>" +
+          "<div style='display:inline-block;padding:4px 10px;background:#7c3aed;color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border-radius:20px;margin-bottom:10px;'>" +
+            badgeText +
+          "</div>" +
+          "<h1 style='margin:0;color:#ffffff;font-size:22px;font-weight:800;letter-spacing:-0.5px;'>New Booking: " + (p.name ? html_(p.name) : "Patient") + "</h1>" +
+          "<p style='margin:6px 0 0 0;color:#e9d5ff;font-size:13px;'>Scheduled for " + html_(p.preferred_date || "Flexible") + " at " + html_(p.preferred_time || "Flexible") + "</p>" +
+        "</div>" +
+        "<div style='padding:24px;'>" +
+          "<table style='width:100%;border-collapse:collapse;'>" +
+            rowsHtml +
+          "</table>" +
+          notesBoxHtml +
+          actionButtonsHtml +
+        "</div>" +
+        "<div style='background:#f8fafc;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px;'>" +
+          "Physiomatics Booking Engine &bull; Automatically saved to Google Sheets (Appointment_Bookings) &bull; Ref: " + html_(p.booking_ref || "") +
+        "</div>" +
+      "</div>" +
+    "</body></html>";
+
+  var plainBody = [
+    "[" + badgeText + "] New Appointment Booking on Physiomatics",
+    "Reference: " + (p.booking_ref || "N/A"),
+    "Name: " + p.name,
+    "Email: " + p.email,
+    "Phone: " + (p.phone || "N/A"),
+    "Consultation Type: " + (p.consultation_type || p.interest),
+    "Date: " + (p.preferred_date || "Flexible"),
+    "Time: " + (p.preferred_time || "Flexible") + " (" + (p.timezone || "Asia/Kolkata") + ")",
+    "Format: " + (p.format || "Online"),
+    "Goal: " + (p.goal || "N/A"),
+    "Notes: " + (p.message || "None"),
+    "Jira: " + (p.jira_key || "N/A"),
+    "Sheet: " + ssUrl
+  ].join("\n");
+
+  recipients.forEach(function (to) {
+    try {
+      MailApp.sendEmail({
+        to: to,
+        subject: "📅 [APPOINTMENT BOOKING] " + (p.booking_ref || "Booking") + " — " + (p.name || "Patient") + " (" + (p.consultation_type || "Consultation") + ") on " + (p.preferred_date || "Flexible"),
+        body: plainBody,
+        htmlBody: htmlBody,
+        name: EMAIL_CONFIG.name,
+        replyTo: p.email && isEmail_(p.email) ? p.email : EMAIL_CONFIG.replyTo
+      });
+      log_("sendBookingAlertToAdmin_", "SUCCESS", "Alert sent to admin: " + to);
+    } catch (err) {
+      log_("sendBookingAlertToAdmin_", "ERROR", String(err));
+    }
+  });
+}
+
+/**
+ * Sends a branded appointment confirmation email directly to the patient / visitor.
+ */
+function sendBookingConfirmationToVisitor_(p) {
+  if (!p.email || !isEmail_(p.email)) return;
+
+  var bookingRef = p.booking_ref || "PHY-REF";
+  var consultType = p.consultation_type || p.interest || "Physiotherapy Consultation";
+  var preferredDate = p.preferred_date || "To be confirmed";
+  var preferredTime = p.preferred_time || "Flexible";
+  var timezone = p.timezone || "Asia/Kolkata";
+  var format = p.format || "Online video consultation";
+
+  var waFollowup = "https://wa.me/917845072426?text=" + encodeURIComponent("Hi Physiomatics, my booking reference is " + bookingRef + ". I have a question about my scheduled " + consultType + ".");
+
+  var htmlBody =
+    "<!DOCTYPE html><html><head><meta charset='utf-8'></head><body style='margin:0;padding:24px;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif;'>" +
+      "<div style='max-width:620px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.06);border:1px solid #e2e8f0;'>" +
+        // Header
+        "<div style='background:linear-gradient(135deg,#3b1d60 0%,#24103c 100%);padding:32px 28px;text-align:center;'>" +
+          "<div style='display:inline-block;padding:6px 14px;background:rgba(255,255,255,0.15);color:#ffffff;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;border-radius:20px;margin-bottom:12px;'>" +
+            "Appointment Booking Received" +
+          "</div>" +
+          "<h1 style='margin:0;color:#ffffff;font-size:24px;font-weight:800;letter-spacing:-0.5px;'>We have received your booking!</h1>" +
+          "<p style='margin:8px 0 0 0;color:#e9d5ff;font-size:14px;'>Thank you, " + html_(p.name) + ". Our clinical team is preparing your session.</p>" +
+        "</div>" +
+        // Summary Box
+        "<div style='padding:28px;'>" +
+          "<div style='background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;'>" +
+            "<div style='font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#7c3aed;margin-bottom:6px;'>Your Booking Reference</div>" +
+            "<div style='font-size:26px;font-family:monospace;font-weight:800;color:#3b1d60;letter-spacing:1px;'>" + html_(bookingRef) + "</div>" +
+          "</div>" +
+          // Details Table
+          "<h3 style='margin:0 0 14px 0;font-size:16px;color:#0f172a;font-weight:700;'>Appointment Summary</h3>" +
+          "<table style='width:100%;border-collapse:collapse;margin-bottom:24px;'>" +
+            "<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:600;'>Consultation Type</td><td style='padding:10px 0;color:#0f172a;font-size:14px;font-weight:700;text-align:right;'>" + html_(consultType) + "</td></tr>" +
+            "<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:600;'>Requested Date</td><td style='padding:10px 0;color:#0f172a;font-size:14px;font-weight:700;text-align:right;'>" + html_(preferredDate) + "</td></tr>" +
+            "<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:600;'>Requested Time</td><td style='padding:10px 0;color:#0f172a;font-size:14px;font-weight:700;text-align:right;'>" + html_(preferredTime) + " (" + html_(timezone) + ")</td></tr>" +
+            "<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:600;'>Format</td><td style='padding:10px 0;color:#0f172a;font-size:14px;text-align:right;'>" + html_(format) + "</td></tr>" +
+            (p.goal ? "<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:600;'>Primary Goal</td><td style='padding:10px 0;color:#0f172a;font-size:14px;text-align:right;'>" + html_(p.goal) + "</td></tr>" : "") +
+          "</table>" +
+          // Next Steps
+          "<div style='background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid #e2e8f0;'>" +
+            "<h4 style='margin:0 0 10px 0;color:#0f172a;font-size:14px;font-weight:700;'>What Happens Next?</h4>" +
+            "<ol style='margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;'>" +
+              "<li>Our clinical coordinator will review your consultation details within 24 hours.</li>" +
+              "<li>You will receive a calendar invitation and Google Meet video link.</li>" +
+              "<li>If you have existing medical or physiotherapy reports, you can reply directly to this email with attachments.</li>" +
+            "</ol>" +
+          "</div>" +
+          // WhatsApp Help Button
+          "<div style='text-align:center;margin-top:24px;'>" +
+            "<a href='" + waFollowup + "' style='display:inline-block;padding:12px 24px;background:#25D366;color:#ffffff;text-decoration:none;border-radius:10px;font-size:14px;font-weight:700;box-shadow:0 2px 8px rgba(37,211,102,0.3);'>Questions? Chat with us on WhatsApp</a>" +
+          "</div>" +
+        "</div>" +
+        // Footer
+        "<div style='background:#f8fafc;padding:20px 28px;text-align:center;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px;'>" +
+          "<div style='font-weight:700;color:#64748b;margin-bottom:4px;'>Physiomatics — AI-Powered Physiotherapy Intelligence</div>" +
+          "<div><a href='" + CONFIG.WEBSITE + "' style='color:#7c3aed;text-decoration:none;'>" + CONFIG.WEBSITE + "</a> &bull; Support: " + EMAIL_CONFIG.adminEmail + "</div>" +
+        "</div>" +
+      "</div>" +
+    "</body></html>";
+
+  var plainBody = [
+    "Dear " + p.name + ",",
+    "",
+    "Thank you for scheduling a consultation with Physiomatics.",
+    "",
+    "Booking Reference: " + bookingRef,
+    "Consultation Type: " + consultType,
+    "Requested Date: " + preferredDate,
+    "Requested Time: " + preferredTime + " (" + timezone + ")",
+    "Format: " + format,
+    (p.goal ? "Goal: " + p.goal : ""),
+    "",
+    "What happens next:",
+    "1. Our clinical team will review your enquiry within 24 hours.",
+    "2. You will receive your video consultation link via email.",
+    "3. Need immediate help? Message us on WhatsApp: +91 78450 72426",
+    "",
+    "Best regards,",
+    "The Physiomatics Team",
+    CONFIG.WEBSITE
+  ].filter(Boolean).join("\n");
+
+  try {
+    MailApp.sendEmail({
+      to: p.email,
+      subject: "✅ Appointment Confirmation: " + consultType + " [Ref: " + bookingRef + "]",
+      body: plainBody,
+      htmlBody: htmlBody,
+      name: EMAIL_CONFIG.name,
+      replyTo: EMAIL_CONFIG.replyTo
+    });
+    log_("sendBookingConfirmationToVisitor_", "SUCCESS", "Booking confirmation sent to visitor: " + p.email);
+  } catch (err) {
+    log_("sendBookingConfirmationToVisitor_", "ERROR", "Failed to send confirmation to " + p.email + ": " + String(err));
+  }
+}
+
+/**
+ * Creates an event in the primary Google Calendar and dispatches native calendar invites to the visitor.
+ */
+function createBookingCalendarEvent_(p) {
+  if (!p.preferred_date || p.preferred_date === "Flexible") return "";
+  try {
+    var cal = CalendarApp.getDefaultCalendar();
+    if (!cal) return "";
+
+    var start = parseDateTime_(p.preferred_date, p.preferred_time);
+    var end = new Date(start.getTime() + 30 * 60 * 1000); // 30 minutes default
+
+    var eventTitle = "Physiomatics: " + (p.consultation_type || "Physiotherapy Consultation") + " — " + p.name;
+    var description = [
+      "Physiomatics Appointment Booking",
+      "Reference: " + (p.booking_ref || "N/A"),
+      "Patient: " + p.name,
+      "Email: " + p.email,
+      "Phone: " + (p.phone || "N/A"),
+      "Consultation Type: " + (p.consultation_type || "General"),
+      "Goal: " + (p.goal || "N/A"),
+      "Format: " + (p.format || "Online"),
+      "Timezone: " + (p.timezone || "Asia/Kolkata"),
+      p.message ? "Notes: " + p.message : "",
+      "Jira: " + (p.jira_key || "N/A"),
+      "Website: " + CONFIG.WEBSITE
+    ].filter(Boolean).join("\n\n");
+
+    var calOptions = {
+      description: description,
+      guests: p.email,
+      sendInvites: true
+    };
+
+    var calEvent = cal.createEvent(eventTitle, start, end, calOptions);
+    p.calendar_event_id = calEvent.getId();
+    log_("createBookingCalendarEvent_", "SUCCESS", "Calendar event created: " + calEvent.getId());
+    return calEvent.getId();
+  } catch (err) {
+    log_("createBookingCalendarEvent_", "WARN", "Calendar event warning: " + String(err));
+    return "";
+  }
+}
+
+/**
+ * Parses YYYY-MM-DD date and HH:MM time into a JavaScript Date object.
+ */
+function parseDateTime_(dateStr, timeStr) {
+  var d = new Date();
+  if (dateStr) {
+    var parts = dateStr.split("-");
+    if (parts.length === 3) {
+      d.setFullYear(parseInt(parts[0], 10));
+      d.setMonth(parseInt(parts[1], 10) - 1);
+      d.setDate(parseInt(parts[2], 10));
+    }
+  }
+  if (timeStr) {
+    var timeParts = timeStr.split(":");
+    if (timeParts.length >= 2) {
+      d.setHours(parseInt(timeParts[0], 10));
+      d.setMinutes(parseInt(timeParts[1], 10));
+      d.setSeconds(0);
+      d.setMilliseconds(0);
+      return d;
+    }
+  }
+  // Default to 10:00 AM if no time specified
+  d.setHours(10, 0, 0, 0);
+  return d;
 }
 
 function sendPeriodicExecutiveDigest(intervalName) {

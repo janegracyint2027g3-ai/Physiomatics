@@ -351,12 +351,17 @@ function BookPage() {
               </div>
             </div>
 
+            <div className="flex items-center justify-center gap-2 p-3 bg-purple-50 rounded-xl border border-purple-200 text-purple-900 text-sm font-medium mb-6">
+              <Mail className="size-4 text-purple-600 shrink-0" />
+              <span>Confirmation email sent to <strong>{email}</strong></span>
+            </div>
+
             <div className="space-y-3 text-sm text-muted-foreground mb-8">
               {[
-                "Our team will review your enquiry and contact you within 24 hours.",
-                `A confirmation will be sent to ${email}.`,
-                "Quote your reference number " + bookingRef + " in all communications.",
-                "To reschedule or cancel, contact us via WhatsApp or email.",
+                `An email confirmation with your booking reference (${bookingRef}) has been sent to ${email}.`,
+                "Our clinical team will review your consultation request within 24 hours.",
+                "If you selected a preferred date & time, a calendar meeting invite is being prepared.",
+                "Quote reference " + bookingRef + " for all follow-ups.",
               ].map((s, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <CheckCircle2 className="size-4 text-primary shrink-0 mt-0.5" />
@@ -979,6 +984,13 @@ function BookPage() {
                       : null,
                   ].filter(Boolean) as any}
                 />
+              </div>
+
+              <div className="rounded-2xl bg-purple-50/80 border border-purple-200 p-4 flex gap-3">
+                <Mail className="size-5 text-purple-700 shrink-0 mt-0.5" />
+                <div className="text-xs text-purple-900 leading-relaxed">
+                  <strong>Email Notification:</strong> Submitting this booking will send an instant confirmation email with your booking reference to <strong>{email || "your email address"}</strong>. An administrative notification and Google Calendar invite will also be issued.
+                </div>
               </div>
 
               <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex gap-3">

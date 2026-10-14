@@ -217,6 +217,7 @@ async function syncBookingToJira(
 }
 
 // ─── 5. Google Sheets Helper ──────────────────────────────────────────────────
+// ─── 5. Google Sheets Helper ──────────────────────────────────────────────────
 async function syncBookingToSheets(
   booking: Record<string, any>,
   jiraKey?: string
@@ -231,14 +232,22 @@ async function syncBookingToSheets(
   try {
     const params = new URLSearchParams({
       action: "booking_submission",
+      event_name: "booking_submission",
       form_type: "appointment_booking",
+      lead_type: "appointment_booking",
+      form_status: "submitted",
       booking_ref: String(booking.booking_ref || ""),
       full_name: String(booking.name || ""),
+      name: String(booking.name || ""),
       email: String(booking.email || ""),
       phone: String(booking.phone || ""),
+      contact: String(booking.email || booking.phone || ""),
       organization: String(booking.organization || ""),
       job_title: String(booking.job_title || ""),
+      role: String(booking.job_title || ""),
       consultation_type: String(booking.consultation_type || ""),
+      interest: String(booking.consultation_type || ""),
+      subject: String(booking.consultation_type || ""),
       goal: String(booking.goal || ""),
       preferred_date: String(booking.preferred_date || "Flexible"),
       preferred_time: String(booking.preferred_time || "Flexible"),
@@ -246,6 +255,7 @@ async function syncBookingToSheets(
       timezone: String(booking.timezone || "Asia/Kolkata"),
       language: String(booking.language || "English"),
       message: String(booking.message || ""),
+      notes: String(booking.notes || booking.message || ""),
       geo_country: String(booking.location?.country || ""),
       geo_city: String(booking.location?.city || ""),
       jira_key: String(jiraKey || ""),
@@ -260,6 +270,97 @@ async function syncBookingToSheets(
     return { success: true };
   } catch (err: any) {
     console.error("[Sheets/Booking] Error:", err);
+    return { success: false, error: err?.message };
+  }
+}
+
+// ─── 5b. Direct Resend Email Helper (fallback / instant delivery) ─────────────
+async function sendBookingEmailViaResend(
+  booking: Record<string, any>
+): Promise<{ success: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { success: false, error: "RESEND_API_KEY not set" };
+
+  try {
+    const fromEmail = process.env.EMAIL_FROM || "Physiomatics <onboarding@resend.dev>";
+    const adminEmail = process.env.ADMIN_EMAIL || "janegracy.int2027g3@gmail.com";
+    const bookingRef = String(booking.booking_ref || "PHY-REF");
+
+    const visitorHtml = `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;">
+        <div style="background:linear-gradient(135deg,#3b1d60 0%,#1e1035 100%);padding:24px;border-radius:8px;text-align:center;color:#ffffff;margin-bottom:24px;">
+          <h1 style="margin:0;font-size:22px;">Appointment Booking Confirmed</h1>
+          <p style="margin:8px 0 0 0;color:#e9d5ff;font-size:14px;">Physiomatics AI-Powered Physiotherapy</p>
+        </div>
+        <p style="font-size:15px;color:#334155;">Dear <strong>${escapeHtml(booking.name)}</strong>,</p>
+        <p style="font-size:14px;color:#475569;line-height:1.6;">Thank you for scheduling your consultation with Physiomatics. Your appointment enquiry has been logged successfully.</p>
+        
+        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:16px;margin:20px 0;">
+          <div style="font-size:11px;text-transform:uppercase;font-weight:bold;color:#7c3aed;margin-bottom:4px;">Booking Reference</div>
+          <div style="font-size:20px;font-family:monospace;font-weight:bold;color:#3b1d60;">${escapeHtml(bookingRef)}</div>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:24px;">
+          <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:8px 0;color:#64748b;">Consultation:</td><td style="padding:8px 0;font-weight:bold;color:#0f172a;">${escapeHtml(booking.consultation_type)}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:8px 0;color:#64748b;">Preferred Date:</td><td style="padding:8px 0;font-weight:bold;color:#0f172a;">${escapeHtml(booking.preferred_date || "Flexible")}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:8px 0;color:#64748b;">Preferred Time:</td><td style="padding:8px 0;font-weight:bold;color:#0f172a;">${escapeHtml(booking.preferred_time || "Flexible")} (${escapeHtml(booking.timezone || "Asia/Kolkata")})</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:8px 0;color:#64748b;">Format:</td><td style="padding:8px 0;color:#0f172a;">${escapeHtml(booking.format || "Online")}</td></tr>
+          <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:8px 0;color:#64748b;">Goal:</td><td style="padding:8px 0;color:#0f172a;">${escapeHtml(booking.goal || "—")}</td></tr>
+        </table>
+
+        <div style="background:#f8fafc;border-radius:8px;padding:16px;font-size:13px;color:#475569;line-height:1.6;margin-bottom:20px;">
+          <strong>What's Next?</strong><br/>
+          • Our clinical team will review your consultation request within 24 hours.<br/>
+          • You will receive a calendar invitation with a video consultation link.<br/>
+          • For immediate coordination or questions, reach us on WhatsApp.
+        </div>
+
+        <div style="text-align:center;margin-top:24px;">
+          <a href="https://wa.me/917845072426" style="display:inline-block;background:#25D366;color:white;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:13px;">Chat on WhatsApp</a>
+        </div>
+      </div>
+    `;
+
+    const adminHtml = `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;">
+        <h2 style="color:#3b1d60;margin-top:0;">📅 New Appointment Booking: ${escapeHtml(bookingRef)}</h2>
+        <p><strong>Patient / Visitor:</strong> ${escapeHtml(booking.name)} (${escapeHtml(booking.email)}${booking.phone ? " / " + escapeHtml(booking.phone) : ""})</p>
+        <p><strong>Consultation Type:</strong> ${escapeHtml(booking.consultation_type)}</p>
+        <p><strong>Date &amp; Time:</strong> ${escapeHtml(booking.preferred_date || "Flexible")} at ${escapeHtml(booking.preferred_time || "Flexible")} (${escapeHtml(booking.timezone || "Asia/Kolkata")})</p>
+        <p><strong>Format:</strong> ${escapeHtml(booking.format || "Online")}</p>
+        <p><strong>Goal:</strong> ${escapeHtml(booking.goal || "N/A")}</p>
+        <p><strong>Notes:</strong> ${escapeHtml(booking.message || "None")}</p>
+        <p><strong>Location:</strong> ${escapeHtml(booking.location?.city || "Unknown")}, ${escapeHtml(booking.location?.country || "Unknown")}</p>
+      </div>
+    `;
+
+    await Promise.allSettled([
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [booking.email],
+          subject: `✅ Appointment Confirmation: ${booking.consultation_type} [Ref: ${bookingRef}]`,
+          html: visitorHtml,
+        }),
+      }),
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [adminEmail],
+          subject: `📅 [NEW APPOINTMENT] ${bookingRef} — ${booking.name} (${booking.consultation_type})`,
+          html: adminHtml,
+        }),
+      }),
+    ]);
+
+    console.log(`[Resend/Booking] Emails dispatched for ${bookingRef}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error("[Resend/Booking] Error:", err);
     return { success: false, error: err?.message };
   }
 }
@@ -454,16 +555,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     const jiraKey = jiraStatus.issueKey;
 
-    // ── Telegram + Sheets + Airtable (parallel) ───────────────────────────────
+    // ── Telegram + Sheets + Airtable + Email (parallel) ──────────────────────
     const tgToken = process.env.TELEGRAM_BOT_TOKEN;
     const tgChatId = process.env.TELEGRAM_CHAT_ID;
 
-    const [sheetsRes, airtableRes, telegramRes] = await Promise.allSettled([
+    const [sheetsRes, airtableRes, telegramRes, resendRes] = await Promise.allSettled([
       syncBookingToSheets(booking, jiraKey),
       syncBookingToAirtable(booking, jiraKey),
       tgToken && tgChatId
         ? sendTelegramAlert(tgToken, tgChatId, buildBookingTelegramMessage(booking))
         : Promise.resolve({ ok: false, error: "Telegram not configured" }),
+      sendBookingEmailViaResend(booking),
     ]);
 
     const sheetsOk =
@@ -474,9 +576,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       telegramRes.status === "fulfilled"
         ? (telegramRes.value as any).ok
         : false;
+    const emailDirectOk =
+      resendRes.status === "fulfilled" ? resendRes.value.success : false;
+    // Email is handled either via direct Resend (if configured) or via Google Apps Script (Sheets sync)
+    const emailOk = emailDirectOk || sheetsOk;
 
     console.log(
-      `[Booking] Done: ref=${bookingRef}, Jira=${jiraKey || "failed"}, Sheets=${sheetsOk}, Airtable=${airtableOk}, Telegram=${telegramOk}`
+      `[Booking] Done: ref=${bookingRef}, Jira=${jiraKey || "failed"}, Sheets/AppsScript=${sheetsOk}, Airtable=${airtableOk}, Telegram=${telegramOk}, Email=${emailOk}`
     );
 
     // ── Respond with full confirmation ────────────────────────────────────────
@@ -507,6 +613,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         sheets: sheetsOk,
         airtable: airtableOk,
         telegram: telegramOk,
+        email: emailOk,
       },
     });
   } catch (err: any) {
