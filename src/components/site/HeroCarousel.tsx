@@ -136,32 +136,79 @@ export function HeroCarousel() {
   }, [emblaApi, onSelect]);
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-white via-primary-soft/25 to-background border-b border-border/40">
-      {/* ── TRANSLUCENT NEAT AMBIENT BACKGROUND & DOTTED GRID (Sample 1 Match) ── */}
+    <section className="relative overflow-hidden border-b border-white/5" style={{ background: 'linear-gradient(135deg, #0d0818 0%, #1a0d35 40%, #0f1a2e 70%, #0d1520 100%)' }}>
+      {/* ── ANIMATED DARK PURPLE MESH BACKGROUND ── */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Soft atmospheric lavender/purple glow on top-left */}
-        <div className="absolute -top-32 -left-32 size-[32rem] rounded-full bg-[#592787]/[0.08] blur-[110px]" />
-        {/* Soft atmospheric aqua/teal glow on top-right */}
-        <div className="absolute -top-28 -right-28 size-[34rem] rounded-full bg-[#5AA9AC]/[0.14] blur-[120px]" />
-        {/* Soft pearl-blue ambient glow in lower-center */}
-        <div className="absolute bottom-0 left-1/3 size-[28rem] rounded-full bg-[#3a7fb5]/[0.06] blur-[100px]" />
-        
-        {/* Technical Translucent Dotted Grid Overlay */}
+        {/* Animated orb 1 — large primary purple, drifts slowly */}
         <div
-          className="absolute inset-0 opacity-[0.22]"
+          className="absolute rounded-full opacity-40"
           style={{
-            backgroundImage: 'radial-gradient(circle, #592787 1.25px, transparent 1.25px)',
-            backgroundSize: '24px 24px',
+            width: '55rem', height: '55rem',
+            top: '-18rem', left: '-12rem',
+            background: 'radial-gradient(circle at center, #7c3aed 0%, #592787 40%, transparent 70%)',
+            filter: 'blur(80px)',
+            animation: 'heroOrbDrift1 18s ease-in-out infinite alternate',
           }}
         />
-        {/* Gentle diagonal shine line */}
-        <div 
-          className="absolute inset-0 opacity-15"
+        {/* Animated orb 2 — mid teal-aqua, drifts from right */}
+        <div
+          className="absolute rounded-full opacity-30"
           style={{
-            background: 'linear-gradient(135deg, transparent 40%, rgba(90, 169, 172, 0.15) 50%, transparent 60%)',
+            width: '42rem', height: '42rem',
+            top: '-8rem', right: '-14rem',
+            background: 'radial-gradient(circle at center, #5AA9AC 0%, #2d6b7a 45%, transparent 70%)',
+            filter: 'blur(90px)',
+            animation: 'heroOrbDrift2 22s ease-in-out infinite alternate',
+          }}
+        />
+        {/* Animated orb 3 — deep indigo, anchored bottom-left */}
+        <div
+          className="absolute rounded-full opacity-25"
+          style={{
+            width: '36rem', height: '36rem',
+            bottom: '-10rem', left: '15%',
+            background: 'radial-gradient(circle at center, #4c1d95 0%, #1e1152 50%, transparent 70%)',
+            filter: 'blur(70px)',
+            animation: 'heroOrbDrift3 26s ease-in-out infinite alternate',
+          }}
+        />
+        {/* Shimmer sweep — slow diagonal gloss */}
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            background: 'linear-gradient(115deg, transparent 30%, rgba(168,85,247,0.25) 50%, transparent 70%)',
+            animation: 'heroShimmer 8s ease-in-out infinite',
+          }}
+        />
+        {/* Fine purple grid lines (not dots) */}
+        <div
+          className="absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(168,85,247,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,0.6) 1px, transparent 1px)',
+            backgroundSize: '60px 60px',
           }}
         />
       </div>
+
+      {/* CSS keyframes injected once via style tag */}
+      <style>{`
+        @keyframes heroOrbDrift1 {
+          0%   { transform: translate(0, 0) scale(1); }
+          100% { transform: translate(60px, 40px) scale(1.12); }
+        }
+        @keyframes heroOrbDrift2 {
+          0%   { transform: translate(0, 0) scale(1); }
+          100% { transform: translate(-50px, 60px) scale(1.08); }
+        }
+        @keyframes heroOrbDrift3 {
+          0%   { transform: translate(0, 0) scale(1); }
+          100% { transform: translate(40px, -50px) scale(1.15); }
+        }
+        @keyframes heroShimmer {
+          0%, 100% { opacity: 0.06; background-position: -200% 0; }
+          50%       { opacity: 0.14; background-position:  200% 0; }
+        }
+      `}</style>
 
       {/* ── EMBLA CAROUSEL SLIDES ── */}
       <div className="overflow-hidden relative z-10" ref={emblaRef}>
@@ -172,28 +219,28 @@ export function HeroCarousel() {
                 
                 {/* ── LEFT: Typography & CTA Buttons ── */}
                 <div className="animate-rise z-10">
-                  {/* Eyebrow badge with icon */}
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase bg-primary/10 border border-primary/20 text-primary backdrop-blur-md shadow-xs">
-                    <Sparkles className="size-3.5 text-primary" />
+                  {/* Eyebrow badge */}
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase bg-purple-500/20 border border-purple-400/30 text-purple-300 backdrop-blur-md shadow-xs">
+                    <Sparkles className="size-3.5 text-purple-300" />
                     <span>{slide.eyebrow}</span>
                   </div>
 
-                  {/* Main Display Headline (Sample 1) */}
-                  <h1 className="mt-5 text-4xl sm:text-5xl md:text-6xl lg:text-[4.15rem] font-serif font-bold text-[#3b1d60] leading-[1.08] tracking-tight">
+                  {/* Main Headline — white on dark */}
+                  <h1 className="mt-5 text-4xl sm:text-5xl md:text-6xl lg:text-[4.15rem] font-serif font-bold text-white leading-[1.08] tracking-tight drop-shadow-[0_2px_24px_rgba(124,58,237,0.35)]">
                     {slide.title}
                   </h1>
 
-                  {/* Description Paragraph */}
-                  <p className="mt-6 max-w-xl text-base sm:text-lg text-muted-foreground/90 leading-relaxed font-sans">
+                  {/* Description */}
+                  <p className="mt-6 max-w-xl text-base sm:text-lg text-white/60 leading-relaxed font-sans">
                     {slide.description}
                   </p>
 
-                  {/* Dual Action Buttons (Sample 1 & Sample 2) */}
+                  {/* CTA Buttons */}
                   <div className="mt-8 flex flex-wrap items-center gap-3.5">
                     <Button 
                       asChild 
                       size="lg" 
-                      className="rounded-full px-7 py-3.5 bg-[#5AA9AC] hover:bg-[#48989b] text-white shadow-lg shadow-[#5AA9AC]/25 font-semibold text-base transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      className="rounded-full px-7 py-3.5 bg-[#5AA9AC] hover:bg-[#48989b] text-white shadow-lg shadow-[#5AA9AC]/30 font-semibold text-base transition-all hover:scale-[1.02] active:scale-[0.98]"
                     >
                       <Link to={slide.linkPrimary}>
                         {slide.ctaPrimary} <ArrowRight className="size-4 ml-1.5" />
@@ -205,7 +252,7 @@ export function HeroCarousel() {
                         asChild 
                         variant="outline" 
                         size="lg" 
-                        className="rounded-full px-6 py-3.5 bg-white/80 hover:bg-white border-border/80 text-foreground backdrop-blur-md shadow-xs font-medium text-base transition-all hover:shadow-sm"
+                        className="rounded-full px-6 py-3.5 bg-white/10 hover:bg-white/20 border-white/25 text-white backdrop-blur-md shadow-xs font-medium text-base transition-all hover:shadow-sm"
                       >
                         <a href={slide.linkSecondary} target="_blank" rel="noreferrer">
                           {slide.ctaSecondary}
@@ -216,7 +263,7 @@ export function HeroCarousel() {
                         asChild 
                         variant="outline" 
                         size="lg" 
-                        className="rounded-full px-6 py-3.5 bg-white/80 hover:bg-white border-border/80 text-foreground backdrop-blur-md shadow-xs font-medium text-base transition-all hover:shadow-sm"
+                        className="rounded-full px-6 py-3.5 bg-white/10 hover:bg-white/20 border-white/25 text-white backdrop-blur-md shadow-xs font-medium text-base transition-all hover:shadow-sm"
                       >
                         <Link to={slide.linkSecondary}>
                           {slide.ctaSecondary}
@@ -225,20 +272,20 @@ export function HeroCarousel() {
                     )}
                   </div>
 
-                  {/* Trust Badge under buttons (Sample 2) */}
-                  <div className="mt-6 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  {/* Trust Badge */}
+                  <div className="mt-6 flex items-center gap-2 text-xs font-medium text-white/45">
                     <ShieldCheck className="size-4 text-[#5AA9AC] shrink-0" />
                     <span>{slide.trust}</span>
                   </div>
                 </div>
 
-                {/* ── RIGHT: Translucent Card with rounded photo & telemetry badges (Sample 1) ── */}
+                {/* ── RIGHT: Card with photo & telemetry badges ── */}
                 <div className="relative animate-rise [animation-delay:150ms] group">
-                  {/* Atmospheric glow behind the card */}
-                  <div className="absolute -inset-4 bg-gradient-to-tr from-primary/15 via-[#5AA9AC]/20 to-transparent rounded-[3rem] blur-2xl opacity-60 transition duration-500 group-hover:opacity-85" />
+                  {/* Atmospheric glow behind card */}
+                  <div className="absolute -inset-4 bg-gradient-to-tr from-purple-700/30 via-[#5AA9AC]/20 to-transparent rounded-[3rem] blur-2xl opacity-70 transition duration-500 group-hover:opacity-100" />
                   
-                  {/* Clean rounded card shell */}
-                  <div className="relative overflow-hidden rounded-[2.5rem] md:rounded-[3rem] border border-white/90 shadow-[0_25px_60px_-15px_rgba(89,39,135,0.18)] bg-card/60 backdrop-blur-md ring-1 ring-black/[0.04]">
+                  {/* Rounded card shell */}
+                  <div className="relative overflow-hidden rounded-[2.5rem] md:rounded-[3rem] border border-white/15 shadow-[0_25px_60px_-15px_rgba(89,39,135,0.5)] bg-white/5 backdrop-blur-md ring-1 ring-purple-500/10">
                     <img 
                       src={slide.image} 
                       alt={slide.title} 
@@ -247,20 +294,20 @@ export function HeroCarousel() {
                       className="aspect-[4/3] w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]" 
                     />
                     
-                    {/* Top-left floating translucent pill badge */}
-                    <div className="absolute top-4 left-4 sm:top-6 sm:left-6 rounded-2xl bg-white/90 backdrop-blur-xl border border-white/70 shadow-lg px-3.5 py-2 sm:px-4 sm:py-2.5 flex items-center gap-2 sm:gap-2.5">
-                      <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-[11px] sm:text-xs font-bold text-foreground tracking-wide">{slide.badgeTop}</span>
+                    {/* Top-left floating badge — translucent dark glass */}
+                    <div className="absolute top-4 left-4 sm:top-6 sm:left-6 rounded-2xl bg-black/50 backdrop-blur-xl border border-white/15 shadow-lg px-3.5 py-2 sm:px-4 sm:py-2.5 flex items-center gap-2 sm:gap-2.5">
+                      <div className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[11px] sm:text-xs font-bold text-white/90 tracking-wide">{slide.badgeTop}</span>
                     </div>
 
-                    {/* Bottom-right floating translucent telemetry micro-card */}
-                    <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 rounded-2xl bg-white/92 backdrop-blur-xl border border-white/80 shadow-xl p-3.5 sm:p-4 max-w-[210px]">
+                    {/* Bottom-right telemetry micro-card — purple glass */}
+                    <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 rounded-2xl backdrop-blur-xl border border-purple-400/25 shadow-xl p-3.5 sm:p-4 max-w-[210px]" style={{ background: 'rgba(30,12,60,0.75)' }}>
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{slide.metricLabel}</span>
-                        <span className="text-[11px] font-black text-emerald-600">{slide.metricChange}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">{slide.metricLabel}</span>
+                        <span className="text-[11px] font-black text-emerald-400">{slide.metricChange}</span>
                       </div>
-                      <div className="text-xl sm:text-2xl font-bold font-display text-primary leading-tight">{slide.metricValue}</div>
-                      <div className="text-[10px] sm:text-[11px] text-muted-foreground/85 mt-0.5">{slide.metricSub}</div>
+                      <div className="text-xl sm:text-2xl font-bold font-display text-purple-300 leading-tight">{slide.metricValue}</div>
+                      <div className="text-[10px] sm:text-[11px] text-white/45 mt-0.5">{slide.metricSub}</div>
                     </div>
                   </div>
                 </div>
@@ -271,11 +318,11 @@ export function HeroCarousel() {
         </div>
       </div>
 
-      {/* ── FLOATING CIRCULAR ARROWS ON LEFT & RIGHT (Sample 2 Match) ── */}
+      {/* ── NAV ARROWS ── */}
       <button
         onClick={scrollPrev}
         aria-label="Previous slide"
-        className="hidden sm:flex absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-20 size-11 md:size-12 rounded-full bg-white/80 hover:bg-white text-foreground/80 hover:text-foreground backdrop-blur-xl border border-white/80 shadow-lg transition-all items-center justify-center hover:scale-105 active:scale-95"
+        className="hidden sm:flex absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-20 size-11 md:size-12 rounded-full bg-white/10 hover:bg-purple-500/30 text-white backdrop-blur-xl border border-white/20 shadow-lg transition-all items-center justify-center hover:scale-105 active:scale-95"
       >
         <ChevronLeft className="size-5" />
       </button>
@@ -283,39 +330,39 @@ export function HeroCarousel() {
       <button
         onClick={scrollNext}
         aria-label="Next slide"
-        className="hidden sm:flex absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-20 size-11 md:size-12 rounded-full bg-white/80 hover:bg-white text-foreground/80 hover:text-foreground backdrop-blur-xl border border-white/80 shadow-lg transition-all items-center justify-center hover:scale-105 active:scale-95"
+        className="hidden sm:flex absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-20 size-11 md:size-12 rounded-full bg-white/10 hover:bg-purple-500/30 text-white backdrop-blur-xl border border-white/20 shadow-lg transition-all items-center justify-center hover:scale-105 active:scale-95"
       >
         <ChevronRight className="size-5" />
       </button>
 
-      {/* ── BOTTOM DOCKED CONTROLS BAR (Sample 2 Match) ── */}
+      {/* ── BOTTOM CONTROLS BAR ── */}
       <div className="container-page pb-10 pt-2 flex items-center justify-between relative z-10">
-        {/* Progress dashes dock (Sample 2) */}
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/75 backdrop-blur-xl border border-white/70 shadow-xs">
+        {/* Progress dashes */}
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-xl border border-white/15 shadow-xs" style={{ background: 'rgba(88,39,135,0.35)' }}>
           {slides.map((_, index) => (
             <button
               key={index}
               onClick={() => scrollTo(index)}
               className={`h-2 rounded-full transition-all duration-300 ${
                 index === selectedIndex
-                  ? 'w-8 bg-gradient-to-r from-primary to-[#5AA9AC]'
-                  : 'w-2.5 bg-primary/20 hover:bg-primary/40'
+                  ? 'w-8 bg-gradient-to-r from-purple-400 to-[#5AA9AC]'
+                  : 'w-2.5 bg-white/20 hover:bg-white/40'
               }`}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}
         </div>
 
-        {/* Counter + Play/Pause dock */}
-        <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/75 backdrop-blur-xl border border-white/70 shadow-xs">
-          <span className="text-xs font-bold text-muted-foreground/90 tracking-wider tabular-nums">
+        {/* Counter + Play/Pause */}
+        <div className="flex items-center gap-3 px-4 py-2 rounded-full backdrop-blur-xl border border-white/15 shadow-xs" style={{ background: 'rgba(88,39,135,0.35)' }}>
+          <span className="text-xs font-bold text-white/60 tracking-wider tabular-nums">
             {selectedIndex + 1} / {slides.length}
           </span>
-          <div className="h-3 w-px bg-border/80" />
+          <div className="h-3 w-px bg-white/20" />
           <button
             onClick={toggleAutoplay}
             aria-label={isPlaying ? 'Pause autoplay' : 'Resume autoplay'}
-            className="size-6 grid place-items-center rounded-full hover:bg-primary/10 text-primary transition"
+            className="size-6 grid place-items-center rounded-full hover:bg-purple-500/30 text-purple-300 transition"
           >
             {isPlaying ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
           </button>
