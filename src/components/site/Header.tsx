@@ -125,21 +125,21 @@ function ContrastMegamenu({
     >
       {/* Trigger button */}
       <button
-        className={`group flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
+        className={`group flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold tracking-wide transition-all duration-200 ${
           open 
-            ? "bg-[#592787]/10 text-[#592787]" 
-            : "text-[#1a0a2e]/75 hover:text-[#592787] hover:bg-[#592787]/8"
+            ? "bg-white/20 text-white shadow-inner ring-1 ring-white/30" 
+            : "text-white/90 hover:text-white hover:bg-white/12"
         }`}
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
       >
-        {label}
-        <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180 text-[#592787]" : "text-[#592787]/50"}`} />
+        <span>{label}</span>
+        <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180 text-[#5AA9AC]" : "text-white/70 group-hover:text-white"}`} />
       </button>
       {/* Animated underline */}
-      <span className={`absolute bottom-0 left-3.5 right-3.5 h-[2px] rounded-full bg-gradient-to-r from-[#592787] to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`} />
+      <span className={`absolute bottom-0 left-3.5 right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-[#5AA9AC] via-white to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100 shadow-[0_0_8px_rgba(90,169,172,0.8)]" : "opacity-0 scale-x-0"}`} />
 
       {open && (
         <div className={`absolute ${positionClasses} top-full z-50 w-[56rem] max-w-[calc(100vw-2rem)] pt-3.5 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
@@ -326,21 +326,21 @@ function CompactMegamenu({
     >
       {/* Trigger button */}
       <button
-        className={`group flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-all duration-200 ${
+        className={`group flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold tracking-wide transition-all duration-200 ${
           open 
-            ? "bg-[#592787]/10 text-[#592787]" 
-            : "text-[#1a0a2e]/75 hover:text-[#592787] hover:bg-[#592787]/8"
+            ? "bg-white/20 text-white shadow-inner ring-1 ring-white/30" 
+            : "text-white/90 hover:text-white hover:bg-white/12"
         }`}
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
       >
-        {label}
-        <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180 text-[#592787]" : "text-[#592787]/50"}`} />
+        <span>{label}</span>
+        <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180 text-[#5AA9AC]" : "text-white/70 group-hover:text-white"}`} />
       </button>
       {/* Animated underline */}
-      <span className={`absolute bottom-0 left-3.5 right-3.5 h-[2px] rounded-full bg-gradient-to-r from-[#592787] to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`} />
+      <span className={`absolute bottom-0 left-3.5 right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-[#5AA9AC] via-white to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100 shadow-[0_0_8px_rgba(90,169,172,0.8)]" : "opacity-0 scale-x-0"}`} />
 
       {open && (
         <div className={`absolute ${positionClasses} top-full z-50 w-[52rem] max-w-[calc(100vw-2rem)] pt-3.5 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
@@ -478,14 +478,14 @@ export function Header() {
     <header
       className={`sticky top-0 z-40 transition-all duration-300 ${
         scrolled
-          ? "border-b border-[#592787]/12 bg-white/95 backdrop-blur-xl shadow-[0_4px_32px_-8px_rgba(89,39,135,0.12)]"
-          : "border-b border-transparent bg-white/80 backdrop-blur-md"
+          ? "border-b border-white/10 bg-[#150526]/95 backdrop-blur-xl shadow-[0_12px_40px_-10px_rgba(10,2,20,0.65)]"
+          : "border-b border-white/10 bg-gradient-to-r from-[#17072a] via-[#260e40] to-[#1a082e] backdrop-blur-md shadow-[0_4px_25px_rgba(15,3,28,0.4)]"
       }`}
     >
       {/* Top gradient accent bar */}
-      <div className="h-[2px] w-full bg-gradient-to-r from-[#592787] via-[#3a7fb5] to-[#5AA9AC]" />
+      <div className="h-[2px] w-full bg-gradient-to-r from-[#592787] via-[#5AA9AC] to-[#3a7fb5]" />
 
-      <div className="container-page flex h-[3.75rem] items-center justify-between gap-4">
+      <div className="container-page flex h-[3.85rem] items-center justify-between gap-4">
         
         {/* Brand Logo */}
         <Link 
@@ -497,12 +497,12 @@ export function Header() {
             <img
               src="/logo-64.png"
               alt="Physiomatics"
-              className="size-8 rounded-full object-cover shadow-sm ring-2 ring-[#592787]/20 group-hover:ring-[#592787]/50 transition-all duration-200"
+              className="size-8 rounded-full object-cover shadow-md ring-2 ring-white/30 group-hover:ring-[#5AA9AC] transition-all duration-200"
               loading="eager"
             />
-            <div className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-gradient-to-br from-[#592787] to-[#5AA9AC] border-[1.5px] border-white" />
+            <div className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-gradient-to-br from-[#5AA9AC] to-white border-[1.5px] border-[#1a082e]" />
           </div>
-          <span className="bg-gradient-to-r from-[#1a0a2e] to-[#592787] bg-clip-text text-transparent group-hover:from-[#592787] group-hover:to-[#3a7fb5] transition-all duration-300">
+          <span className="font-display font-bold tracking-tight text-white group-hover:text-[#5AA9AC] transition-colors duration-200 text-xl">
             Physiomatics
           </span>
         </Link>
@@ -596,19 +596,19 @@ export function Header() {
         </nav>
 
         {/* Desktop Quick Actions */}
-        <div className="hidden items-center gap-2 lg:flex shrink-0">
+        <div className="hidden items-center gap-2.5 lg:flex shrink-0">
           <Button 
             asChild 
             variant="ghost" 
             size="sm" 
-            className="rounded-full text-xs font-semibold text-[#592787] hover:bg-[#592787]/8 hover:text-[#3d1860]"
+            className="rounded-full text-xs font-bold text-white/90 hover:text-white hover:bg-white/12 border border-white/20 px-4 h-9 transition-all"
           >
             <Link to="/analyze">Try analysis</Link>
           </Button>
           <Button 
             asChild 
             size="sm" 
-            className="rounded-full px-5 text-xs font-bold shadow-sm bg-gradient-to-r from-[#592787] to-[#3a7fb5] hover:from-[#3d1860] hover:to-[#2a5f8a] text-white border-0 transition-all duration-200 hover:shadow-[0_4px_16px_-4px_rgba(89,39,135,0.5)]"
+            className="rounded-full px-5 text-xs font-bold text-white border-0 shadow-lg shadow-[#5AA9AC]/25 bg-gradient-to-r from-[#5AA9AC] to-[#409194] hover:from-[#67babb] hover:to-[#4aa2a5] hover:shadow-[0_4px_20px_rgba(90,169,172,0.5)] hover:scale-105 transition-all duration-200 h-9"
           >
             <Link to="/contact">Book a Demo</Link>
           </Button>
@@ -616,7 +616,7 @@ export function Header() {
 
         {/* Mobile Menu Trigger */}
         <button 
-          className="lg:hidden p-2 rounded-xl text-[#592787] hover:bg-[#592787]/8 transition-colors" 
+          className="lg:hidden p-2 rounded-xl text-white hover:bg-white/10 transition-colors" 
           aria-label="Toggle menu" 
           aria-expanded={mobile} 
           onClick={() => setMobile((m) => !m)}
@@ -631,14 +631,13 @@ export function Header() {
       {/* Mobile Menu Dropdown */}
       {mobile && (
         <nav
-          className="container-page border-t border-[#592787]/10 py-4 lg:hidden max-h-[80vh] overflow-y-auto"
-          style={{ background: "linear-gradient(180deg, #faf8ff 0%, #f0f9fb 100%)" }}
+          className="container-page border-t border-white/10 py-4 lg:hidden max-h-[80vh] overflow-y-auto bg-[#18082b] text-white shadow-2xl"
           aria-label="Mobile"
         >
           {/* Section Label */}
           <div className="flex items-center gap-2 mb-3 px-2">
-            <div className="size-1 rounded-full bg-[#592787]" />
-            <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#592787]/70">Navigation</div>
+            <div className="size-1 rounded-full bg-[#5AA9AC]" />
+            <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/70">Navigation</div>
           </div>
 
           <div className="space-y-0.5">
@@ -655,24 +654,24 @@ export function Header() {
                 key={l.to} 
                 to={l.to as any} 
                 onClick={() => setMobile(false)} 
-                className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-semibold text-[#1a0a2e]/80 hover:bg-[#592787]/8 hover:text-[#592787] transition-all group"
+                className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-bold text-white/90 hover:bg-white/10 hover:text-white transition-all group"
               >
                 <div className="flex items-center gap-3">
-                  <div className="size-7 rounded-lg bg-[#592787]/8 border border-[#592787]/12 flex items-center justify-center text-[#592787] group-hover:bg-[#592787] group-hover:text-white transition-all">
+                  <div className="size-7 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center text-[#5AA9AC] group-hover:bg-[#5AA9AC] group-hover:text-white transition-all">
                     {renderIcon(l.icon, "size-3.5")}
                   </div>
                   <span>{l.label}</span>
                 </div>
-                <ChevronRight className="size-4 text-[#592787]/30 group-hover:text-[#592787]/60 transition-colors" />
+                <ChevronRight className="size-4 text-white/40 group-hover:text-white transition-colors" />
               </Link>
             ))}
           </div>
 
-          <div className="pt-4 mt-3 border-t border-[#592787]/10 space-y-2">
-            <Button asChild variant="outline" className="w-full rounded-xl text-sm font-semibold border-[#592787]/30 text-[#592787] hover:bg-[#592787]/8">
+          <div className="pt-4 mt-3 border-t border-white/10 space-y-2">
+            <Button asChild variant="outline-inverse" className="w-full rounded-xl text-sm font-bold">
               <Link to="/analyze" onClick={() => setMobile(false)}>Try Live Analysis</Link>
             </Button>
-            <Button asChild className="w-full rounded-xl text-sm font-bold bg-gradient-to-r from-[#592787] to-[#3a7fb5] hover:from-[#3d1860] hover:to-[#2a5f8a] text-white border-0">
+            <Button asChild className="w-full rounded-xl text-sm font-bold bg-[#5AA9AC] hover:bg-[#48989b] text-white border-0 shadow-md">
               <Link to="/contact" onClick={() => setMobile(false)}>Book a Demo</Link>
             </Button>
           </div>
