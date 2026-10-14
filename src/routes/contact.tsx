@@ -20,6 +20,7 @@ import { trackClarityEvent, setClarityTag, upgradeClaritySession } from "@/lib/c
 import { captureVercelLead } from "@/lib/vercelAnalytics";
 import { recordMeaningfulActivity } from "@/lib/visitorSession";
 import { GoogleCalendarButton } from "@/components/site/GoogleCalendarButton";
+import { Testimonials } from "@/components/site/Testimonials";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/contact")({
@@ -745,6 +746,14 @@ function Contact() {
           </form>
         )}
       </section>
+
+      {/* Customer Testimonials Carousel */}
+      <Testimonials 
+        title="Trusted by Clinicians & Patients" 
+        eyebrow="Verified Clinical Feedback"
+        sub="See why physical therapy clinics, sports academies, and independent patients trust Physiomatics for precise, browser-based movement tracking."
+        className="py-14"
+      />
 
       {/* Connect with us */}
       <section className="container-page max-w-3xl pb-6">
