@@ -127,7 +127,7 @@ function ContrastMegamenu({
     >
       {/* Trigger button */}
       <button
-        className={`group flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold tracking-wide transition-all duration-200 ${
+        className={`group flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-full px-3 py-1.5 xl:px-3.5 xl:py-2 text-[13px] xl:text-sm font-bold tracking-wide transition-all duration-200 ${
           open 
             ? "bg-white/20 text-white shadow-inner ring-1 ring-white/30" 
             : "text-white/90 hover:text-white hover:bg-white/12"
@@ -137,11 +137,11 @@ function ContrastMegamenu({
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
       >
-        <span>{label}</span>
-        <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180 text-[#5AA9AC]" : "text-white/70 group-hover:text-white"}`} />
+        <span className="whitespace-nowrap">{label}</span>
+        <ChevronDown className={`size-3.5 shrink-0 transition-transform duration-200 ${open ? "rotate-180 text-[#5AA9AC]" : "text-white/70 group-hover:text-white"}`} />
       </button>
       {/* Animated underline */}
-      <span className={`absolute bottom-0 left-3.5 right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-[#5AA9AC] via-white to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100 shadow-[0_0_8px_rgba(90,169,172,0.8)]" : "opacity-0 scale-x-0"}`} />
+      <span className={`absolute bottom-0 left-3 right-3 xl:left-3.5 xl:right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-[#5AA9AC] via-white to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100 shadow-[0_0_8px_rgba(90,169,172,0.8)]" : "opacity-0 scale-x-0"}`} />
 
       {open && (
         <div className={`absolute ${positionClasses} top-full z-50 w-[56rem] max-w-[calc(100vw-2rem)] pt-3.5 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
@@ -328,7 +328,7 @@ function CompactMegamenu({
     >
       {/* Trigger button */}
       <button
-        className={`group flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-bold tracking-wide transition-all duration-200 ${
+        className={`group flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-full px-3 py-1.5 xl:px-3.5 xl:py-2 text-[13px] xl:text-sm font-bold tracking-wide transition-all duration-200 ${
           open 
             ? "bg-white/20 text-white shadow-inner ring-1 ring-white/30" 
             : "text-white/90 hover:text-white hover:bg-white/12"
@@ -338,11 +338,11 @@ function CompactMegamenu({
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
       >
-        <span>{label}</span>
-        <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180 text-[#5AA9AC]" : "text-white/70 group-hover:text-white"}`} />
+        <span className="whitespace-nowrap">{label}</span>
+        <ChevronDown className={`size-3.5 shrink-0 transition-transform duration-200 ${open ? "rotate-180 text-[#5AA9AC]" : "text-white/70 group-hover:text-white"}`} />
       </button>
       {/* Animated underline */}
-      <span className={`absolute bottom-0 left-3.5 right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-[#5AA9AC] via-white to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100 shadow-[0_0_8px_rgba(90,169,172,0.8)]" : "opacity-0 scale-x-0"}`} />
+      <span className={`absolute bottom-0 left-3 right-3 xl:left-3.5 xl:right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-[#5AA9AC] via-white to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100 shadow-[0_0_8px_rgba(90,169,172,0.8)]" : "opacity-0 scale-x-0"}`} />
 
       {open && (
         <div className={`absolute ${positionClasses} top-full z-50 w-[52rem] max-w-[calc(100vw-2rem)] pt-3.5 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
@@ -487,7 +487,7 @@ export function Header() {
       {/* Top gradient accent bar */}
       <div className="h-[2px] w-full bg-gradient-to-r from-[#592787] via-[#5AA9AC] to-[#3a7fb5]" />
 
-      <div className="container-page flex h-[3.85rem] items-center justify-between gap-4">
+      <div className="w-full max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 flex h-[3.85rem] items-center justify-between gap-2 xl:gap-4">
         
         {/* Brand Logo */}
         <Link 
@@ -510,7 +510,7 @@ export function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main">
+        <nav className="hidden items-center gap-0.5 xl:gap-1 lg:flex shrink-0" aria-label="Main">
           
           <CompactMegamenu 
             label="About" 
@@ -598,19 +598,19 @@ export function Header() {
         </nav>
 
         {/* Desktop Quick Actions */}
-        <div className="hidden items-center gap-2.5 lg:flex shrink-0">
+        <div className="hidden items-center gap-2 lg:flex shrink-0">
           <Button 
             asChild 
             variant="ghost" 
             size="sm" 
-            className="rounded-full text-xs font-bold text-white/90 hover:text-white hover:bg-white/12 border border-white/20 px-4 h-9 transition-all"
+            className="rounded-full text-xs font-bold text-white/90 hover:text-white hover:bg-white/12 border border-white/20 px-3 xl:px-4 h-9 whitespace-nowrap transition-all"
           >
             <Link to="/analyze">Try analysis</Link>
           </Button>
           <Button 
             asChild 
             size="sm" 
-            className="rounded-full px-5 text-xs font-bold text-white border-0 shadow-lg shadow-[#5AA9AC]/25 bg-gradient-to-r from-[#5AA9AC] to-[#409194] hover:from-[#67babb] hover:to-[#4aa2a5] hover:shadow-[0_4px_20px_rgba(90,169,172,0.5)] hover:scale-105 transition-all duration-200 h-9"
+            className="rounded-full px-4 xl:px-5 text-xs font-bold text-white border-0 shadow-lg shadow-[#5AA9AC]/25 bg-gradient-to-r from-[#5AA9AC] to-[#409194] hover:from-[#67babb] hover:to-[#4aa2a5] hover:shadow-[0_4px_20px_rgba(90,169,172,0.5)] hover:scale-105 transition-all duration-200 h-9 whitespace-nowrap"
           >
             <Link to="/book">Book a Consultation</Link>
           </Button>
