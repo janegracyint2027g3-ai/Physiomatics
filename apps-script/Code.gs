@@ -531,7 +531,7 @@ function processEvent_(rawPayload) {
 
   appendEvent_(ss, p);           // always log to Live_Traffic_Events
 
-  if      (kind === "booking")      { saveAppointmentBooking_(ss, p); sendBookingAlertToAdmin_(p); sendBookingConfirmationToVisitor_(p); createBookingCalendarEvent_(p); }
+  if      (kind === "booking")      { createBookingCalendarEvent_(p); saveAppointmentBooking_(ss, p); sendBookingAlertToAdmin_(p); sendBookingConfirmationToVisitor_(p); }
   else if (kind === "demo")         { saveDemo_(ss, p);         sendLeadAlert_(p, "New Physiomatics Demo / ICP Request"); }
   else if (kind === "quick")        { saveQuickEnquiry_(ss, p); sendLeadAlert_(p, "New Physiomatics Quick Enquiry"); }
   else if (kind === "consultation") { saveConsultation_(ss, p); sendLeadAlert_(p, "New Physiomatics Consultation Request"); }
@@ -1298,6 +1298,16 @@ function sendBookingAlertToAdmin_(p) {
       "</div>";
   }
 
+  var meetBtnHtml = "";
+  if (p.meet_link) {
+    meetBtnHtml =
+      "<div style='margin:18px 0 0 0;padding:16px 18px;background:#e8f5e9;border:2px solid #4caf50;border-radius:10px;text-align:center;'>" +
+        "<div style='font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#2e7d32;margin-bottom:8px;'>&#x1F4F9; Google Meet Link (Share with Patient)</div>" +
+        "<a href='" + html_(p.meet_link) + "' style='display:inline-block;padding:12px 26px;background:#1b5e20;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:800;letter-spacing:0.3px;margin-bottom:8px;'>Join Google Meet</a>" +
+        "<div style='font-size:12px;color:#388e3c;margin-top:6px;word-break:break-all;'>" + html_(p.meet_link) + "</div>" +
+      "</div>";
+  }
+
   var actionButtonsHtml =
     "<div style='margin-top:26px;display:flex;gap:10px;text-align:center;flex-wrap:wrap;'>" +
       (p.email ? "<a href='mailto:" + html_(p.email) + "?subject=Re: Physiomatics Appointment Booking [" + html_(p.booking_ref || "") + "]' style='display:inline-block;padding:11px 20px;background:#7c3aed;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;margin-right:8px;margin-bottom:8px;'>Reply by Email</a>" : "") +
@@ -1320,6 +1330,7 @@ function sendBookingAlertToAdmin_(p) {
             rowsHtml +
           "</table>" +
           notesBoxHtml +
+          meetBtnHtml +
           actionButtonsHtml +
         "</div>" +
         "<div style='background:#f8fafc;padding:16px 24px;text-align:center;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px;'>" +
@@ -1340,9 +1351,10 @@ function sendBookingAlertToAdmin_(p) {
     "Format: " + (p.format || "Online"),
     "Goal: " + (p.goal || "N/A"),
     "Notes: " + (p.message || "None"),
+    p.meet_link ? "Google Meet: " + p.meet_link : "",
     "Jira: " + (p.jira_key || "N/A"),
     "Sheet: " + ssUrl
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   recipients.forEach(function (to) {
     try {
@@ -1402,12 +1414,21 @@ function sendBookingConfirmationToVisitor_(p) {
             "<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:600;'>Format</td><td style='padding:10px 0;color:#0f172a;font-size:14px;text-align:right;'>" + html_(format) + "</td></tr>" +
             (p.goal ? "<tr style='border-bottom:1px solid #f1f5f9;'><td style='padding:10px 0;color:#64748b;font-size:13px;font-weight:600;'>Primary Goal</td><td style='padding:10px 0;color:#0f172a;font-size:14px;text-align:right;'>" + html_(p.goal) + "</td></tr>" : "") +
           "</table>" +
+          // Google Meet block (only shown if a real Meet link was generated)
+          (p.meet_link ?
+            "<div style='margin-bottom:24px;padding:20px;background:linear-gradient(135deg,#e8f5e9 0%,#f1f8e9 100%);border:2px solid #81c784;border-radius:14px;text-align:center;'>" +
+              "<div style='font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#2e7d32;margin-bottom:10px;'>&#x1F4F9; Your Google Meet Link</div>" +
+              "<a href='" + html_(p.meet_link) + "' style='display:inline-block;padding:14px 32px;background:#1b5e20;color:#ffffff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:800;letter-spacing:0.3px;margin-bottom:10px;box-shadow:0 4px 14px rgba(27,94,32,0.35);'>&#x1F3A5; Join Google Meet</a>" +
+              "<div style='font-size:12px;color:#388e3c;word-break:break-all;'>" + html_(p.meet_link) + "</div>" +
+            "</div>" : "") +
           // Next Steps
           "<div style='background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid #e2e8f0;'>" +
             "<h4 style='margin:0 0 10px 0;color:#0f172a;font-size:14px;font-weight:700;'>What Happens Next?</h4>" +
             "<ol style='margin:0;padding-left:20px;color:#475569;font-size:13px;line-height:1.7;'>" +
               "<li>Our clinical coordinator will review your consultation details within 24 hours.</li>" +
-              "<li>You will receive a calendar invitation and Google Meet video link.</li>" +
+              (p.meet_link
+                ? "<li>Your Google Meet link is ready — click the button above to join at the scheduled time. A calendar invite has also been sent to your email.</li>"
+                : "<li>You will receive a calendar invitation and Google Meet video link via email within 24 hours.</li>") +
               "<li>If you have existing medical or physiotherapy reports, you can reply directly to this email with attachments.</li>" +
             "</ol>" +
           "</div>" +
@@ -1436,9 +1457,14 @@ function sendBookingConfirmationToVisitor_(p) {
     "Format: " + format,
     (p.goal ? "Goal: " + p.goal : ""),
     "",
+    (p.meet_link ? "Google Meet Link: " + p.meet_link : ""),
+    (p.meet_link ? "(Click the link above at the scheduled time to join your video consultation)" : ""),
+    "",
     "What happens next:",
-    "1. Our clinical team will review your enquiry within 24 hours.",
-    "2. You will receive your video consultation link via email.",
+    p.meet_link
+      ? "1. Your Google Meet link is ready — use it at the scheduled time to join the video call."
+      : "1. Our clinical team will review your enquiry within 24 hours and send your video consultation link.",
+    "2. A Google Calendar invite with the meeting details has been sent to " + p.email + ".",
     "3. Need immediate help? Message us on WhatsApp: +91 78450 72426",
     "",
     "Best regards,",
@@ -1462,45 +1488,127 @@ function sendBookingConfirmationToVisitor_(p) {
 }
 
 /**
- * Creates an event in the primary Google Calendar and dispatches native calendar invites to the visitor.
+ * Creates a Google Calendar event with a Google Meet link, invites both the visitor
+ * and the admin, and stores the Meet URL in p.meet_link for use in email notifications.
+ *
+ * Uses the Calendar advanced service (Calendar.Events.insert) so that Meet conferencing
+ * can be attached. Enable it via: Resources → Advanced Google Services → Google Calendar API.
  */
 function createBookingCalendarEvent_(p) {
-  if (!p.preferred_date || p.preferred_date === "Flexible") return "";
+  if (!p.preferred_date || p.preferred_date === "Flexible") {
+    p.meet_link = "";
+    return "";
+  }
   try {
-    var cal = CalendarApp.getDefaultCalendar();
-    if (!cal) return "";
-
     var start = parseDateTime_(p.preferred_date, p.preferred_time);
-    var end = new Date(start.getTime() + 30 * 60 * 1000); // 30 minutes default
+    var end   = new Date(start.getTime() + 30 * 60 * 1000); // 30-minute default
 
-    var eventTitle = "Physiomatics: " + (p.consultation_type || "Physiotherapy Consultation") + " — " + p.name;
-    var description = [
-      "Physiomatics Appointment Booking",
+    var tz = p.timezone || "Asia/Kolkata";
+    var toIso = function(d) { return Utilities.formatDate(d, tz, "yyyy-MM-dd'T'HH:mm:ss"); };
+
+    var eventTitle = "Physiomatics: " + (p.consultation_type || "Physiotherapy Consultation") + " \u2014 " + p.name;
+
+    var descLines = [
+      "\uD83D\uDCC5 Physiomatics Appointment Booking",
       "Reference: " + (p.booking_ref || "N/A"),
-      "Patient: " + p.name,
-      "Email: " + p.email,
-      "Phone: " + (p.phone || "N/A"),
-      "Consultation Type: " + (p.consultation_type || "General"),
-      "Goal: " + (p.goal || "N/A"),
-      "Format: " + (p.format || "Online"),
-      "Timezone: " + (p.timezone || "Asia/Kolkata"),
-      p.message ? "Notes: " + p.message : "",
-      "Jira: " + (p.jira_key || "N/A"),
+      "Patient:   " + p.name,
+      "Email:     " + p.email,
+      "Phone:     " + (p.phone || "N/A"),
+      "Type:      " + (p.consultation_type || "General"),
+      "Goal:      " + (p.goal || "N/A"),
+      "Format:    " + (p.format || "Online Google Meet"),
+      "Timezone:  " + tz,
+      p.message ? "Notes:     " + p.message : "",
+      "",
+      "\u26A0\uFE0F Please join via Google Meet at the scheduled time.",
       "Website: " + CONFIG.WEBSITE
-    ].filter(Boolean).join("\n\n");
+    ].filter(Boolean).join("\n");
 
-    var calOptions = {
-      description: description,
-      guests: p.email,
-      sendInvites: true
+    // Build attendee list: visitor + admin
+    var attendees = [];
+    if (p.email && isEmail_(p.email)) {
+      attendees.push({ email: p.email, displayName: p.name || p.email, responseStatus: "needsAction" });
+    }
+    if (EMAIL_CONFIG.adminEmail && isEmail_(EMAIL_CONFIG.adminEmail)) {
+      attendees.push({ email: EMAIL_CONFIG.adminEmail, displayName: "Physiomatics Admin", responseStatus: "accepted" });
+    }
+
+    var eventResource = {
+      summary: eventTitle,
+      description: descLines,
+      start:  { dateTime: toIso(start), timeZone: tz },
+      end:    { dateTime: toIso(end),   timeZone: tz },
+      attendees: attendees,
+      guestsCanSeeOtherGuests: true,
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: "email", minutes: 24 * 60 },  // 1 day before
+          { method: "popup", minutes: 30 }          // 30 min before
+        ]
+      },
+      conferenceData: {
+        createRequest: {
+          requestId: Utilities.getUuid(),
+          conferenceSolutionKey: { type: "hangoutsMeet" }
+        }
+      }
     };
 
-    var calEvent = cal.createEvent(eventTitle, start, end, calOptions);
-    p.calendar_event_id = calEvent.getId();
-    log_("createBookingCalendarEvent_", "SUCCESS", "Calendar event created: " + calEvent.getId());
-    return calEvent.getId();
+    var calendarId = "primary";
+    var insertedEvent;
+    try {
+      // Advanced Calendar Service gives us Google Meet link
+      insertedEvent = Calendar.Events.insert(eventResource, calendarId, {
+        conferenceDataVersion: 1,
+        sendUpdates: "all"   // sends calendar invite to all attendees
+      });
+    } catch (advErr) {
+      log_("createBookingCalendarEvent_", "WARN", "Advanced Calendar API failed, falling back to CalendarApp: " + String(advErr));
+      // Fallback: CalendarApp (no Meet link)
+      var cal = CalendarApp.getDefaultCalendar();
+      if (!cal) { p.meet_link = ""; return ""; }
+      var calEvent = cal.createEvent(eventTitle, start, end, {
+        description: descLines,
+        guests: attendees.map(function(a){ return a.email; }).join(","),
+        sendInvites: true
+      });
+      p.calendar_event_id = calEvent.getId();
+      p.meet_link = "";
+      log_("createBookingCalendarEvent_", "SUCCESS", "Fallback calendar event created: " + calEvent.getId());
+      return calEvent.getId();
+    }
+
+    p.calendar_event_id = insertedEvent.id || "";
+
+    // Extract Google Meet link from conferenceData
+    var meetLink = "";
+    try {
+      var confData = insertedEvent.conferenceData;
+      if (confData && confData.entryPoints) {
+        for (var i = 0; i < confData.entryPoints.length; i++) {
+          var ep = confData.entryPoints[i];
+          if (ep.entryPointType === "video" && ep.uri) {
+            meetLink = ep.uri;
+            break;
+          }
+        }
+      }
+      if (!meetLink && confData && confData.conferenceId) {
+        meetLink = "https://meet.google.com/" + confData.conferenceId;
+      }
+    } catch (mErr) {
+      log_("createBookingCalendarEvent_", "WARN", "Could not parse Meet link: " + String(mErr));
+    }
+
+    p.meet_link = meetLink;
+    log_("createBookingCalendarEvent_", "SUCCESS",
+      "Calendar event created: " + p.calendar_event_id + " | Meet: " + (meetLink || "none"));
+    return p.calendar_event_id;
+
   } catch (err) {
     log_("createBookingCalendarEvent_", "WARN", "Calendar event warning: " + String(err));
+    p.meet_link = "";
     return "";
   }
 }
