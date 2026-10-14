@@ -2177,6 +2177,42 @@ function TEST_ConsultationRequest() {
   return "Consultation test row written. Check Consultation_Requests, Lead_Management and email.";
 }
 
+function TEST_AppointmentBooking() {
+  var today = new Date();
+  var tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+  var dateStr = Utilities.formatDate(tomorrow, CONFIG.TIMEZONE, "yyyy-MM-dd");
+  var ref = "PHY-TEST-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+
+  var p = enrichPayload_({
+    action: "booking_submission",
+    form_type: "appointment_booking",
+    booking_ref: ref,
+    full_name: "Jane Gracy (Test Booking)",
+    email: EMAIL_CONFIG.adminEmail,
+    phone: "+91 78450 72426",
+    organization: "Physiomatics Clinic",
+    job_title: "Clinical Director",
+    consultation_type: "Physiotherapy Consultation",
+    goal: "Evaluate AI movement analysis for post-op ACL rehab",
+    preferred_date: dateStr,
+    preferred_time: "15:00",
+    format: "Online (Google Meet)",
+    timezone: "Asia/Kolkata",
+    language: "English",
+    message: "Test appointment booking created from Apps Script test runner.",
+    pageUrl: CONFIG.WEBSITE + "book"
+  });
+
+  var ss = getSpreadsheet();
+  appendEvent_(ss, p);
+  saveAppointmentBooking_(ss, p);
+  sendBookingAlertToAdmin_(p);
+  sendBookingConfirmationToVisitor_(p);
+  var calEventId = createBookingCalendarEvent_(p);
+
+  return "Success! Check Appointment_Bookings sheet, your inbox (" + EMAIL_CONFIG.adminEmail + ") for confirmation + admin alert emails, and Google Calendar for the scheduled event (" + (calEventId || "created") + "). Ref: " + ref;
+}
+
 function TEST_ChatbotMessage() {
   var p = enrichPayload_({ action: "chatbot_inquiry", form_type: "assistant_chat",
     message: "What does Physiomatics do?", context_node: "start",
