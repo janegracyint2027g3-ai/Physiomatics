@@ -76,6 +76,7 @@ export interface ReportRunResult {
   email_message_id?: string;
   email_recipients_count?: number;
   report_data_retrieved: boolean;
+  report_data_error?: string;
   email_response?: string;
   error?: string;
 }
@@ -411,19 +412,27 @@ export function buildReportPlainText(interval: string, m: ReportMetrics): string
 export async function fetchReportDataFromAppsScript(
   interval: string,
   customDate?: string
-): Promise<{ retrieved: boolean; metrics: ReportMetrics }> {
-  const sheetsUrl =
+): Promise<{ retrieved: boolean; metrics: ReportMetrics; error?: string }> {
+  let sheetsUrl = (
     process.env.GOOGLE_SHEETS_URL ||
     process.env.VITE_GOOGLE_SHEETS_URL ||
-    "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
+    ""
+  ).trim();
+
+  // If missing or set to the spreadsheet document URL instead of the Web App /exec URL:
+  if (!sheetsUrl || sheetsUrl.includes("docs.google.com/spreadsheets") || !sheetsUrl.includes("/exec")) {
+    sheetsUrl =
+      "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
+  }
 
   const defaultMetrics = getDefaultMetrics(interval, customDate);
 
   try {
     const fetchUrl = `${sheetsUrl}?action=run_digest&interval=${encodeURIComponent(interval)}`;
+    console.log(`[Report/Data] Fetching live metrics from: ${fetchUrl}`);
     const res = await fetch(fetchUrl, {
       method: "GET",
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(45000),
     });
 
     if (res.ok) {
@@ -455,16 +464,22 @@ export async function fetchReportDataFromAppsScript(
           trendRows: Array.isArray(d.trendRows) ? d.trendRows : [],
           sheetUrl: d.sheetUrl || defaultMetrics.sheetUrl,
         };
-        console.log(`[Report/Data] ✓ Retrieved aggregated metrics from Apps Script for ${interval} (${merged.period})`);
+        console.log(`[Report/Data] ✓ Retrieved aggregated metrics from Apps Script for ${interval} (${merged.period}): totalLeads=${merged.totalAllLeads}, visitors=${merged.visitors}`);
         return { retrieved: true, metrics: merged };
+      } else {
+        const errDetail = json?.message || "Invalid JSON payload structure from Apps Script";
+        console.warn(`[Report/Data] Apps Script returned unsuccessful status: ${errDetail}`);
+        return { retrieved: false, metrics: defaultMetrics, error: errDetail };
       }
     }
-    console.warn(`[Report/Data] Apps Script response status ${res.status}. Falling back to default zero-state metrics.`);
+    const statusErr = `Apps Script HTTP ${res.status}: ${res.statusText}`;
+    console.warn(`[Report/Data] ${statusErr}. Falling back to default zero-state metrics.`);
+    return { retrieved: false, metrics: defaultMetrics, error: statusErr };
   } catch (err: any) {
-    console.warn(`[Report/Data] Could not fetch live metrics from Apps Script (${err?.message || err}). Using default zero-state.`);
+    const fetchErr = err?.message || String(err);
+    console.warn(`[Report/Data] Could not fetch live metrics from Apps Script (${fetchErr}). Using default zero-state.`);
+    return { retrieved: false, metrics: defaultMetrics, error: fetchErr };
   }
-
-  return { retrieved: false, metrics: defaultMetrics };
 }
 
 export async function sendExecutiveReportEmail(params: {
@@ -654,8 +669,8 @@ export async function runReportForInterval(interval: ReportInterval, customDate?
 
   console.log(`[Cron] Executing ${interval} executive report for period ${dateStr} (IST)`);
 
-  const { retrieved, metrics } = await fetchReportDataFromAppsScript(interval, dateStr);
-  console.log(`[Cron] Report data retrieved from Google Sheets: ${retrieved ? "YES" : "NO (using fallback metrics)"}`);
+  const { retrieved, metrics, error: dataError } = await fetchReportDataFromAppsScript(interval, dateStr);
+  console.log(`[Cron] Report data retrieved from Google Sheets: ${retrieved ? "YES" : "NO (using fallback metrics)"}${dataError ? ` | Error: ${dataError}` : ""}`);
 
   const jiraKey = await createJiraDigestTask({ interval, period: dateStr });
   if (jiraKey) {
@@ -703,6 +718,7 @@ export async function runReportForInterval(interval: ReportInterval, customDate?
     email_message_id: emailResult.messageId,
     email_recipients_count: emailResult.recipientCount,
     report_data_retrieved: retrieved,
+    report_data_error: dataError,
     email_response: emailResult.response,
     error: emailResult.error,
   };

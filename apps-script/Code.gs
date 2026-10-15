@@ -1656,126 +1656,155 @@ function parseDateTime_(dateStr, timeStr) {
  * Called by doGet(e) for Vercel API report generation.
  */
 function getReportData_(intervalName) {
-  BUILD_AGGREGATED_INTERVAL_SUMMARIES();
   var ss  = getSpreadsheet();
-  var map = { Daily: "Daily_Summary", Weekly: "Weekly_Summary", Monthly: "Monthly_Summary" };
-  var tabName = map[intervalName] || "Daily_Summary";
-  var sheet = ss.getSheetByName(tabName);
-
   var dateStr = Utilities.formatDate(new Date(), CONFIG.TIMEZONE, "yyyy-MM-dd");
-  var totalEvents = 0, visitors = 0, pageViews = 0, demos = 0, quick = 0;
-  var consults = 0, chatbot = 0, feedback = 0, leads = 0;
-  var convRate = "0.0%";
-  var avgDuration = "0";
-  var data = [];
+  var ssUrl = "";
+  try { ssUrl = ss.getUrl(); } catch (e) { ssUrl = CONFIG.WEBSITE; }
 
-  if (sheet && sheet.getLastRow() >= 2) {
-    data = sheet.getDataRange().getDisplayValues();
-    var header = data[0];
-    var latest = data[1] || [];
-
-    var idx = function(name) { return header.indexOf(name); };
-    dateStr     = latest[0] || dateStr;
-    totalEvents = Number(latest[idx("Total_Events")]) || 0;
-    visitors    = Number(latest[idx("Unique_Visitors")]) || 0;
-    pageViews   = Number(latest[idx("Page_Views")]) || 0;
-    demos       = Number(latest[idx("Demo_Requests")]) || 0;
-    quick       = Number(latest[idx("Quick_Enquiries")]) || 0;
-    consults    = Number(latest[idx("Consultations")]) || 0;
-    chatbot     = Number(latest[idx("Chatbot_Messages")]) || 0;
-    feedback    = Number(latest[idx("Feedback_Count")]) || 0;
-    leads       = Number(latest[idx("Total_Leads")]) || (demos + quick + consults);
-    convRate    = latest[idx("Conversion_Rate")] || (visitors ? ((leads / visitors) * 100).toFixed(1) + "%" : "0.0%");
-    avgDuration = latest[idx("Avg_Engagement_Sec")] || "0";
-  } else {
-    log_("getReportData_", "INFO", "Generating zero-state executive report metrics for " + intervalName);
+  function sheetData_(name) {
+    try {
+      var s = ss.getSheetByName(name);
+      if (!s || s.getLastRow() < 2) return [];
+      var raw = s.getDataRange().getValues();
+      var h = raw[0];
+      var out = [];
+      for (var i = 1; i < raw.length; i++) {
+        var obj = {};
+        for (var j = 0; j < h.length; j++) obj[h[j]] = raw[i][j];
+        out.push(obj);
+      }
+      return out;
+    } catch(e) { return []; }
   }
 
-  // 1. YouTube counts
+  var demoRows    = sheetData_("Demo_Requests");
+  var quickRows   = sheetData_("Quick_Enquiries");
+  var consultRows = sheetData_("Consultation_Requests");
+  var chatRows    = sheetData_("Chatbot_Interactions");
+  var fbRows      = sheetData_("Feedback");
+  var lmRows      = sheetData_("Lead_Management");
+
+  var demos    = demoRows.length;
+  var quick    = quickRows.length;
+  var consults = consultRows.length;
+  var chatbot  = chatRows.length;
+  var feedback = fbRows.length;
+  var leads    = demos + quick + consults;
+
+  var visitors = 0, pageViews = 0, totalEvents = 0;
+  try {
+    var vsSh = ss.getSheetByName("Visitor_Sessions");
+    if (vsSh && vsSh.getLastRow() > 1) {
+      var vsRaw = vsSh.getDataRange().getValues();
+      var vsH   = vsRaw[0];
+      var vidCol = vsH.indexOf("visitor_id");
+      var uniq = {};
+      for (var r = 1; r < vsRaw.length; r++) {
+        if (vidCol >= 0 && vsRaw[r][vidCol]) uniq[String(vsRaw[r][vidCol])] = true;
+      }
+      visitors    = Object.keys(uniq).length;
+      totalEvents = vsRaw.length - 1;
+    }
+  } catch(e) {}
+  try {
+    var ppSh = ss.getSheetByName("Page_Performance");
+    if (ppSh && ppSh.getLastRow() > 1) pageViews = ppSh.getLastRow() - 1;
+  } catch(e) {}
+  try {
+    var lteSh = ss.getSheetByName("Live_Traffic_Events");
+    if (lteSh && lteSh.getLastRow() > 1) totalEvents = Math.max(totalEvents, lteSh.getLastRow() - 1);
+  } catch(e) {}
+
+  var avgDuration = "0";
+  try {
+    var ppSh2 = ss.getSheetByName("Page_Performance");
+    if (ppSh2 && ppSh2.getLastRow() > 1) {
+      var ppRaw = ppSh2.getDataRange().getValues();
+      var ppH   = ppRaw[0];
+      var durCol = ppH.indexOf("time_on_page_seconds");
+      if (durCol >= 0) {
+        var durTotal = 0, durCnt = 0;
+        for (var r = 1; r < ppRaw.length; r++) {
+          var v = Number(ppRaw[r][durCol]);
+          if (v > 0) { durTotal += v; durCnt++; }
+        }
+        if (durCnt > 0) avgDuration = String(Math.round(durTotal / durCnt));
+      }
+    }
+  } catch(e) {}
+
+  var convRate = visitors > 0 ? (leads / visitors * 100).toFixed(1) + "%" : "0.0%";
+
   var ytLeads = 0, ytEnquiries = 0;
   var ytSheet = null;
   try {
     ytSheet = ss.getSheetByName("YouTube_Raw_Leads");
     if (ytSheet && ytSheet.getLastRow() > 1) {
-      var ytData = ytSheet.getRange(2, 1, ytSheet.getLastRow() - 1, Math.min(ytSheet.getLastColumn(), 17)).getValues();
-      ytLeads = ytData.length;
-      ytEnquiries = ytData.filter(function(r) { return String(r[12]).toUpperCase() === "TRUE"; }).length;
+      var ytRaw = ytSheet.getDataRange().getValues();
+      var ytH   = ytRaw[0];
+      var ytEnqCol = ytH.indexOf("is_enquiry");
+      ytLeads = ytRaw.length - 1;
+      for (var r = 1; r < ytRaw.length; r++) {
+        if (ytEnqCol >= 0 && String(ytRaw[r][ytEnqCol]).toUpperCase() === "TRUE") ytEnquiries++;
+      }
     }
   } catch(e) { log_("getReportData_yt", "WARN", String(e)); }
 
-  // 2. LinkedIn counts
   var liLeads = 0, liEnquiries = 0;
   var liSheet = null;
   try {
     liSheet = ss.getSheetByName("LinkedIn_Raw_Leads");
     if (liSheet && liSheet.getLastRow() > 1) {
-      var liData = liSheet.getRange(2, 1, liSheet.getLastRow() - 1, Math.min(liSheet.getLastColumn(), 17)).getValues();
-      liLeads = liData.length;
-      liEnquiries = liData.filter(function(r) { return String(r[10]).toUpperCase() === "TRUE"; }).length;
+      var liRaw = liSheet.getDataRange().getValues();
+      var liH   = liRaw[0];
+      var liEnqCol = liH.indexOf("is_enquiry");
+      liLeads = liRaw.length - 1;
+      for (var r = 1; r < liRaw.length; r++) {
+        if (liEnqCol >= 0 && String(liRaw[r][liEnqCol]).toUpperCase() === "TRUE") liEnquiries++;
+      }
     }
   } catch(e) { log_("getReportData_li", "WARN", String(e)); }
 
-  // 3. Telegram counts
-  var telegramLeads = 0;
-  var telegramSentAlerts = 0;
+  var telegramLeads = 0, telegramSentAlerts = 0;
   try {
-    var lmSheet = ss.getSheetByName("Lead_Management");
-    if (lmSheet && lmSheet.getLastRow() > 1) {
-      var lmData = lmSheet.getDataRange().getValues();
-      var lmH = lmData[0];
-      var lmSrcCol = lmH.indexOf("lead_source");
-      var lmTelCol = lmH.indexOf("telegram_status");
-      for (var r = 1; r < lmData.length; r++) {
-        var rowVal = lmData[r];
-        if (lmSrcCol !== -1 && String(rowVal[lmSrcCol] || "").toLowerCase().indexOf("telegram") !== -1) {
-          telegramLeads++;
-        }
-        if (lmTelCol !== -1 && String(rowVal[lmTelCol] || "").toLowerCase() === "sent") {
-          telegramSentAlerts++;
-        }
-      }
-    }
+    lmRows.forEach(function(row) {
+      var src = String(row["lead_source"] || "").toLowerCase();
+      var tel = String(row["telegram_status"] || "").toLowerCase();
+      if (src.indexOf("telegram") !== -1) telegramLeads++;
+      if (tel === "sent") telegramSentAlerts++;
+    });
     if (liSheet && liSheet.getLastRow() > 1) {
-      var liH = liSheet.getRange(1, 1, 1, liSheet.getLastColumn()).getValues()[0];
-      var liTelCol = liH.indexOf("telegram_status");
-      if (liTelCol !== -1) {
-        var liTelData = liSheet.getRange(2, liTelCol + 1, liSheet.getLastRow() - 1, 1).getValues();
-        telegramSentAlerts += liTelData.filter(function(r) { return String(r[0]).toLowerCase() === "sent"; }).length;
+      var liRaw2 = liSheet.getDataRange().getValues();
+      var liH2   = liRaw2[0];
+      var liTelCol = liH2.indexOf("telegram_status");
+      if (liTelCol >= 0) {
+        for (var r = 1; r < liRaw2.length; r++) {
+          if (String(liRaw2[r][liTelCol]).toLowerCase() === "sent") telegramSentAlerts++;
+        }
       }
     }
     telegramSentAlerts += ytEnquiries;
     if (telegramLeads === 0) telegramLeads = telegramSentAlerts;
   } catch(e) { log_("getReportData_telegram", "WARN", String(e)); }
 
-  // 4. Most repeated emails
-  var emailFreq = {};
-  var emailNames = {};
-  var emailSources = {};
-  var leadSheets = ["Lead_Management", "Demo_Requests", "Quick_Enquiries", "Consultation_Requests", "Feedback"];
-  leadSheets.forEach(function(sheetName) {
-    try {
-      var ls = ss.getSheetByName(sheetName);
-      if (!ls || ls.getLastRow() < 2) return;
-      var lsData = ls.getDataRange().getValues();
-      var lsHeaders = lsData[0];
-      var emailCol = lsHeaders.indexOf("email");
-      var nameCol = lsHeaders.indexOf("name");
-      if (emailCol === -1) return;
-      for (var i = 1; i < lsData.length; i++) {
-        var em = String(lsData[i][emailCol] || "").trim().toLowerCase();
-        if (em && em.indexOf("@") > 0 && em.indexOf(".") > 0) {
-          emailFreq[em] = (emailFreq[em] || 0) + 1;
-          if (nameCol !== -1 && lsData[i][nameCol] && !emailNames[em]) {
-            emailNames[em] = String(lsData[i][nameCol]).trim();
-          }
-          if (!emailSources[em]) {
-            emailSources[em] = sheetName.replace(/_/g, " ");
-          }
-        }
+  var emailFreq = {}, emailNames = {}, emailSources = {};
+  var allLeadSheets = [
+    { name: "Lead Management",          data: lmRows },
+    { name: "Demo Requests",            data: demoRows },
+    { name: "Quick Enquiries",          data: quickRows },
+    { name: "Consultation Requests",    data: consultRows },
+    { name: "Feedback",                 data: fbRows }
+  ];
+  allLeadSheets.forEach(function(obj) {
+    obj.data.forEach(function(row) {
+      var em = String(row["email"] || "").trim().toLowerCase();
+      if (em && em.indexOf("@") > 0 && em.indexOf(".") > 0) {
+        emailFreq[em] = (emailFreq[em] || 0) + 1;
+        if (row["name"] && !emailNames[em]) emailNames[em] = String(row["name"]).trim();
+        if (!emailSources[em]) emailSources[em] = obj.name;
       }
-    } catch(e) {}
+    });
   });
-
   var emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
   [ytSheet, liSheet].forEach(function(s) {
     try {
@@ -1794,64 +1823,67 @@ function getReportData_(intervalName) {
       }
     } catch(e) {}
   });
-
   var topEmails = Object.keys(emailFreq)
     .map(function(em) {
-      return {
-        email: em,
-        count: emailFreq[em],
-        name: emailNames[em] || "Lead Visitor",
-        source: emailSources[em] || "Web Form"
-      };
+      return { email: em, count: emailFreq[em], name: emailNames[em] || "Lead Visitor", source: emailSources[em] || "Web Form" };
     })
     .filter(function(e) { return e.count > 0; })
     .sort(function(a, b) { return b.count - a.count; })
     .slice(0, 5);
 
+  var trendRows = [];
+  try {
+    var trendMap = { Daily: "Daily_Summary", Weekly: "Weekly_Summary", Monthly: "Monthly_Summary" };
+    var trendSheet = ss.getSheetByName(trendMap[intervalName] || "Daily_Summary");
+    if (!trendSheet || trendSheet.getLastRow() <= 1) {
+      BUILD_AGGREGATED_INTERVAL_SUMMARIES();
+      trendSheet = ss.getSheetByName(trendMap[intervalName] || "Daily_Summary");
+    }
+    if (trendSheet && trendSheet.getLastRow() > 1) {
+      var tData = trendSheet.getDataRange().getDisplayValues();
+      var tH = tData[0];
+      var tIdx = function(n) { return tH.indexOf(n); };
+      for (var r = 1; r < Math.min(tData.length, 6); r++) {
+        trendRows.push({
+          period:    String(tData[r][0] || ""),
+          visitors:  String(tData[r][tIdx("Unique_Visitors")] || 0),
+          pageViews: String(tData[r][tIdx("Page_Views")] || 0),
+          leads:     String(tData[r][tIdx("Total_Leads")] || 0),
+          convRate:  String(tData[r][tIdx("Conversion_Rate")] || "0.0%")
+        });
+      }
+    }
+  } catch(e) { log_("getReportData_trends", "WARN", String(e)); }
+
   var totalAllLeads = leads + ytEnquiries + liEnquiries;
 
-  var trendRows = [];
-  if (data.length > 1) {
-    var hidx = function(name) { return data[0].indexOf(name); };
-    for (var r = 1; r < Math.min(data.length, 6); r++) {
-      var row = data[r];
-      trendRows.push({
-        period: String(row[0] || ""),
-        visitors: String(row[hidx("Unique_Visitors")] || 0),
-        pageViews: String(row[hidx("Page_Views")] || 0),
-        leads: String(row[hidx("Total_Leads")] || 0),
-        convRate: String(row[hidx("Conversion_Rate")] || "0.0%")
-      });
-    }
-  }
-
-  var ssUrl = "";
-  try { ssUrl = ss.getUrl(); } catch (e) { ssUrl = CONFIG.WEBSITE; }
+  log_("getReportData_", "INFO", intervalName + " compiled: Visitors=" + visitors +
+    " Leads=" + leads + " YT=" + ytEnquiries + " LI=" + liEnquiries + " TG=" + telegramLeads);
 
   return {
-    interval: intervalName,
-    period: dateStr,
-    totalEvents: totalEvents,
-    visitors: visitors,
-    pageViews: pageViews,
-    demos: demos,
-    quick: quick,
-    consults: consults,
-    chatbot: chatbot,
-    feedback: feedback,
-    leads: leads,
-    convRate: convRate,
-    avgDuration: avgDuration,
-    ytLeads: ytLeads,
-    ytEnquiries: ytEnquiries,
-    liLeads: liLeads,
-    liEnquiries: liEnquiries,
-    telegramLeads: telegramLeads,
+    interval:           intervalName,
+    period:             dateStr,
+    totalEvents:        totalEvents,
+    visitors:           visitors,
+    pageViews:          pageViews,
+    demos:              demos,
+    quick:              quick,
+    consults:           consults,
+    chatbot:            chatbot,
+    feedback:           feedback,
+    leads:              leads,
+    convRate:           convRate,
+    avgDuration:        avgDuration,
+    ytLeads:            ytLeads,
+    ytEnquiries:        ytEnquiries,
+    liLeads:            liLeads,
+    liEnquiries:        liEnquiries,
+    telegramLeads:      telegramLeads,
     telegramSentAlerts: telegramSentAlerts,
-    totalAllLeads: totalAllLeads,
-    topEmails: topEmails,
-    trendRows: trendRows,
-    sheetUrl: ssUrl
+    totalAllLeads:      totalAllLeads,
+    topEmails:          topEmails,
+    trendRows:          trendRows,
+    sheetUrl:           ssUrl
   };
 }
 
@@ -2054,7 +2086,33 @@ function writeSummary_(ss, tabName, bucket) {
   if (rows.length) sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
 }
 
-/* ----------------------------- TEST HELPERS ------------------------------- */
+/* ----------------------------- TEST & DEBUG HELPERS ------------------------------- */
+
+function DEBUG_SheetCounts() {
+  var ss = getSpreadsheet();
+  var sheets = [
+    "Demo_Requests",
+    "Quick_Enquiries",
+    "Consultation_Requests",
+    "Chatbot_Interactions",
+    "Feedback",
+    "Lead_Management",
+    "YouTube_Raw_Leads",
+    "LinkedIn_Raw_Leads",
+    "Visitor_Sessions",
+    "Page_Performance",
+    "Live_Traffic_Events",
+    "Daily_Summary"
+  ];
+  var results = {};
+  sheets.forEach(function(name) {
+    var s = ss.getSheetByName(name);
+    var count = s ? Math.max(0, s.getLastRow() - 1) : "NOT_FOUND";
+    results[name] = count;
+    Logger.log(name + ": " + count + " data rows");
+  });
+  return results;
+}
 
 function TEST_ICPDemoRequest() {
   var p = enrichPayload_({ action: "icp_lead", form_type: "icp_lead",
