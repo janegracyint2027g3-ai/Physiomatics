@@ -33,6 +33,18 @@
     {
       "source": "/api/report-all",
       "destination": "/api/cron/reports?interval=All"
+    },
+    {
+      "source": "/api/report%20all",
+      "destination": "/api/cron/reports?interval=All"
+    },
+    {
+      "source": "/api/report_all",
+      "destination": "/api/cron/reports?interval=All"
+    },
+    {
+      "source": "/api/reportall",
+      "destination": "/api/cron/reports?interval=All"
     }
   ]
 }
