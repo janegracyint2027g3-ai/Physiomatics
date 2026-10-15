@@ -253,21 +253,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const dayOfMonth = kolkataNow.getDate(); // 1..31
   const dateStr = kolkataNow.toISOString().split("T")[0];
 
-  const intervalsToRun: ReportInterval[] = ["Daily"];
+  let intervalsToRun: ReportInterval[] = [];
 
-  // Weekly digest on Mondays
-  if (dayOfWeek === 1 || req.query.interval === "Weekly") {
-    intervalsToRun.push("Weekly");
-  }
-
-  // Monthly digest on the 1st
-  if (dayOfMonth === 1 || req.query.interval === "Monthly") {
-    intervalsToRun.push("Monthly");
-  }
-
-  // Force specific interval if requested in query
-  if (req.query.interval === "Daily" && !intervalsToRun.includes("Daily")) {
-    intervalsToRun.push("Daily");
+  if (req.query.interval === "Daily") {
+    intervalsToRun = ["Daily"];
+  } else if (req.query.interval === "Weekly") {
+    intervalsToRun = ["Weekly"];
+  } else if (req.query.interval === "Monthly") {
+    intervalsToRun = ["Monthly"];
+  } else {
+    intervalsToRun = ["Daily"];
+    if (dayOfWeek === 1) {
+      intervalsToRun.push("Weekly");
+    }
+    if (dayOfMonth === 1) {
+      intervalsToRun.push("Monthly");
+    }
   }
 
   console.log(`[Cron] Running scheduled digests for: ${intervalsToRun.join(", ")} on ${dateStr} (IST)`);

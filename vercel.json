@@ -1,20 +1,34 @@
 {
   "crons": [
     {
-      "path": "/api/report-daily",
+      "path": "/api/cron/reports?interval=Daily",
       "schedule": "30 15 * * *"
     },
     {
-      "path": "/api/report-weekly",
+      "path": "/api/cron/reports?interval=Weekly",
       "schedule": "30 3 * * 1"
     },
     {
-      "path": "/api/report-monthly",
+      "path": "/api/cron/reports?interval=Monthly",
       "schedule": "30 3 1 * *"
     },
     {
       "path": "/api/linkedin?sync=true",
       "schedule": "0 0 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/report-daily",
+      "destination": "/api/cron/reports?interval=Daily"
+    },
+    {
+      "source": "/api/report-weekly",
+      "destination": "/api/cron/reports?interval=Weekly"
+    },
+    {
+      "source": "/api/report-monthly",
+      "destination": "/api/cron/reports?interval=Monthly"
     }
   ]
 }

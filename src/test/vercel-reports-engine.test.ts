@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import dailyHandler from "../../api/report-daily";
-import weeklyHandler from "../../api/report-weekly";
-import monthlyHandler from "../../api/report-monthly";
 import defaultCronHandler, {
   verifyCronAuth,
   runReportForInterval,
   runDailyReport,
   runWeeklyReport,
   runMonthlyReport,
+  handleReportEndpoint,
 } from "../../api/cron/reports";
+
+const dailyHandler = handleReportEndpoint("Daily");
+const weeklyHandler = handleReportEndpoint("Weekly");
+const monthlyHandler = handleReportEndpoint("Monthly");
 
 function createMockReqRes(options: {
   headers?: Record<string, string>;
