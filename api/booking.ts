@@ -376,8 +376,10 @@ async function syncBookingToAirtable(
 
   if (!apiKey || !baseId) return { success: true }; // Skip gracefully
 
-  try {
-    const fields: Record<string, any> = {
+  const jiraFieldName = process.env.AIRTABLE_JIRA_FIELD || "Jira Key";
+
+  const buildFields = (includeJira: boolean): Record<string, any> => {
+    const f: Record<string, any> = {
       Name: booking.name,
       Email: booking.email,
       Phone: booking.phone || "",
@@ -395,11 +397,14 @@ async function syncBookingToAirtable(
       "Lead Type": "appointment_booking",
       Country: booking.location?.country || "",
       "Received At": booking.timestamp,
-      "Jira Key": jiraKey || "",
     };
-    Object.keys(fields).forEach((k) => { if (fields[k] === "") delete fields[k]; });
+    if (includeJira && jiraKey) f[jiraFieldName] = jiraKey;
+    Object.keys(f).forEach((k) => { if (f[k] === "") delete f[k]; });
+    return f;
+  };
 
-    const res = await fetch(
+  const postToAirtable = (fields: Record<string, any>) =>
+    fetch(
       `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`,
       {
         method: "POST",
@@ -411,6 +416,20 @@ async function syncBookingToAirtable(
         body: JSON.stringify({ records: [{ fields }], typecast: true }),
       }
     );
+
+  try {
+    let res = await postToAirtable(buildFields(true));
+
+    if (res.status === 422) {
+      const errBody = await res.text();
+      if (errBody.includes("UNKNOWN_FIELD_NAME")) {
+        console.warn(`[Airtable/Booking] Column "${jiraFieldName}" not found. Retrying without it.`);
+        res = await postToAirtable(buildFields(false));
+      } else {
+        console.warn("[Airtable/Booking] Warning:", res.status, errBody);
+        return { success: false, error: `Airtable ${res.status}` };
+      }
+    }
 
     if (res.ok) {
       console.log("[Airtable/Booking] ✓ Saved");

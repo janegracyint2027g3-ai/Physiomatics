@@ -320,7 +320,7 @@ async function syncToGoogleSheetsServer(
 
     const res = await fetch(`${sheetsUrl}?${params.toString()}`, {
       method: "GET",
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(25000), // Apps Script can take 20-25s on cold start
     });
     console.log(`[Sheets] ✓ Sent lead. Status: ${res.status}`);
     return { success: true };
@@ -344,8 +344,11 @@ async function syncToAirtableServer(
     return { success: true };
   }
 
-  try {
-    const fields: Record<string, any> = {
+  // The Jira column name may differ per Airtable base — configurable via env.
+  const jiraFieldName = process.env.AIRTABLE_JIRA_FIELD || "Jira Key";
+
+  const buildFields = (includeJira: boolean): Record<string, any> => {
+    const f: Record<string, any> = {
       Name: lead.name || "Anonymous Visitor",
       Email: lead.email || "",
       Phone: lead.phone || "",
@@ -359,13 +362,17 @@ async function syncToAirtableServer(
       City: lead.location?.city || "",
       Country: lead.location?.country || "",
       "Received At": lead.timestamp || new Date().toISOString(),
-      "Jira Key": jiraIssueKey || "",
       "Report Name": lead.document_name || "",
       "Report URL": lead.document_url || "",
     };
-    Object.keys(fields).forEach((k) => { if (fields[k] === "") delete fields[k]; });
+    if (includeJira && jiraIssueKey) f[jiraFieldName] = jiraIssueKey;
+    // Strip empty strings so Airtable doesn't complain about type mismatches
+    Object.keys(f).forEach((k) => { if (f[k] === "") delete f[k]; });
+    return f;
+  };
 
-    const res = await fetch(`https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`, {
+  const postToAirtable = (fields: Record<string, any>) =>
+    fetch(`https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -374,6 +381,25 @@ async function syncToAirtableServer(
       signal: AbortSignal.timeout(8000),
       body: JSON.stringify({ records: [{ fields }], typecast: true }),
     });
+
+  try {
+    let res = await postToAirtable(buildFields(true));
+
+    // If Airtable rejects because "Jira Key" (or custom name) doesn't exist,
+    // retry once without that field so the rest of the record is saved.
+    if (res.status === 422) {
+      const errBody = await res.text();
+      if (errBody.includes("UNKNOWN_FIELD_NAME")) {
+        console.warn(
+          `[Airtable] Column "${jiraFieldName}" not found in base. Retrying without it.`,
+          `Set AIRTABLE_JIRA_FIELD env var to match your Airtable column name.`
+        );
+        res = await postToAirtable(buildFields(false));
+      } else {
+        console.warn("[Airtable] Warning:", res.status, errBody);
+        return { success: false, error: `Airtable ${res.status}` };
+      }
+    }
 
     if (res.ok) {
       console.log("[Airtable] ✓ Saved lead record");

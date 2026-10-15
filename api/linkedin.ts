@@ -300,31 +300,49 @@ async function syncToAirtable(lead: Record<string, any>, jiraIssueKey?: string):
   }
 
   try {
-    const fields: Record<string, any> = {
-      Name: lead.author_name || "LinkedIn Lead",
-      Email: lead.email || "",
-      Phone: lead.phone || "",
-      Organization: lead.author_headline || "LinkedIn Prospect",
-      Role: lead.author_headline || "",
-      Interest: "LinkedIn Post Engagement",
-      Subject: `LinkedIn ${lead.interaction_type || "Action"}`,
-      Message: lead.content_text || `Engaged on post: ${lead.post_url || ""}`,
-      "Lead Type": "LinkedIn Lead",
-      Page: lead.post_url || "LinkedIn",
-      "Received At": lead.timestamp || new Date().toISOString(),
-      "Jira Key": jiraIssueKey || "",
-    };
-    Object.keys(fields).forEach((k) => { if (fields[k] === "") delete fields[k]; });
+    const jiraFieldName = process.env.AIRTABLE_JIRA_FIELD || "Jira Key";
 
-    const res = await fetch(`https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      signal: AbortSignal.timeout(8000),
-      body: JSON.stringify({ records: [{ fields }], typecast: true }),
-    });
+    const buildFields = (includeJira: boolean): Record<string, any> => {
+      const f: Record<string, any> = {
+        Name: lead.author_name || "LinkedIn Lead",
+        Email: lead.email || "",
+        Phone: lead.phone || "",
+        Organization: lead.author_headline || "LinkedIn Prospect",
+        Role: lead.author_headline || "",
+        Interest: "LinkedIn Post Engagement",
+        Subject: `LinkedIn ${lead.interaction_type || "Action"}`,
+        Message: lead.content_text || `Engaged on post: ${lead.post_url || ""}`,
+        "Lead Type": "LinkedIn Lead",
+        Page: lead.post_url || "LinkedIn",
+        "Received At": lead.timestamp || new Date().toISOString(),
+      };
+      if (includeJira && jiraIssueKey) f[jiraFieldName] = jiraIssueKey;
+      Object.keys(f).forEach((k) => { if (f[k] === "") delete f[k]; });
+      return f;
+    };
+
+    const postToAirtable = (fields: Record<string, any>) =>
+      fetch(`https://api.airtable.com/v0/${baseId}/${encodeURIComponent(tableName)}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+        body: JSON.stringify({ records: [{ fields }], typecast: true }),
+      });
+
+    let res = await postToAirtable(buildFields(true));
+
+    if (res.status === 422) {
+      const errBody = await res.text();
+      if (errBody.includes("UNKNOWN_FIELD_NAME")) {
+        console.warn(`[Airtable/LinkedIn] Column "${jiraFieldName}" not found. Retrying without it.`);
+        res = await postToAirtable(buildFields(false));
+      } else {
+        return { success: false };
+      }
+    }
 
     return { success: res.ok };
   } catch (err: any) {
