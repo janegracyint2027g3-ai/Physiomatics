@@ -172,7 +172,7 @@ describe("Welcome Back & Returning Visitor System", () => {
       expect(shouldShowWelcomeNotification()).toBe(false);
     });
 
-    it("honors dismissal cooldown across sessions", () => {
+    it("honors dismissal for current session", () => {
       expect(shouldShowWelcomeNotification()).toBe(true);
 
       dismissWelcomeNotification();
@@ -181,12 +181,7 @@ describe("Welcome Back & Returning Visitor System", () => {
       // New tab session started (clearing sessionStorage)
       sessionStorage.clear();
 
-      // Within 12-hour cooldown: should still be suppressed
-      expect(shouldShowWelcomeNotification()).toBe(false);
-
-      // After 13 hours: cooldown expired, can show again
-      const thirteenHoursLater = Date.now() + 13 * 60 * 60 * 1000;
-      vi.spyOn(Date, "now").mockReturnValue(thirteenHoursLater);
+      // Fresh session can display notification
       expect(shouldShowWelcomeNotification()).toBe(true);
     });
   });

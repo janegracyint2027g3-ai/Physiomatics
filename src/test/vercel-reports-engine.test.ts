@@ -1,5 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+
+vi.mock("nodemailer", () => ({
+  default: {
+    createTransport: vi.fn().mockReturnValue({
+      sendMail: vi.fn().mockResolvedValue({
+        messageId: "<mock-msg-id-123@physiomatics>",
+        response: "250 2.0.0 OK",
+      }),
+    }),
+  },
+}));
+
 import defaultCronHandler, {
   verifyCronAuth,
   runReportForInterval,
@@ -48,7 +60,12 @@ describe("Vercel Executive Reporting Engine (/api/report-*)", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    process.env = { ...originalEnv };
+    process.env = {
+      ...originalEnv,
+      SMTP_USER: "test@example.com",
+      SMTP_PASS: "mock-password-1234",
+      REPORT_EMAIL: "janegracy.int2027g3@gmail.com",
+    };
   });
 
   afterEach(() => {

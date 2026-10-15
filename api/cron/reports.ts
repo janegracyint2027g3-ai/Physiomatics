@@ -16,9 +16,14 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import * as https from "https";
+import {
+  fetchReportDataFromAppsScript,
+  sendExecutiveReportEmail,
+  type ReportMetrics,
+} from "../../src/lib/reportEmail.ts";
 
 export const config = {
-  maxDuration: 30,
+  maxDuration: 60,
 };
 
 export type ReportInterval = "Daily" | "Weekly" | "Monthly";
@@ -28,6 +33,11 @@ export interface ReportRunResult {
   jira_task: string;
   telegram_sent: boolean;
   email_sent: boolean;
+  email_message_id?: string;
+  email_recipients_count?: number;
+  report_data_retrieved: boolean;
+  email_response?: string;
+  error?: string;
 }
 
 export function getKolkataDate(): Date {
@@ -147,30 +157,25 @@ export async function createJiraDigestTask(params: {
   return null;
 }
 
-export async function triggerAppsScriptReport(interval: ReportInterval): Promise<boolean> {
-  const sheetsUrl =
-    process.env.GOOGLE_SHEETS_URL ||
-    process.env.VITE_GOOGLE_SHEETS_URL ||
-    "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
-
-  try {
-    const emailRes = await fetch(`${sheetsUrl}?action=run_digest&interval=${encodeURIComponent(interval)}`, {
-      signal: AbortSignal.timeout(20000),
-    });
-    console.log(`[Cron] Google Apps Script report email triggered (${interval}): status ${emailRes.status}`);
-    return emailRes.ok;
-  } catch (sheetCronErr: any) {
-    console.warn(`[Cron] Apps Script report email trigger notice (${interval}):`, sheetCronErr?.message || sheetCronErr);
-    return false;
-  }
-}
-
 export async function runReportForInterval(interval: ReportInterval, customDate?: string): Promise<ReportRunResult> {
   const kolkataNow = getKolkataDate();
   const dateStr: string = customDate || kolkataNow.toISOString().split("T")[0] || "";
 
-  const jiraKey = await createJiraDigestTask({ interval, period: dateStr });
+  console.log(`[Cron] Executing ${interval} executive report for period ${dateStr} (IST)`);
 
+  // 1. Fetch live aggregated metrics from Google Sheets via Apps Script endpoint
+  const { retrieved, metrics } = await fetchReportDataFromAppsScript(interval, dateStr);
+  console.log(`[Cron] Report data retrieved from Google Sheets: ${retrieved ? "YES" : "NO (using fallback metrics)"}`);
+
+  // 2. Create Jira Digest Task under project PHY
+  const jiraKey = await createJiraDigestTask({ interval, period: dateStr });
+  if (jiraKey) {
+    console.log(`[Cron] ✓ Jira digest task created: ${jiraKey}`);
+  } else {
+    console.warn(`[Cron] Jira digest task skipped or credentials missing.`);
+  }
+
+  // 3. Send Telegram executive digest
   let telegramSent = false;
   const tgToken = process.env.TELEGRAM_BOT_TOKEN;
   const tgChatId = process.env.TELEGRAM_CHAT_ID;
@@ -180,6 +185,8 @@ export async function runReportForInterval(interval: ReportInterval, customDate?
       `📊 <b>Physiomatics ${interval} Executive Digest</b>`,
       "",
       `🗓️ <b>Period:</b> ${dateStr} (Asia/Kolkata)`,
+      `👥 <b>Visitors:</b> ${metrics.visitors} | 📄 <b>Views:</b> ${metrics.pageViews}`,
+      `🎯 <b>Total Leads:</b> ${metrics.totalAllLeads} (${metrics.convRate} conv)`,
       jiraKey ? `🎫 <b>Jira Digest Task:</b> <code>${jiraKey}</code>` : null,
       `🌐 <b>Website:</b> https://physiomatics.vercel.app/`,
       "",
@@ -187,16 +194,30 @@ export async function runReportForInterval(interval: ReportInterval, customDate?
     ].filter(Boolean).join("\n");
 
     telegramSent = await sendTelegramReport(tgToken, tgChatId, tgMsg);
+    console.log(`[Cron] Telegram digest dispatch: ${telegramSent ? "SUCCESS" : "FAILED"}`);
   }
 
-  // Trigger Google Apps Script Executive Digest Email dispatch
-  const emailReportSent = await triggerAppsScriptReport(interval);
+  // 4. Send Executive Report Email directly from Vercel backend using Nodemailer / Gmail SMTP
+  const emailResult = await sendExecutiveReportEmail({
+    interval,
+    metrics,
+    customDate: dateStr,
+  });
+
+  console.log(
+    `[Cron] ${interval} Report Execution Completed: Email=${emailResult.success ? "DELIVERED" : "FAILED"} (Recipients=${emailResult.recipientCount}), Jira=${jiraKey || "none"}, Telegram=${telegramSent}`
+  );
 
   return {
     period: dateStr,
     jira_task: jiraKey || "skipped_or_failed",
     telegram_sent: telegramSent,
-    email_sent: emailReportSent,
+    email_sent: emailResult.success,
+    email_message_id: emailResult.messageId,
+    email_recipients_count: emailResult.recipientCount,
+    report_data_retrieved: retrieved,
+    email_response: emailResult.response,
+    error: emailResult.error,
   };
 }
 
