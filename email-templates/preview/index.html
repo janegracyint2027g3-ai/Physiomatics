@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Physiomatics Email Template Library — Interactive Preview</title>
+  <link rel="stylesheet" href="../shared/email-styles.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Top Bar */
+    .topbar {
+      background-color: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+    }
+    .brand-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+    }
+    .brand-badge {
+      background-color: rgba(13, 148, 136, 0.2);
+      color: #2dd4bf;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(45, 212, 191, 0.3);
+    }
+
+    /* Template Switcher Buttons */
+    .template-nav {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .nav-btn {
+      background-color: #334155;
+      color: #cbd5e1;
+      border: 1px solid #475569;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover {
+      background-color: #475569;
+      color: #ffffff;
+    }
+    .nav-btn.active {
+      background-color: #0d9488;
+      border-color: #14b8a6;
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.4);
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      background-color: #1e293b;
+      padding: 10px 24px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tool-btn {
+      background-color: #0f172a;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .tool-btn:hover, .tool-btn.active {
+      background-color: #334155;
+      color: #ffffff;
+      border-color: #64748b;
+    }
+    .tool-btn.active-teal {
+      background-color: #0d9488;
+      color: #ffffff;
+      border-color: #14b8a6;
+    }
+
+    /* Main Preview Stage */
+    .stage {
+      flex: 1;
+      display: flex;
+      background-color: #090d16;
+      padding: 24px;
+      overflow-y: auto;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 24px;
+    }
+    
+    /* Device Frame */
+    .preview-frame-wrap {
+      background-color: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.4);
+      transition: width 0.3s ease;
+      width: 640px;
+      max-width: 100%;
+    }
+    .preview-frame-wrap.mobile {
+      width: 390px;
+      border: 10px solid #1e293b;
+      border-radius: 36px;
+      box-shadow: 0 20px 48px rgba(0,0,0,0.6);
+    }
+    
+    iframe#emailFrame {
+      width: 100%;
+      height: 850px;
+      border: none;
+      display: block;
+      background-color: #f1f5f9;
+    }
+
+    /* Meta & Placeholders Sidebar */
+    .sidebar {
+      width: 320px;
+      background-color: #1e293b;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      padding: 20px;
+      font-size: 13px;
+    }
+    .sidebar-section {
+      margin-bottom: 20px;
+    }
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #5eead4;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .field-row {
+      margin-bottom: 10px;
+    }
+    .field-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #94a3b8;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+    .field-input {
+      width: 100%;
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 13px;
+      color: #ffffff;
+      font-family: inherit;
+    }
+    .field-input:focus {
+      outline: none;
+      border-color: #0d9488;
+    }
+    .info-pill {
+      background-color: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 8px 12px;
+      line-height: 1.5;
+      color: #cbd5e1;
+      font-size: 12px;
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background-color: #0d9488;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      display: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="brand-group">
+      <img src="../assets/logo.png" alt="Physiomatics" class="brand-logo" onerror="this.src='https://physiomatics.vercel.app/email-assets/logo.png'">
+      <span class="brand-title">PHYSIOMATICS</span>
+      <span class="brand-badge">Email Design System</span>
+    </div>
+
+    <!-- Template Selector Nav -->
+    <nav class="template-nav">
+      <button class="nav-btn active" onclick="loadTemplate('welcome.html', this)">1. Welcome</button>
+      <button class="nav-btn" onclick="loadTemplate('advertising.html', this)">2. Advertising</button>
+      <button class="nav-btn" onclick="loadTemplate('business-value.html', this)">3. Business Value</button>
+      <button class="nav-btn" onclick="loadTemplate('reengagement.html', this)">4. Re-engagement</button>
+      <button class="nav-btn" onclick="loadTemplate('lead-generation.html', this)">5. Lead Gen</button>
+      <button class="nav-btn" onclick="loadTemplate('products-features.html', this)">6. Features</button>
+    </nav>
+  </header>
+
+  <!-- Control Strip -->
+  <div class="controls-bar">
+    <div class="btn-group">
+      <span style="color: #64748b; font-weight: 600; margin-right: 4px;">Viewport:</span>
+      <button class="tool-btn active" id="btnDesktop" onclick="setViewport('desktop')">🖥️ Desktop (640px)</button>
+      <button class="tool-btn" id="btnMobile" onclick="setViewport('mobile')">📱 Mobile (390px)</button>
+      <button class="tool-btn" id="btnFull" onclick="setViewport('full')">↔️ 100% Fluid</button>
+    </div>
+
+    <div class="btn-group">
+      <button class="tool-btn" id="btnBlockImages" onclick="toggleImages()">🖼️ Simulate Images Blocked: <span id="imgStatus" style="font-weight:bold;color:#f87171;">OFF</span></button>
+      <button class="tool-btn active-teal" onclick="copyRenderedHtml()">📋 Copy HTML Code</button>
+      <button class="tool-btn" onclick="openRawInTab()">↗️ Open Full Page</button>
+    </div>
+  </div>
+
+  <!-- Stage -->
+  <div class="stage">
+    
+    <!-- Rendered Email Device Viewport -->
+    <div class="preview-frame-wrap" id="frameWrap">
+      <iframe id="emailFrame" title="Physiomatics Email Template Preview"></iframe>
+    </div>
+
+    <!-- Live Test Placeholders Sidebar -->
+    <aside class="sidebar">
+      
+      <div class="sidebar-section">
+        <div class="sidebar-title">🎯 Campaign Metadata</div>
+        <div class="field-row">
+          <div class="field-label">Subject Line</div>
+          <div class="info-pill" id="metaSubject" style="font-weight: 700; color: #ffffff;">—</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Audience Focus</div>
+          <div class="info-pill" id="metaAudience">—</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">Primary Conversion Goal</div>
+          <div class="info-pill" id="metaGoal" style="color: #2dd4bf;">—</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">⚡ Live Placeholders Test</div>
+        <div class="field-row">
+          <label class="field-label" for="inputName">Recipient Name ({{name}})</label>
+          <input type="text" id="inputName" class="field-input" value="Dr. Jane Gracy" oninput="applyPlaceholders()">
+        </div>
+        <div class="field-row">
+          <label class="field-label" for="inputOrg">Organization ({{organization}})</label>
+          <input type="text" id="inputOrg" class="field-input" value="PhysioMotion Recovery Clinic" oninput="applyPlaceholders()">
+        </div>
+        <div class="field-row">
+          <label class="field-label" for="inputRole">Recipient Role ({{role}})</label>
+          <input type="text" id="inputRole" class="field-input" value="Clinical Director" oninput="applyPlaceholders()">
+        </div>
+        <div class="field-row">
+          <label class="field-label" for="inputInterest">Expressed Interest ({{interest}})</label>
+          <input type="text" id="inputInterest" class="field-input" value="AI Video Movement Analysis" oninput="applyPlaceholders()">
+        </div>
+      </div>
+
+      <div class="sidebar-section" style="margin-bottom: 0;">
+        <div class="sidebar-title">📞 Verified Brand Details</div>
+        <div class="info-pill" style="font-size: 11px; line-height: 1.6;">
+          <strong>Phone &amp; WhatsApp:</strong> +91 78450 72426<br>
+          <strong>Email:</strong> janegracy.int2027g3@gmail.com<br>
+          <strong>Website:</strong> physiomatics.vercel.app<br>
+          <strong>YouTube:</strong> @JaneGracyDavid<br>
+          <strong>LinkedIn:</strong> linkedin.com/company/143995162/
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <div id="toast">HTML Copied to Clipboard!</div>
+
+  <script src="../shared/brand-config.js"></script>
+  <script>
+    let currentTemplateName = 'welcome.html';
+    let rawTemplateSource = '';
+    let imagesBlocked = false;
+
+    const TEMPLATE_METAS = {
+      'welcome.html': {
+        subject: "Welcome to Physiomatics — Let's Move Forward Together!",
+        audience: "New subscribers, website enquiries and opt-in users",
+        goal: "First platform exploration & WhatsApp direct engagement"
+      },
+      'advertising.html': {
+        subject: "Discover a Smarter Approach to Physiotherapy",
+        audience: "Opted-in professional contacts & healthcare providers",
+        goal: "Platform awareness, movement analysis test drive & WhatsApp inquiries"
+      },
+      'business-value.html': {
+        subject: "Explore New Possibilities for Your Physiotherapy Practice",
+        audience: "Hospital administrators, clinic owners & practice directors",
+        goal: "Requirement discussions & formal clinical demo requests"
+      },
+      'reengagement.html': {
+        subject: "Ready to Revisit Physiomatics, {{name}}?",
+        audience: "Previous leads, inactive subscribers & clinical evaluators",
+        goal: "Reconnection, library exploration & low-pressure WhatsApp contact"
+      },
+      'lead-generation.html': {
+        subject: "Let's Explore Your Physiotherapy Technology Needs",
+        audience: "High-intent prospects, clinics & athletic organizations",
+        goal: "Demo booking, consultation submission & phone lead capture"
+      },
+      'products-features.html': {
+        subject: "Explore Physiomatics — Movement Insights and More",
+        audience: "Healthcare technology evaluators & clinical staff",
+        goal: "Feature exploration, privacy verification & workflow review"
+      }
+    };
+
+    async function loadTemplate(fileName, btnElement) {
+      currentTemplateName = fileName;
+
+      // Update Active Navigation Button
+      if (btnElement) {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        btnElement.classList.add('active');
+      }
+
+      // Update Campaign Meta
+      const meta = TEMPLATE_METAS[fileName] || {};
+      document.getElementById('metaSubject').innerText = meta.subject || '';
+      document.getElementById('metaAudience').innerText = meta.audience || '';
+      document.getElementById('metaGoal').innerText = meta.goal || '';
+
+      try {
+        const res = await fetch('../' + fileName);
+        if (!res.ok) throw new Error("Could not fetch " + fileName);
+        rawTemplateSource = await res.text();
+        applyPlaceholders();
+      } catch (err) {
+        console.error("Failed to load template", err);
+      }
+    }
+
+    function applyPlaceholders() {
+      if (!rawTemplateSource) return;
+
+      const variables = {
+        name: document.getElementById('inputName').value || 'Doctor / Partner',
+        organization: document.getElementById('inputOrg').value || 'Physiotherapy Practice',
+        role: document.getElementById('inputRole').value || 'Clinical Director',
+        interest: document.getElementById('inputInterest').value || 'Movement Analysis',
+      };
+
+      let rendered = window.BRAND_CONFIG 
+        ? window.BRAND_CONFIG.renderTemplate(rawTemplateSource, variables)
+        : rawTemplateSource;
+
+      // If simulate images blocked mode is on
+      if (imagesBlocked) {
+        // Strip or break src attributes while preserving alt and layout
+        rendered = rendered.replace(/<img\s+([^>]*?)src=["'][^"']*?["']([^>]*?)>/gi, '<img $1src="" style="background:#e2e8f0;color:#0f766e;font-size:12px;font-weight:bold;text-align:center;padding:12px;display:block;border:1px dashed #cbd5e1;" $2>');
+      }
+
+      const iframe = document.getElementById('emailFrame');
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(rendered);
+      doc.close();
+    }
+
+    function setViewport(mode) {
+      const wrap = document.getElementById('frameWrap');
+      document.querySelectorAll('#btnDesktop, #btnMobile, #btnFull').forEach(b => b.classList.remove('active'));
+      
+      if (mode === 'desktop') {
+        wrap.className = 'preview-frame-wrap';
+        wrap.style.width = '640px';
+        document.getElementById('btnDesktop').classList.add('active');
+      } else if (mode === 'mobile') {
+        wrap.className = 'preview-frame-wrap mobile';
+        wrap.style.width = '390px';
+        document.getElementById('btnMobile').classList.add('active');
+      } else if (mode === 'full') {
+        wrap.className = 'preview-frame-wrap';
+        wrap.style.width = '100%';
+        document.getElementById('btnFull').classList.add('active');
+      }
+    }
+
+    function toggleImages() {
+      imagesBlocked = !imagesBlocked;
+      const statusSpan = document.getElementById('imgStatus');
+      const btn = document.getElementById('btnBlockImages');
+      
+      if (imagesBlocked) {
+        statusSpan.innerText = 'ON';
+        statusSpan.style.color = '#34d399';
+        btn.classList.add('active');
+      } else {
+        statusSpan.innerText = 'OFF';
+        statusSpan.style.color = '#f87171';
+        btn.classList.remove('active');
+      }
+      applyPlaceholders();
+    }
+
+    function copyRenderedHtml() {
+      const iframe = document.getElementById('emailFrame');
+      const content = iframe.contentDocument ? iframe.contentDocument.documentElement.outerHTML : rawTemplateSource;
+      navigator.clipboard.writeText(content).then(() => {
+        showToast("✓ Rendered HTML copied to clipboard!");
+      });
+    }
+
+    function openRawInTab() {
+      window.open('../' + currentTemplateName, '_blank');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2500);
+    }
+
+    // Initial load
+    window.onload = function() {
+      loadTemplate('welcome.html', document.querySelector('.nav-btn.active'));
+    };
+  </script>
+</body>
+</html>
