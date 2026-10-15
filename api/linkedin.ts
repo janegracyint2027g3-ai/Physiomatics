@@ -453,7 +453,7 @@ async function fetchLinkedInPostEngagement(accessToken: string, postUrn: string)
 // ─── 7. Master Processing Pipeline ────────────────────────────────────────────
 async function processLinkedInLead(lead: Record<string, any>): Promise<{
   success: boolean;
-  jiraKey?: string;
+  jiraKey?: string | undefined;
   telegramSent: boolean;
   sheetsSynced: boolean;
   airtableSynced: boolean;

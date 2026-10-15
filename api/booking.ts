@@ -487,12 +487,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // ── Deduplication ─────────────────────────────────────────────────────────
-    const clientIp = String(
+    const rawIp =
       req.headers["x-forwarded-for"] ||
       req.headers["x-real-ip"] ||
       (req.socket as any)?.remoteAddress ||
-      "unknown"
-    ).split(",")[0].trim();
+      "unknown";
+    const clientIp = (Array.isArray(rawIp) ? rawIp[0] || "unknown" : String(rawIp)).split(",")[0]?.trim() || "unknown";
 
     const dedupFingerprint = `booking_${name}_${email}_${consultationType}_${clientIp}`;
     if (isDuplicateBooking(dedupFingerprint)) {
@@ -624,5 +624,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         error: "Booking could not be processed. Please try again or contact us via WhatsApp.",
       });
     }
+    return;
   }
 }

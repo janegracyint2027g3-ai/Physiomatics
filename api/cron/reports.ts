@@ -167,7 +167,7 @@ export async function triggerAppsScriptReport(interval: ReportInterval): Promise
 
 export async function runReportForInterval(interval: ReportInterval, customDate?: string): Promise<ReportRunResult> {
   const kolkataNow = getKolkataDate();
-  const dateStr = customDate || kolkataNow.toISOString().split("T")[0];
+  const dateStr: string = customDate || kolkataNow.toISOString().split("T")[0] || "";
 
   const jiraKey = await createJiraDigestTask({ interval, period: dateStr });
 

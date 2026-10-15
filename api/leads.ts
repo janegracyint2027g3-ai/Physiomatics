@@ -432,12 +432,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Deduplication
-    const clientIp = String(
+    const rawIp =
       req.headers["x-forwarded-for"] ||
       req.headers["x-real-ip"] ||
       (req.socket as any)?.remoteAddress ||
-      "unknown"
-    ).split(",")[0].trim();
+      "unknown";
+    const clientIp = (Array.isArray(rawIp) ? rawIp[0] || "unknown" : String(rawIp)).split(",")[0]?.trim() || "unknown";
 
     const dedupFingerprint = `${name}_${contact}_${raw.lead_type || raw.form_type}_${clientIp}`;
     if (isDuplicateSubmission(dedupFingerprint)) {
@@ -555,5 +555,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         error: "Lead processing encountered an unexpected error.",
       });
     }
+    return;
   }
 }
