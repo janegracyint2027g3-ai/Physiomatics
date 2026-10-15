@@ -18,6 +18,7 @@ import defaultCronHandler, {
   runDailyReport,
   runWeeklyReport,
   runMonthlyReport,
+  runAllReports,
   handleReportEndpoint,
 } from "../../api/cron/reports";
 
@@ -241,6 +242,41 @@ describe("Vercel Executive Reporting Engine (/api/report-*)", () => {
       const body = res.getBody();
       expect(body.success).toBe(true);
       expect(body.runs.Daily).toBeDefined();
+    });
+
+    it("triggers all 3 reports (Daily, Weekly, Monthly) when interval=All is requested", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ key: "PHY-TEST-ALL" }),
+      } as Response);
+
+      const { req, res } = createMockReqRes({
+        query: { interval: "All" },
+      });
+
+      await defaultCronHandler(req, res);
+
+      expect(res.getStatusCode()).toBe(200);
+      const body = res.getBody();
+      expect(body.success).toBe(true);
+      expect(body.triggered_reports).toEqual(["Daily", "Weekly", "Monthly"]);
+      expect(body.runs.Daily.email_sent).toBe(true);
+      expect(body.runs.Weekly.email_sent).toBe(true);
+      expect(body.runs.Monthly.email_sent).toBe(true);
+    });
+
+    it("runAllReports executes and sends all 3 reports directly", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ key: "PHY-ALL-DIRECT" }),
+      } as Response);
+
+      const results = await runAllReports("2026-10-15");
+      expect(results.Daily.email_sent).toBe(true);
+      expect(results.Weekly.email_sent).toBe(true);
+      expect(results.Monthly.email_sent).toBe(true);
     });
   });
 });

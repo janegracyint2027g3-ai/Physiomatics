@@ -29,6 +29,10 @@
     {
       "source": "/api/report-monthly",
       "destination": "/api/cron/reports?interval=Monthly"
+    },
+    {
+      "source": "/api/report-all",
+      "destination": "/api/cron/reports?interval=All"
     }
   ]
 }

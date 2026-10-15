@@ -43,6 +43,7 @@ This document outlines the architecture, scheduled triggers, email delivery engi
 | **Daily Report** | Daily at 9:00 PM IST (21:00) | `30 15 * * *` (15:30 UTC) | `/api/report-daily` | `/api/cron/reports?interval=Daily` |
 | **Weekly Report** | Mondays at 9:00 AM IST | `30 3 * * 1` (03:30 UTC Mon) | `/api/report-weekly` | `/api/cron/reports?interval=Weekly` |
 | **Monthly Report** | 1st of month at 9:00 AM IST | `30 3 1 * *` (03:30 UTC 1st) | `/api/report-monthly` | `/api/cron/reports?interval=Monthly` |
+| **All 3 Reports (Trigger)** | On-demand / Trigger | Triggers Daily, Weekly, & Monthly emails | `/api/report-all` | `/api/cron/reports?interval=All` |
 | **Unified Cron** | Dynamic fallback | Scheduled via crons | `/api/cron/reports` | Main handler |
 
 > **Note on Hobby Plan Limits**: Consolidating endpoints through `api/cron/reports.ts` and `vercel.json` rewrites guarantees compliance with Vercel's 12-function limit on the Hobby plan.
@@ -95,6 +96,9 @@ curl -X GET "https://physiomatics.vercel.app/api/report-weekly?secret=YOUR_CRON_
 
 # Test Monthly Report
 curl -X GET "https://physiomatics.vercel.app/api/report-monthly?secret=YOUR_CRON_SECRET"
+
+# Trigger ALL 3 reports (Daily, Weekly, Monthly) at once
+curl -X GET "https://physiomatics.vercel.app/api/report-all?secret=YOUR_CRON_SECRET"
 
 # Test unified endpoint with a custom date
 curl -X GET "https://physiomatics.vercel.app/api/cron/reports?interval=Daily&date=2026-10-15&secret=YOUR_CRON_SECRET"

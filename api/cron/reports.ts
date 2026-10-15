@@ -233,7 +233,16 @@ export async function runMonthlyReport(customDate?: string): Promise<ReportRunRe
   return runReportForInterval("Monthly", customDate);
 }
 
-export function handleReportEndpoint(interval: ReportInterval) {
+export async function runAllReports(customDate?: string): Promise<Record<ReportInterval, ReportRunResult>> {
+  const intervals: ReportInterval[] = ["Daily", "Weekly", "Monthly"];
+  const results: Record<string, ReportRunResult> = {};
+  for (const interval of intervals) {
+    results[interval] = await runReportForInterval(interval, customDate);
+  }
+  return results as Record<ReportInterval, ReportRunResult>;
+}
+
+export function handleReportEndpoint(interval: ReportInterval | "All") {
   return async function (req: VercelRequest, res: VercelResponse) {
     if (!verifyCronAuth(req)) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -243,6 +252,17 @@ export function handleReportEndpoint(interval: ReportInterval) {
     const customDate = typeof req.query.date === "string" ? req.query.date : undefined;
 
     try {
+      if (interval === "All") {
+        console.log(`[Cron] Invoking All 3 Executive Reports endpoint (${kolkataNow.toISOString()})`);
+        const results = await runAllReports(customDate);
+        return res.status(200).json({
+          success: true,
+          triggered: "All 3 reports (Daily, Weekly, Monthly)",
+          timestamp_ist: kolkataNow.toISOString(),
+          runs: results,
+        });
+      }
+
       console.log(`[Cron] Invoking ${interval} Executive Report endpoint (${kolkataNow.toISOString()})`);
       const result = await runReportForInterval(interval, customDate);
 
@@ -253,7 +273,7 @@ export function handleReportEndpoint(interval: ReportInterval) {
         result,
       });
     } catch (err: any) {
-      console.error(`[Cron] Error executing ${interval} report:`, err);
+      console.error(`[Cron] Error executing report:`, err);
       return res.status(500).json({
         success: false,
         interval,
@@ -276,13 +296,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let intervalsToRun: ReportInterval[] = [];
 
-  if (req.query.interval === "Daily") {
+  const requestedInterval = String(req.query.interval || "").trim();
+
+  if (
+    requestedInterval.toLowerCase() === "all" ||
+    req.query.all === "true" ||
+    req.query.trigger === "all" ||
+    req.query.trigger_all === "true"
+  ) {
+    intervalsToRun = ["Daily", "Weekly", "Monthly"];
+  } else if (requestedInterval === "Daily") {
     intervalsToRun = ["Daily"];
-  } else if (req.query.interval === "Weekly") {
+  } else if (requestedInterval === "Weekly") {
     intervalsToRun = ["Weekly"];
-  } else if (req.query.interval === "Monthly") {
+  } else if (requestedInterval === "Monthly") {
     intervalsToRun = ["Monthly"];
   } else {
+    // Default automated schedule matching current day
     intervalsToRun = ["Daily"];
     if (dayOfWeek === 1) {
       intervalsToRun.push("Weekly");
@@ -302,6 +332,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   return res.status(200).json({
     success: true,
+    triggered_reports: intervalsToRun,
     timestamp_ist: kolkataNow.toISOString(),
     runs: results,
   });
