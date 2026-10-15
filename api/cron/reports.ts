@@ -21,14 +21,43 @@ export const config = {
   maxDuration: 30,
 };
 
-function getKolkataDate(): Date {
+export type ReportInterval = "Daily" | "Weekly" | "Monthly";
+
+export interface ReportRunResult {
+  period: string;
+  jira_task: string;
+  telegram_sent: boolean;
+  email_sent: boolean;
+}
+
+export function getKolkataDate(): Date {
   // Current time in IST (UTC+5:30)
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
   return new Date(utc + 3600000 * 5.5);
 }
 
-async function sendTelegramReport(token: string, chatId: string, text: string): Promise<boolean> {
+export function verifyCronAuth(req: VercelRequest): boolean {
+  const authHeader = String(req.headers["authorization"] || "");
+  const secretQuery = String(req.query.secret || "");
+  const expectedSecret = process.env.CRON_SECRET;
+
+  if (expectedSecret) {
+    const isAuthorized =
+      authHeader === `Bearer ${expectedSecret}` ||
+      secretQuery === expectedSecret ||
+      req.headers["x-vercel-cron"] === "1";
+
+    if (!isAuthorized) {
+      console.warn("[Cron] Unauthorized cron invocation attempt.");
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export async function sendTelegramReport(token: string, chatId: string, text: string): Promise<boolean> {
   const payload = JSON.stringify({
     chat_id: chatId,
     text,
@@ -61,8 +90,8 @@ async function sendTelegramReport(token: string, chatId: string, text: string): 
   });
 }
 
-async function createJiraDigestTask(params: {
-  interval: "Daily" | "Weekly" | "Monthly";
+export async function createJiraDigestTask(params: {
+  interval: ReportInterval;
   period: string;
 }): Promise<string | null> {
   const email = process.env.JIRA_EMAIL || process.env.VITE_JIRA_EMAIL || "janegracy.int2027g3@gmail.com";
@@ -118,22 +147,105 @@ async function createJiraDigestTask(params: {
   return null;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Verify Cron authorization
-  const authHeader = String(req.headers["authorization"] || "");
-  const secretQuery = String(req.query.secret || "");
-  const expectedSecret = process.env.CRON_SECRET;
+export async function triggerAppsScriptReport(interval: ReportInterval): Promise<boolean> {
+  const sheetsUrl =
+    process.env.GOOGLE_SHEETS_URL ||
+    process.env.VITE_GOOGLE_SHEETS_URL ||
+    "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
 
-  if (expectedSecret) {
-    const isAuthorized =
-      authHeader === `Bearer ${expectedSecret}` ||
-      secretQuery === expectedSecret ||
-      req.headers["x-vercel-cron"] === "1";
+  try {
+    const emailRes = await fetch(`${sheetsUrl}?action=run_digest&interval=${encodeURIComponent(interval)}`, {
+      signal: AbortSignal.timeout(20000),
+    });
+    console.log(`[Cron] Google Apps Script report email triggered (${interval}): status ${emailRes.status}`);
+    return emailRes.ok;
+  } catch (sheetCronErr: any) {
+    console.warn(`[Cron] Apps Script report email trigger notice (${interval}):`, sheetCronErr?.message || sheetCronErr);
+    return false;
+  }
+}
 
-    if (!isAuthorized) {
-      console.warn("[Cron] Unauthorized cron invocation attempt.");
+export async function runReportForInterval(interval: ReportInterval, customDate?: string): Promise<ReportRunResult> {
+  const kolkataNow = getKolkataDate();
+  const dateStr = customDate || kolkataNow.toISOString().split("T")[0];
+
+  const jiraKey = await createJiraDigestTask({ interval, period: dateStr });
+
+  let telegramSent = false;
+  const tgToken = process.env.TELEGRAM_BOT_TOKEN;
+  const tgChatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (tgToken && tgChatId) {
+    const tgMsg = [
+      `📊 <b>Physiomatics ${interval} Executive Digest</b>`,
+      "",
+      `🗓️ <b>Period:</b> ${dateStr} (Asia/Kolkata)`,
+      jiraKey ? `🎫 <b>Jira Digest Task:</b> <code>${jiraKey}</code>` : null,
+      `🌐 <b>Website:</b> https://physiomatics.vercel.app/`,
+      "",
+      `✅ Automated lead routing, Jira tasks, and data sync engines operating normally.`,
+    ].filter(Boolean).join("\n");
+
+    telegramSent = await sendTelegramReport(tgToken, tgChatId, tgMsg);
+  }
+
+  // Trigger Google Apps Script Executive Digest Email dispatch
+  const emailReportSent = await triggerAppsScriptReport(interval);
+
+  return {
+    period: dateStr,
+    jira_task: jiraKey || "skipped_or_failed",
+    telegram_sent: telegramSent,
+    email_sent: emailReportSent,
+  };
+}
+
+export async function runDailyReport(customDate?: string): Promise<ReportRunResult> {
+  return runReportForInterval("Daily", customDate);
+}
+
+export async function runWeeklyReport(customDate?: string): Promise<ReportRunResult> {
+  return runReportForInterval("Weekly", customDate);
+}
+
+export async function runMonthlyReport(customDate?: string): Promise<ReportRunResult> {
+  return runReportForInterval("Monthly", customDate);
+}
+
+export function handleReportEndpoint(interval: ReportInterval) {
+  return async function (req: VercelRequest, res: VercelResponse) {
+    if (!verifyCronAuth(req)) {
       return res.status(401).json({ error: "Unauthorized" });
     }
+
+    const kolkataNow = getKolkataDate();
+    const customDate = typeof req.query.date === "string" ? req.query.date : undefined;
+
+    try {
+      console.log(`[Cron] Invoking ${interval} Executive Report endpoint (${kolkataNow.toISOString()})`);
+      const result = await runReportForInterval(interval, customDate);
+
+      return res.status(200).json({
+        success: true,
+        interval,
+        timestamp_ist: kolkataNow.toISOString(),
+        result,
+      });
+    } catch (err: any) {
+      console.error(`[Cron] Error executing ${interval} report:`, err);
+      return res.status(500).json({
+        success: false,
+        interval,
+        error: err?.message || String(err),
+      });
+    }
+  };
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Verify Cron authorization
+  if (!verifyCronAuth(req)) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   const kolkataNow = getKolkataDate();
@@ -141,7 +253,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const dayOfMonth = kolkataNow.getDate(); // 1..31
   const dateStr = kolkataNow.toISOString().split("T")[0];
 
-  const intervalsToRun: ("Daily" | "Weekly" | "Monthly")[] = ["Daily"];
+  const intervalsToRun: ReportInterval[] = ["Daily"];
 
   // Weekly digest on Mondays
   if (dayOfWeek === 1 || req.query.interval === "Weekly") {
@@ -160,52 +272,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   console.log(`[Cron] Running scheduled digests for: ${intervalsToRun.join(", ")} on ${dateStr} (IST)`);
 
-  const results: Record<string, any> = {};
-  const tgToken = process.env.TELEGRAM_BOT_TOKEN;
-  const tgChatId = process.env.TELEGRAM_CHAT_ID;
+  const results: Record<string, ReportRunResult> = {};
 
   for (const interval of intervalsToRun) {
-    const periodLabel = `${interval} Digest (${dateStr})`;
-    const jiraKey = await createJiraDigestTask({ interval, period: dateStr });
-
-    let telegramSent = false;
-    if (tgToken && tgChatId) {
-      const tgMsg = [
-        `📊 <b>Physiomatics ${interval} Executive Digest</b>`,
-        "",
-        `🗓️ <b>Period:</b> ${dateStr} (Asia/Kolkata)`,
-        jiraKey ? `🎫 <b>Jira Digest Task:</b> <code>${jiraKey}</code>` : null,
-        `🌐 <b>Website:</b> https://physiomatics.vercel.app/`,
-        "",
-        `✅ Automated lead routing, Jira tasks, and data sync engines operating normally.`,
-      ].filter(Boolean).join("\n");
-
-      telegramSent = await sendTelegramReport(tgToken, tgChatId, tgMsg);
-    }
-
-    // Trigger Google Apps Script Executive Digest Email dispatch
-    let emailReportSent = false;
-    const sheetsUrl =
-      process.env.GOOGLE_SHEETS_URL ||
-      process.env.VITE_GOOGLE_SHEETS_URL ||
-      "https://script.google.com/macros/s/AKfycby_kT_VKNkpRR9xFfVQbf3TFyQ7oINUhgU1DIkjhZSazdeDIrAwBFgklDXN_dfZVx_2/exec";
-
-    try {
-      const emailRes = await fetch(`${sheetsUrl}?action=run_digest&interval=${encodeURIComponent(interval)}`, {
-        signal: AbortSignal.timeout(20000),
-      });
-      emailReportSent = emailRes.ok;
-      console.log(`[Cron] Google Apps Script report email triggered (${interval}): status ${emailRes.status}`);
-    } catch (sheetCronErr: any) {
-      console.warn(`[Cron] Apps Script report email trigger notice (${interval}):`, sheetCronErr?.message || sheetCronErr);
-    }
-
-    results[interval] = {
-      period: dateStr,
-      jira_task: jiraKey || "skipped_or_failed",
-      telegram_sent: telegramSent,
-      email_sent: emailReportSent,
-    };
+    results[interval] = await runReportForInterval(interval, dateStr);
   }
 
   return res.status(200).json({

@@ -436,6 +436,15 @@ function doGet(e) {
       return json_({ success: false, message: String(err.message || err) });
     }
   }
+  if (params.action === "disable_report_triggers") {
+    try {
+      var disableResult = disableAppsScriptReportTriggers();
+      return json_({ success: true, message: "Apps Script report triggers disabled to prevent duplicate emails with Vercel API / Cron.", result: disableResult });
+    } catch (err) {
+      log_("doGet_disable_report_triggers", "ERROR", String(err));
+      return json_({ success: false, message: String(err.message || err) });
+    }
+  }
   if (params.action === "linkedin_lead") {
     try {
       return saveLinkedInLead_(params);
@@ -2161,6 +2170,24 @@ function setupPhysiomaticsTriggers() {
   // Automatically poll YouTube comments every hour for new leads
   ScriptApp.newTrigger("SYNC_YOUTUBE_COMMENTS_AUTO").timeBased().everyHours(1).create();
   log_("setupPhysiomaticsTriggers", "SUCCESS", "All triggers installed including YouTube hourly auto-sync.");
+}
+
+/**
+ * Disables internal Google Apps Script time-driven triggers for dailyReport,
+ * weeklyReport, and monthlyReport to prevent duplicate emails now that Vercel API
+ * and Vercel Cron are the single source of truth for report scheduling.
+ */
+function disableAppsScriptReportTriggers() {
+  var removed = [];
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    var fn = trigger.getHandlerFunction();
+    if (["dailyReport", "weeklyReport", "monthlyReport"].indexOf(fn) >= 0) {
+      removed.push(fn);
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  log_("disableAppsScriptReportTriggers", "SUCCESS", "Disabled redundant report triggers: " + (removed.join(", ") || "none") + ". Reports are managed via Vercel API.");
+  return { success: true, removed: removed };
 }
 
 /* ---------------------------- AGGREGATION --------------------------------- */

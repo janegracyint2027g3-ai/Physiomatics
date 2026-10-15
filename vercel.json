@@ -1,8 +1,16 @@
 {
   "crons": [
     {
-      "path": "/api/cron/reports",
+      "path": "/api/report-daily",
       "schedule": "30 15 * * *"
+    },
+    {
+      "path": "/api/report-weekly",
+      "schedule": "30 3 * * 1"
+    },
+    {
+      "path": "/api/report-monthly",
+      "schedule": "30 3 1 * *"
     },
     {
       "path": "/api/linkedin?sync=true",
