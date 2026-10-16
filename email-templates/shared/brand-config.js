@@ -66,7 +66,7 @@ const BRAND_CONFIG = {
 
   defaultPlaceholders: {
     name: "Doctor / Healthcare Partner",
-    email: "partner@example.com",
+    email: "janegracy2005@gmail.com",
     organization: "Physiotherapy & Rehabilitation Practice",
     role: "Clinical Director",
     interest: "AI Video Movement Analysis & Remote Adherence",
