@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/send-templates.ts": {
+      "includeFiles": "email-templates/**"
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/reports?interval=Daily",

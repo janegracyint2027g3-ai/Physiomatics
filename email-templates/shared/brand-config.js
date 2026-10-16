@@ -50,12 +50,13 @@ const BRAND_CONFIG = {
   },
 
   colors: {
+    primaryPurple: "#7c3aed",
+    darkPurple: "#6d28d9",
+    deepIndigo: "#1e1b4b",
+    lightPurpleBg: "#f5f3ff",
+    purpleBorder: "#e9d5ff",
     primaryTeal: "#0d9488",
     darkTeal: "#0f766e",
-    deepNavy: "#042f2e",
-    slateNavy: "#0f172a",
-    mintLight: "#f0fdfa",
-    mintBorder: "#ccfbf1",
     bodyText: "#334155",
     mutedText: "#64748b",
     borderGray: "#e2e8f0",
