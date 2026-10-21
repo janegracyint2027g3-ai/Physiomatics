@@ -12,6 +12,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:redis": "node scripts/test-redis.mjs",
+    "test:redis:live": "node scripts/test-redis.mjs --live",
     "sync:youtube": "node scripts/sync-youtube-jira.mjs"
   },
   "overrides": {
