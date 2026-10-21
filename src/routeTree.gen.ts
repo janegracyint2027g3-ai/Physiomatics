@@ -16,6 +16,7 @@ import { Route as AnalyzeRouteImport } from './routes/analyze'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BookRouteImport } from './routes/book'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as IcpRouteImport } from './routes/icp'
@@ -89,6 +90,11 @@ const BookRoute = BookRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiagnosticsRoute = DiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeedbackRoute = FeedbackRouteImport.update({
@@ -299,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/book': typeof BookRoute
   '/contact': typeof ContactRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/feedback': typeof FeedbackRoute
   '/how-it-works': typeof HowItWorksRoute
   '/icp': typeof IcpRoute
@@ -347,6 +354,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/book': typeof BookRoute
   '/contact': typeof ContactRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/feedback': typeof FeedbackRoute
   '/how-it-works': typeof HowItWorksRoute
   '/icp': typeof IcpRoute
@@ -397,6 +405,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/book': typeof BookRoute
   '/contact': typeof ContactRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/feedback': typeof FeedbackRoute
   '/how-it-works': typeof HowItWorksRoute
   '/icp': typeof IcpRoute
@@ -447,6 +456,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/book'
     | '/contact'
+    | '/diagnostics'
     | '/feedback'
     | '/how-it-works'
     | '/icp'
@@ -495,6 +505,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/book'
     | '/contact'
+    | '/diagnostics'
     | '/feedback'
     | '/how-it-works'
     | '/icp'
@@ -544,6 +555,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/book'
     | '/contact'
+    | '/diagnostics'
     | '/feedback'
     | '/how-it-works'
     | '/icp'
@@ -594,6 +606,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BookRoute: typeof BookRoute
   ContactRoute: typeof ContactRoute
+  DiagnosticsRoute: typeof DiagnosticsRoute
   FeedbackRoute: typeof FeedbackRoute
   HowItWorksRoute: typeof HowItWorksRoute
   IcpRoute: typeof IcpRoute
@@ -684,6 +697,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/diagnostics': {
+      id: '/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/diagnostics'
+      preLoaderRoute: typeof DiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/feedback': {
@@ -988,6 +1008,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BookRoute: BookRoute,
   ContactRoute: ContactRoute,
+  DiagnosticsRoute: DiagnosticsRoute,
   FeedbackRoute: FeedbackRoute,
   HowItWorksRoute: HowItWorksRoute,
   IcpRoute: IcpRoute,
