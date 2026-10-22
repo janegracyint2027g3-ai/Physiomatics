@@ -102,7 +102,7 @@ export function VisionPage() {
                 Human pose estimation is a computer vision technique that infers the spatial arrangement of skeletal joints from regular visual sensor data. Rather than relying on expensive multi-camera optical motion capture laboratories or wearable IMU sensors, Physiomatics executes a convolutional and transformer-assisted neural network entirely inside modern web browsers.
               </p>
               <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-                The inference engine identifies 33 distinctive anatomical landmarks on every video frame at 30+ frames per second. Each landmark output provides normalized coordinates $(X, Y, Z)$ along with an independent statistical confidence score between 0.0 and 1.0.
+                The inference engine identifies 33 distinctive anatomical landmarks on every video frame at 30+ frames per second. Each landmark output provides normalized coordinates (X, Y, Z) along with an independent statistical confidence score between 0.0 and 1.0.
               </p>
             </div>
 
@@ -135,7 +135,7 @@ export function VisionPage() {
                 How Joint Angles Are Calculated
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                To measure a joint angle (such as knee flexion between hip $A$, knee $B$, and ankle $C$), the platform constructs two 2D vectors: $\vec{u} = A - B$ and $\vec{v} = C - B$. The absolute angle $\theta$ is extracted using arc-tangent geometry:
+                To measure a joint angle (such as knee flexion between hip <span className="font-semibold text-foreground">A</span>, knee <span className="font-semibold text-foreground">B</span>, and ankle <span className="font-semibold text-foreground">C</span>), the platform constructs two 2D vectors: <span className="font-mono font-semibold text-primary">u = A - B</span> and <span className="font-mono font-semibold text-primary">v = C - B</span>. The absolute angle <span className="font-mono font-semibold text-primary">θ</span> is extracted using arc-tangent geometry:
               </p>
               
               <div className="rounded-xl bg-muted/80 p-4 font-mono text-xs text-foreground overflow-x-auto border border-border">
