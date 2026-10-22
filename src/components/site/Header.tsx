@@ -144,28 +144,28 @@ function ContrastMegamenu({
       <span className={`absolute bottom-0 left-3 right-3 xl:left-3.5 xl:right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-[#5AA9AC] via-white to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100 shadow-[0_0_8px_rgba(90,169,172,0.8)]" : "opacity-0 scale-x-0"}`} />
 
       {open && (
-        <div className={`absolute ${positionClasses} top-full z-50 w-[64rem] max-w-[calc(100vw-2rem)] pt-3.5 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
-          <div className="overflow-hidden rounded-[1.75rem] shadow-[0_24px_80px_-12px_rgba(89,39,135,0.25)] ring-1 ring-[#592787]/12">
+        <div className={`absolute ${positionClasses} top-full z-50 w-[52rem] max-w-[calc(100vw-2rem)] pt-2.5 animate-in fade-in-0 slide-in-from-top-2 duration-150`}>
+          <div className="overflow-hidden rounded-2xl shadow-[0_20px_60px_-15px_rgba(89,39,135,0.25)] ring-1 ring-[#592787]/15">
             
             {/* Top Grid: Contrast Split */}
-            <div className="grid grid-cols-[260px_1fr] min-h-[420px]">
+            <div className="grid grid-cols-[210px_1fr]">
               
               {/* LEFT COLUMN: Deep Purple-Black Panel */}
               <div
-                className="flex flex-col justify-between p-6 text-white border-r border-[#592787]/20"
+                className="flex flex-col justify-between p-4 text-white border-r border-[#592787]/20"
                 style={{ background: "linear-gradient(160deg, #1a0a2e 0%, #0d0520 60%, #061020 100%)" }}
               >
                 <div>
-                  <div className="flex items-center gap-2 mb-5">
+                  <div className="flex items-center gap-1.5 mb-2.5">
                     <div className="size-1.5 rounded-full bg-[#5AA9AC] animate-pulse" />
-                    <div className="text-[9px] font-bold tracking-[0.22em] text-[#5AA9AC]/80 uppercase">
+                    <div className="text-[8.5px] font-bold tracking-[0.18em] text-[#5AA9AC]/90 uppercase">
                       {sidebarEyebrow}
                     </div>
                   </div>
-                  <h3 className="font-display text-2xl font-bold tracking-tight text-white mb-2">
+                  <h3 className="font-display text-lg font-bold tracking-tight text-white mb-1">
                     {sidebarTitle || label}
                   </h3>
-                  <p className="text-[11px] text-white/40 leading-relaxed mb-6">
+                  <p className="text-[10px] text-white/50 leading-tight mb-3">
                     Choose a category to explore
                   </p>
 
@@ -179,14 +179,14 @@ function ContrastMegamenu({
                           type="button"
                           onMouseEnter={() => setActiveTab(idx)}
                           onClick={() => setActiveTab(idx)}
-                          className={`group flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-xs font-medium transition-all duration-150 ${
+                          className={`group flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[11px] font-medium transition-all duration-150 ${
                             isActive
-                              ? "bg-gradient-to-r from-[#592787]/80 to-[#3a7fb5]/60 text-white font-semibold shadow-inner border border-[#592787]/40"
-                              : "text-white/50 hover:bg-white/8 hover:text-white/80"
+                              ? "bg-gradient-to-r from-[#592787] to-[#3a7fb5]/70 text-white font-semibold shadow-xs border border-[#592787]/50"
+                              : "text-white/60 hover:bg-white/10 hover:text-white"
                           }`}
                         >
                           <span className="truncate">{cat.label}</span>
-                          <ChevronRight className={`size-3 transition-all ${isActive ? "text-[#5AA9AC] translate-x-0.5" : "text-white/20 group-hover:text-white/40"}`} />
+                          <ChevronRight className={`size-3 transition-all ${isActive ? "text-[#5AA9AC] translate-x-0.5" : "text-white/30 group-hover:text-white/60"}`} />
                         </button>
                       );
                     })}
@@ -194,11 +194,11 @@ function ContrastMegamenu({
                 </div>
 
                 {/* Left Bottom Link */}
-                <div className="pt-5 border-t border-white/10">
+                <div className="pt-3 mt-3 border-t border-white/10">
                   <Link 
                     to={to as any} 
                     onClick={() => setOpen(false)}
-                    className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/80 transition-colors group"
+                    className="inline-flex items-center gap-1 text-[11px] text-white/50 hover:text-white transition-colors group"
                   >
                     <span>View all {label.toLowerCase()}</span>
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
@@ -207,52 +207,51 @@ function ContrastMegamenu({
               </div>
 
               {/* RIGHT COLUMN: Clean White Panel */}
-              <div className="p-7 bg-white flex flex-col justify-between">
+              <div className="p-4 bg-white flex flex-col justify-between">
                 <div>
                   {/* Category Header */}
-                  <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#592787]/10">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between pb-2 mb-3 border-b border-[#592787]/10">
+                    <div className="flex items-center gap-1.5">
                       <div className="size-1 rounded-full bg-[#592787]" />
-                      <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#592787] font-sans">
+                      <div className="text-[9.5px] font-bold tracking-[0.16em] uppercase text-[#592787] font-sans">
                         {activeCategory.label}
                       </div>
                     </div>
-                    <span className="text-[10px] text-zinc-400 font-medium bg-zinc-50 border border-zinc-100 rounded-full px-2 py-0.5">
+                    <span className="text-[9px] text-zinc-400 font-medium bg-zinc-50 border border-zinc-100 rounded-full px-2 py-0.2">
                       {activeCategory.items.length} options
                     </span>
                   </div>
 
-                  {/* Grid of Cards */}
-                  <div className="grid grid-cols-2 gap-3 max-h-[460px] overflow-y-auto pr-1">
+                  {/* Compact Grid of Cards */}
+                  <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
                     {activeCategory.items.map((item) => (
                       <Link
                         key={item.label}
                         to={item.to as any}
                         onClick={() => setOpen(false)}
-                        className="group flex flex-col justify-between rounded-2xl border border-zinc-100 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#592787]/30 hover:shadow-[0_8px_24px_-4px_rgba(89,39,135,0.15)] hover:ring-1 hover:ring-[#592787]/15"
+                        className="group flex items-start gap-2.5 rounded-xl border border-zinc-100 bg-white p-2.5 shadow-xs transition-all duration-150 hover:border-[#592787]/30 hover:bg-violet-50/20 hover:shadow-xs"
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5 shrink-0 rounded-xl bg-[#592787]/8 p-2.5 text-[#592787] border border-[#592787]/12 group-hover:bg-[#592787] group-hover:text-white group-hover:border-[#592787] transition-all duration-200">
-                            {renderIcon(item.icon, "size-4")}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-semibold text-xs sm:text-sm text-zinc-900 group-hover:text-[#592787] transition-colors leading-snug">
-                              {item.label}
-                            </div>
-                            {item.tag && (
-                              <div className="inline-flex items-center text-[9px] font-bold tracking-wider text-[#5AA9AC] uppercase mt-0.5 font-sans bg-[#5AA9AC]/8 border border-[#5AA9AC]/20 rounded-full px-1.5 py-px">
-                                {item.tag}
-                              </div>
-                            )}
-                            <p className="mt-1 text-xs text-zinc-500 line-clamp-2 leading-relaxed">
-                              {item.desc}
-                            </p>
-                          </div>
+                        <div className="mt-0.5 shrink-0 rounded-lg bg-[#592787]/8 p-2 text-[#592787] border border-[#592787]/10 group-hover:bg-[#592787] group-hover:text-white transition-all duration-150">
+                          {renderIcon(item.icon, "size-3.5")}
                         </div>
-
-                        <div className="mt-2.5 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] font-semibold text-[#592787] opacity-90 group-hover:opacity-100">
-                          <span>Explore Solution</span>
-                          <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-xs text-zinc-900 group-hover:text-[#592787] transition-colors leading-snug">
+                              {item.label}
+                            </span>
+                            {item.tag && (
+                              <span className="text-[8px] font-bold tracking-wider text-[#5AA9AC] uppercase font-sans bg-[#5AA9AC]/10 border border-[#5AA9AC]/20 rounded px-1 py-px">
+                                {item.tag}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-zinc-500 line-clamp-1 leading-normal">
+                            {item.desc}
+                          </p>
+                          <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-[#592787] group-hover:text-[#3d1860]">
+                            <span>Explore</span>
+                            <ChevronRight className="size-2.5 transition-transform group-hover:translate-x-0.5" />
+                          </div>
                         </div>
                       </Link>
                     ))}
@@ -260,8 +259,8 @@ function ContrastMegamenu({
                 </div>
 
                 {/* Right Bottom Footer */}
-                <div className="pt-5 mt-5 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-400">
-                  <span>Direct practice access</span>
+                <div className="pt-2.5 mt-2.5 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-400">
+                  <span>Direct clinical access</span>
                   <Link 
                     to={to as any} 
                     onClick={() => setOpen(false)}
@@ -276,13 +275,13 @@ function ContrastMegamenu({
 
             {/* BOTTOM FOOTER BAR */}
             <div
-              className="flex items-center justify-between px-8 py-3.5 border-t border-[#592787]/10"
+              className="flex items-center justify-between px-5 py-2.5 border-t border-[#592787]/10"
               style={{ background: "linear-gradient(90deg, #faf8ff 0%, #f0f9fb 100%)" }}
             >
-              <span className="text-xs text-zinc-600 font-medium">
+              <span className="text-[11px] text-zinc-600 font-medium">
                 {ctaText}
               </span>
-              <Button asChild size="sm" className="rounded-full text-xs h-8 px-5 font-semibold shadow-sm bg-gradient-to-r from-[#592787] to-[#3a7fb5] hover:from-[#3d1860] hover:to-[#2a5f8a] text-white border-0">
+              <Button asChild size="sm" className="rounded-full text-[11px] h-7 px-4 font-semibold shadow-xs bg-gradient-to-r from-[#592787] to-[#3a7fb5] hover:from-[#3d1860] hover:to-[#2a5f8a] text-white border-0">
                 <Link to={ctaLink as any} onClick={() => setOpen(false)}>
                   {ctaButtonText}
                 </Link>
