@@ -14,14 +14,15 @@ import {
   Calendar, Target, Users, Star, Heart, ShieldAlert, UserCheck, Zap,
   Compass, Scale, AlignCenter, ClipboardCheck, Dumbbell, Expand, Footprints,
   BarChart3, Filter, Download, Plus, ChevronRight, Info,
-  Radio, RefreshCw, Edit3, User, CheckCircle2, Sliders, ShieldCheck
+  Radio, RefreshCw, Edit3, User, ShieldCheck
 } from "lucide-react";
 import {
   KPI_CATEGORIES, Assessment, KPIDefinition, KPICategory, PatientProfile,
+  getStandardKPIDefinitions, getStandardAssessments, DEFAULT_PATIENT,
   getDashboardSummary, getKPIChange, getTargetProgress, getThresholdStatus,
   loadSavedKPIs, saveKPIs, loadSavedAssessments, saveAssessments,
   loadSavedPatient, savePatient, resetAllToClinicalStandards,
-  getCurrentDate, getCurrentTime, getRelativeDate
+  getCurrentDate, getCurrentTime
 } from "@/data/kpiData";
 
 export const Route = createFileRoute("/how-it-works_/kpi-dashboard")({
@@ -65,19 +66,33 @@ const CATEGORY_META: Record<KPICategory | "all", { bg: string; text: string; bor
 };
 
 // ── Mini sparkline chart ──────────────────────────────────────────────────────
-function MiniSparkline({ data, color = "#7c3aed" }: { data: { date: string; value: number }[]; color?: string }) {
+function MiniSparkline({
+  data,
+  color = "#7c3aed",
+  isMounted = true
+}: {
+  data: { date: string; value: number }[];
+  color?: string;
+  isMounted?: boolean;
+}) {
+  if (!isMounted || !data || data.length === 0) {
+    return <div className="h-12 w-full rounded-lg bg-muted/20 animate-pulse" />;
+  }
+
   return (
-    <ResponsiveContainer width="100%" height={48}>
-      <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
-        <defs>
-          <linearGradient id={`grad-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={color} stopOpacity={0.25} />
-            <stop offset="95%" stopColor={color} stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2} fill={`url(#grad-${color.replace("#", "")})`} dot={false} />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div className="h-12 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
+          <defs>
+            <linearGradient id={`grad-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.25} />
+              <stop offset="95%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2} fill={`url(#grad-${color.replace("#", "")})`} dot={false} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -85,17 +100,19 @@ function MiniSparkline({ data, color = "#7c3aed" }: { data: { date: string; valu
 function KPICard({
   kpi,
   onViewDetails,
-  onQuickLog
+  onQuickLog,
+  isMounted = true
 }: {
   kpi: KPIDefinition;
   onViewDetails: (kpi: KPIDefinition) => void;
   onQuickLog: (kpi: KPIDefinition) => void;
+  isMounted?: boolean;
 }) {
   const { pct } = getKPIChange(kpi);
   const progress = getTargetProgress(kpi);
-  const status = STATUS_CONFIG[kpi.status];
+  const status = STATUS_CONFIG[kpi.status] ?? STATUS_CONFIG.improving;
   const StatusIcon = status.icon;
-  const catMeta = CATEGORY_META[kpi.category];
+  const catMeta = CATEGORY_META[kpi.category] ?? CATEGORY_META.all;
   const thresholdStatus = getThresholdStatus(kpi);
 
   const sparkColor =
@@ -172,7 +189,7 @@ function KPICard({
 
       {/* Sparkline */}
       <div className="mb-3 -mx-1">
-        <MiniSparkline data={kpi.trend} color={sparkColor} />
+        <MiniSparkline data={kpi.trend} color={sparkColor} isMounted={isMounted} />
       </div>
 
       {/* Footer Actions */}
@@ -212,19 +229,23 @@ function QuickLogDialog({
   onClose: () => void;
   onSave: (kpiId: string, newLatest: number, notes: string) => void;
 }) {
-  const [value, setValue] = useState("");
+  if (!open || !kpi) return null;
+
+  return <QuickLogForm kpi={kpi} onClose={onClose} onSave={onSave} />;
+}
+
+function QuickLogForm({
+  kpi,
+  onClose,
+  onSave
+}: {
+  kpi: KPIDefinition;
+  onClose: () => void;
+  onSave: (kpiId: string, newLatest: number, notes: string) => void;
+}) {
+  const [value, setValue] = useState(String(kpi.latest));
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (kpi) {
-      setValue(String(kpi.latest));
-      setNotes("");
-      setError("");
-    }
-  }, [kpi]);
-
-  if (!kpi) return null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -238,7 +259,7 @@ function QuickLogDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -318,11 +339,21 @@ function PatientModal({
   onClose: () => void;
   onSave: (p: PatientProfile) => void;
 }) {
-  const [form, setForm] = useState(patient);
+  if (!open || !patient) return null;
 
-  useEffect(() => {
-    setForm(patient);
-  }, [patient]);
+  return <PatientForm patient={patient} onClose={onClose} onSave={onSave} />;
+}
+
+function PatientForm({
+  patient,
+  onClose,
+  onSave
+}: {
+  patient: PatientProfile;
+  onClose: () => void;
+  onSave: (p: PatientProfile) => void;
+}) {
+  const [form, setForm] = useState(patient);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -331,7 +362,7 @@ function PatientModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -431,15 +462,25 @@ function PatientModal({
 }
 
 // ── KPI Detail Dialog ─────────────────────────────────────────────────────────
-function KPIDetailDialog({ kpi, open, onClose }: { kpi: KPIDefinition | null; open: boolean; onClose: () => void }) {
-  if (!kpi) return null;
+function KPIDetailDialog({
+  kpi,
+  open,
+  onClose,
+  isMounted = true
+}: {
+  kpi: KPIDefinition | null;
+  open: boolean;
+  onClose: () => void;
+  isMounted?: boolean;
+}) {
+  if (!open || !kpi) return null;
   const { value, pct } = getKPIChange(kpi);
   const progress = getTargetProgress(kpi);
-  const status = STATUS_CONFIG[kpi.status];
+  const status = STATUS_CONFIG[kpi.status] ?? STATUS_CONFIG.improving;
   const thresholdStatus = getThresholdStatus(kpi);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
@@ -519,24 +560,28 @@ function KPIDetailDialog({ kpi, open, onClose }: { kpi: KPIDefinition | null; op
         <div>
           <h4 className="text-xs font-semibold text-foreground mb-2">Timeline Progression</h4>
           <div className="rounded-xl border border-border bg-muted/20 p-3">
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={kpi.trend} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="detailGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{ fontSize: 11, borderRadius: 8 }}
-                  formatter={(v: number) => [`${v} ${kpi.unit}`, kpi.shortName]}
-                />
-                <Area type="monotone" dataKey="value" stroke="#7c3aed" strokeWidth={2} fill="url(#detailGrad)" dot={{ r: 3, fill: "#7c3aed" }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            {isMounted ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={kpi.trend} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="detailGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip
+                    contentStyle={{ fontSize: 11, borderRadius: 8 }}
+                    formatter={(v: number) => [`${v} ${kpi.unit}`, kpi.shortName]}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#7c3aed" strokeWidth={2} fill="url(#detailGrad)" dot={{ r: 3, fill: "#7c3aed" }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-44 w-full rounded bg-muted/20 animate-pulse" />
+            )}
           </div>
         </div>
 
@@ -576,6 +621,20 @@ function AssessmentFormDialog({
   kpis: KPIDefinition[];
   patient: PatientProfile;
 }) {
+  if (!open) return null;
+
+  const safeKPIs = kpis && kpis.length > 0 ? kpis : getStandardKPIDefinitions();
+  return <AssessmentFormContent kpis={safeKPIs} patient={patient} onClose={onClose} onSave={onSave} />;
+}
+
+function AssessmentFormContent({
+  kpis, patient, onClose, onSave
+}: {
+  kpis: KPIDefinition[];
+  patient: PatientProfile;
+  onClose: () => void;
+  onSave: (a: Assessment) => void;
+}) {
   const [form, setForm] = useState({
     kpiId: kpis[0]?.id ?? "pain-reduction",
     date: getCurrentDate(),
@@ -585,11 +644,12 @@ function AssessmentFormDialog({
     scale: "",
     notes: "",
     status: "improving" as Assessment["status"],
-    assessorName: patient.therapist,
+    assessorName: patient?.therapist || "Supervising Physiotherapist",
   });
   const [error, setError] = useState("");
 
   const selectedKPI = kpis.find(k => k.id === form.kpiId) ?? kpis[0];
+  if (!selectedKPI) return null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -616,7 +676,7 @@ function AssessmentFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -705,10 +765,11 @@ function AssessmentFormDialog({
 
 // ── Main Page Component ───────────────────────────────────────────────────────
 export function KPIDashboardPage() {
-  const [kpis, setKpis] = useState<KPIDefinition[]>([]);
-  const [userAssessments, setUserAssessments] = useState<Assessment[]>([]);
+  const [kpis, setKpis] = useState<KPIDefinition[]>(getStandardKPIDefinitions);
+  const [userAssessments, setUserAssessments] = useState<Assessment[]>(getStandardAssessments);
   const [patient, setPatient] = useState<PatientProfile>(DEFAULT_PATIENT);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const [activeCategory, setActiveCategory] = useState<KPICategory | "all">("all");
   const [selectedKPI, setSelectedKPI] = useState<KPIDefinition | null>(null);
@@ -720,15 +781,30 @@ export function KPIDashboardPage() {
   const [activeTab, setActiveTab] = useState("overview");
 
   // Real-time telemetry simulation state
-  const [isLiveTelemetry, setIsLiveTelemetry] = useState(true);
-  const [livePacketCount, setLivePacketCount] = useState(128);
-  const [lastSyncTime, setLastSyncTime] = useState(getCurrentTime());
+  const [isLiveTelemetry] = useState(true);
+  const [livePacketCount, setLivePacketCount] = useState(142);
+  const [lastSyncTime, setLastSyncTime] = useState("");
 
-  // Load saved state from LocalStorage on mount
+  // Client-side initialization from LocalStorage
   useEffect(() => {
-    setKpis(loadSavedKPIs());
-    setUserAssessments(loadSavedAssessments());
-    setPatient(loadSavedPatient());
+    setMounted(true);
+    setLastSyncTime(getCurrentTime());
+    try {
+      const savedKpis = loadSavedKPIs();
+      if (savedKpis && savedKpis.length === 15) {
+        setKpis(savedKpis);
+      }
+      const savedAsms = loadSavedAssessments();
+      if (savedAsms && savedAsms.length > 0) {
+        setUserAssessments(savedAsms);
+      }
+      const savedPatient = loadSavedPatient();
+      if (savedPatient) {
+        setPatient(savedPatient);
+      }
+    } catch (e) {
+      console.error("Failed to load local storage data", e);
+    }
     setIsLoaded(true);
   }, []);
 
@@ -753,13 +829,13 @@ export function KPIDashboardPage() {
 
   // Live telemetry pulse effect
   useEffect(() => {
-    if (!isLiveTelemetry) return;
+    if (!isLiveTelemetry || !mounted) return;
     const interval = setInterval(() => {
       setLivePacketCount(c => c + 1);
       setLastSyncTime(getCurrentTime());
     }, 4000);
     return () => clearInterval(interval);
-  }, [isLiveTelemetry]);
+  }, [isLiveTelemetry, mounted]);
 
   // Handle Quick Measurement Log
   function handleQuickMeasurement(kpiId: string, newLatest: number, notes: string) {
@@ -767,7 +843,6 @@ export function KPIDashboardPage() {
     setKpis(prev => prev.map(k => {
       if (k.id !== kpiId) return k;
 
-      // evaluate new status
       let newStatus: KPIDefinition["status"] = k.status;
       if (k.direction === "higher_is_better") {
         newStatus = newLatest >= k.baseline ? "improving" : "declining";
@@ -775,7 +850,6 @@ export function KPIDashboardPage() {
         newStatus = newLatest <= k.baseline ? "improving" : "declining";
       }
 
-      // append or update trend point
       const lastPoint = k.trend[k.trend.length - 1];
       let updatedTrend = [...k.trend];
       if (lastPoint && lastPoint.date === today) {
@@ -794,7 +868,6 @@ export function KPIDashboardPage() {
       };
     }));
 
-    // Add assessment log entry
     const matchingKPI = kpis.find(k => k.id === kpiId);
     if (matchingKPI) {
       const newAsm: Assessment = {
@@ -818,7 +891,6 @@ export function KPIDashboardPage() {
   // Handle New Assessment from full form
   function handleSaveFullAssessment(assessment: Assessment) {
     setUserAssessments(prev => [assessment, ...prev]);
-    // Also update corresponding KPI latest reading
     setKpis(prev => prev.map(k => {
       if (k.id !== assessment.kpiId) return k;
       return {
@@ -844,7 +916,6 @@ export function KPIDashboardPage() {
 
   // Simulate real-time biofeedback reading
   function handleSimulateReading() {
-    // pick ROM or Posture and increment slightly
     const targets = ["rom", "posture", "muscle-strength", "adherence"];
     const targetId = targets[Math.floor(Math.random() * targets.length)];
     const kpi = kpis.find(k => k.id === targetId);
@@ -886,6 +957,10 @@ export function KPIDashboardPage() {
     latest: k.latest,
     unit: k.unit,
   }));
+
+  // Adherence trend safely
+  const adherenceKpi = kpis.find(k => k.id === "adherence");
+  const adherenceTrend = adherenceKpi?.trend ?? [];
 
   // Export CSV
   function exportCSV() {
@@ -948,7 +1023,7 @@ export function KPIDashboardPage() {
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                 </span>
                 <span className="font-semibold">LIVE SENSOR TELEMETRY</span>
-                <span className="text-[10px] text-emerald-600 font-mono">({livePacketCount} pkts • {lastSyncTime})</span>
+                <span className="text-[10px] text-emerald-600 font-mono">({livePacketCount} pkts • {lastSyncTime || "connected"})</span>
               </div>
 
               {/* Live Test Simulate Button */}
@@ -1075,6 +1150,7 @@ export function KPIDashboardPage() {
                       kpi={kpi}
                       onViewDetails={k => { setSelectedKPI(k); setDetailOpen(true); }}
                       onQuickLog={k => setQuickLogKPI(k)}
+                      isMounted={mounted}
                     />
                   ))}
                 </div>
@@ -1092,21 +1168,25 @@ export function KPIDashboardPage() {
                   <h3 className="text-base font-semibold text-foreground mt-0.5">Patient Baseline vs Current Real Measurement</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Tracking first 8 active clinical measures with current patient values.</p>
                 </div>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={comparisonData} margin={{ top: 8, right: 8, left: -10, bottom: 30 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" interval={0} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip
-                      contentStyle={{ fontSize: 11, borderRadius: 8 }}
-                      formatter={(v: number, name: string, props: { payload?: { unit?: string } }) =>
-                        [`${v} ${props.payload?.unit ?? ""}`, name === "baseline" ? "Baseline" : "Current Measured"]
-                      }
-                    />
-                    <Bar dataKey="baseline" fill="#e9d5ff" radius={[4, 4, 0, 0]} name="Baseline" />
-                    <Bar dataKey="latest" fill="#7c3aed" radius={[4, 4, 0, 0]} name="Current Measured" />
-                  </BarChart>
-                </ResponsiveContainer>
+                {mounted ? (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={comparisonData} margin={{ top: 8, right: 8, left: -10, bottom: 30 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" interval={0} />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <Tooltip
+                        contentStyle={{ fontSize: 11, borderRadius: 8 }}
+                        formatter={(v: number, name: string, props: { payload?: { unit?: string } }) =>
+                          [`${v} ${props.payload?.unit ?? ""}`, name === "baseline" ? "Baseline" : "Current Measured"]
+                        }
+                      />
+                      <Bar dataKey="baseline" fill="#e9d5ff" radius={[4, 4, 0, 0]} name="Baseline" />
+                      <Bar dataKey="latest" fill="#7c3aed" radius={[4, 4, 0, 0]} name="Current Measured" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-64 w-full rounded bg-muted/20 animate-pulse" />
+                )}
               </div>
 
               {/* Radar & Status Distribution */}
@@ -1117,14 +1197,18 @@ export function KPIDashboardPage() {
                     <h3 className="text-base font-semibold text-foreground mt-0.5">Mean Standard Benchmark Completion</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">Average % progress toward clinical benchmark targets by domain.</p>
                   </div>
-                  <ResponsiveContainer width="100%" height={240}>
-                    <RadarChart data={radarData}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="category" tick={{ fontSize: 10 }} />
-                      <Radar name="Progress" dataKey="progress" stroke="#7c3aed" fill="#7c3aed" fillOpacity={0.25} />
-                      <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} formatter={(v: number) => [`${v}%`, "Standard Progress"]} />
-                    </RadarChart>
-                  </ResponsiveContainer>
+                  {mounted ? (
+                    <ResponsiveContainer width="100%" height={240}>
+                      <RadarChart data={radarData}>
+                        <PolarGrid />
+                        <PolarAngleAxis dataKey="category" tick={{ fontSize: 10 }} />
+                        <Radar name="Progress" dataKey="progress" stroke="#7c3aed" fill="#7c3aed" fillOpacity={0.25} />
+                        <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} formatter={(v: number) => [`${v}%`, "Standard Progress"]} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-56 w-full rounded bg-muted/20 animate-pulse" />
+                  )}
                 </div>
 
                 <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-soft">
@@ -1135,7 +1219,7 @@ export function KPIDashboardPage() {
                   <div className="space-y-3">
                     {(["improving", "stable", "declining", "needs-review"] as const).map(s => {
                       const count = kpis.filter(k => k.status === s).length;
-                      const cfg = STATUS_CONFIG[s];
+                      const cfg = STATUS_CONFIG[s] ?? STATUS_CONFIG.improving;
                       return (
                         <div key={s}>
                           <div className="flex justify-between text-xs mb-1">
@@ -1155,7 +1239,7 @@ export function KPIDashboardPage() {
                     <div className="text-xs font-semibold text-foreground mb-2">Category Distribution</div>
                     {KPI_CATEGORIES.slice(1).map(cat => {
                       const count = kpis.filter(k => k.category === cat.id).length;
-                      const catM = CATEGORY_META[cat.id as KPICategory];
+                      const catM = CATEGORY_META[cat.id as KPICategory] ?? CATEGORY_META.all;
                       return (
                         <div key={cat.id} className="flex items-center justify-between text-xs">
                           <span className={`rounded-full border px-2 py-0.5 font-semibold text-[11px] ${catM.bg} ${catM.text} ${catM.border}`}>{cat.label}</span>
@@ -1174,25 +1258,29 @@ export function KPIDashboardPage() {
                   <h3 className="text-base font-semibold text-foreground mt-0.5">Live Rehabilitation Adherence & Recovery Tracking</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">Continuous trajectory over the active rehabilitation timeline.</p>
                 </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="date" type="category" allowDuplicatedCategory={false}
-                      data={kpis.find(k => k.id === "adherence")?.trend}
-                      tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
-                    <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
-                    <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                    {["adherence", "recovery-progress", "program-participation"].map((id, i) => {
-                      const targetKpi = kpis.find(k => k.id === id);
-                      if (!targetKpi) return null;
-                      const colors = ["#7c3aed", "#059669", "#d97706"];
-                      return (
-                        <Line key={id} data={targetKpi.trend} dataKey="value" name={targetKpi.shortName}
-                          stroke={colors[i]} strokeWidth={2} dot={{ r: 3 }} type="monotone" />
-                      );
-                    })}
-                  </LineChart>
-                </ResponsiveContainer>
+                {mounted && adherenceTrend.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <LineChart margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="date" type="category" allowDuplicatedCategory={false}
+                        data={adherenceTrend}
+                        tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
+                      <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
+                      <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                      {["adherence", "recovery-progress", "program-participation"].map((id, i) => {
+                        const targetKpi = kpis.find(k => k.id === id);
+                        if (!targetKpi) return null;
+                        const colors = ["#7c3aed", "#059669", "#d97706"];
+                        return (
+                          <Line key={id} data={targetKpi.trend} dataKey="value" name={targetKpi.shortName}
+                            stroke={colors[i]} strokeWidth={2} dot={{ r: 3 }} type="monotone" />
+                        );
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-52 w-full rounded bg-muted/20 animate-pulse" />
+                )}
               </div>
             </div>
           </TabsContent>
@@ -1222,7 +1310,7 @@ export function KPIDashboardPage() {
                   <tbody className="divide-y divide-border/50">
                     {userAssessments.map((a) => {
                       const matchingKpi = kpis.find(k => k.id === a.kpiId);
-                      const cfg = STATUS_CONFIG[a.status];
+                      const cfg = STATUS_CONFIG[a.status] ?? STATUS_CONFIG.improving;
                       return (
                         <tr key={a.id} className="hover:bg-muted/20 transition-colors">
                           <td className="px-4 py-3 font-semibold text-foreground">{matchingKpi?.shortName ?? a.kpiId}</td>
@@ -1250,7 +1338,12 @@ export function KPIDashboardPage() {
       </section>
 
       {/* ── Dialogs ────────────────────────────────────────────────────────────── */}
-      <KPIDetailDialog kpi={selectedKPI} open={detailOpen} onClose={() => setDetailOpen(false)} />
+      <KPIDetailDialog
+        kpi={selectedKPI}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        isMounted={mounted}
+      />
       <QuickLogDialog
         kpi={quickLogKPI}
         open={Boolean(quickLogKPI)}
