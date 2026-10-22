@@ -16,8 +16,10 @@ import {
   Smartphone,
   Compass,
   Lock,
-  Workflow
+  Workflow,
+  BarChart3
 } from "lucide-react";
+
 
 export const Route = createFileRoute("/how-it-works")({
   head: () => ({
@@ -55,8 +57,16 @@ const SUBPAGES = [
     description: "Why zero video frames leave your device. Complete overview of client-side WebAssembly sandboxing and HIPAA/GDPR alignment.",
     to: "/how-it-works/privacy",
     tag: "Data Sovereignty"
+  },
+  {
+    icon: BarChart3,
+    title: "Wellness KPI Analytics Dashboard",
+    description: "Monitor 15 evidence-informed physiotherapy wellness indicators—pain reduction, ROM, balance, adherence, QoL—with interactive charts and assessment forms.",
+    to: "/how-it-works/kpi-dashboard",
+    tag: "Analytics Demo"
   }
 ];
+
 
 const ARCHITECTURE_LAYERS = [
   {

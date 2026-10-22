@@ -35,6 +35,7 @@ import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ContactConsultationRouteImport } from './routes/contact_.consultation'
 import { Route as ContactDemoRouteImport } from './routes/contact_.demo'
 import { Route as ContactEnquiryRouteImport } from './routes/contact_.enquiry'
+import { Route as HowItWorksKpiDashboardRouteImport } from './routes/how-it-works_.kpi-dashboard'
 import { Route as HowItWorksPrivacyRouteImport } from './routes/how-it-works_.privacy'
 import { Route as HowItWorksVisionRouteImport } from './routes/how-it-works_.vision'
 import { Route as HowItWorksWorkflowRouteImport } from './routes/how-it-works_.workflow'
@@ -193,6 +194,11 @@ const ContactDemoRoute = ContactDemoRouteImport.update({
 const ContactEnquiryRoute = ContactEnquiryRouteImport.update({
   id: '/contact_/enquiry',
   path: '/contact/enquiry',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksKpiDashboardRoute = HowItWorksKpiDashboardRouteImport.update({
+  id: '/how-it-works_/kpi-dashboard',
+  path: '/how-it-works/kpi-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksPrivacyRoute = HowItWorksPrivacyRouteImport.update({
@@ -379,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/contact/consultation': typeof ContactConsultationRoute
   '/contact/demo': typeof ContactDemoRoute
   '/contact/enquiry': typeof ContactEnquiryRoute
+  '/how-it-works/kpi-dashboard': typeof HowItWorksKpiDashboardRoute
   '/how-it-works/privacy': typeof HowItWorksPrivacyRoute
   '/how-it-works/vision': typeof HowItWorksVisionRoute
   '/how-it-works/workflow': typeof HowItWorksWorkflowRoute
@@ -436,6 +443,7 @@ export interface FileRoutesByTo {
   '/contact/consultation': typeof ContactConsultationRoute
   '/contact/demo': typeof ContactDemoRoute
   '/contact/enquiry': typeof ContactEnquiryRoute
+  '/how-it-works/kpi-dashboard': typeof HowItWorksKpiDashboardRoute
   '/how-it-works/privacy': typeof HowItWorksPrivacyRoute
   '/how-it-works/vision': typeof HowItWorksVisionRoute
   '/how-it-works/workflow': typeof HowItWorksWorkflowRoute
@@ -495,6 +503,7 @@ export interface FileRoutesById {
   '/contact_/consultation': typeof ContactConsultationRoute
   '/contact_/demo': typeof ContactDemoRoute
   '/contact_/enquiry': typeof ContactEnquiryRoute
+  '/how-it-works_/kpi-dashboard': typeof HowItWorksKpiDashboardRoute
   '/how-it-works_/privacy': typeof HowItWorksPrivacyRoute
   '/how-it-works_/vision': typeof HowItWorksVisionRoute
   '/how-it-works_/workflow': typeof HowItWorksWorkflowRoute
@@ -554,6 +563,7 @@ export interface FileRouteTypes {
     | '/contact/consultation'
     | '/contact/demo'
     | '/contact/enquiry'
+    | '/how-it-works/kpi-dashboard'
     | '/how-it-works/privacy'
     | '/how-it-works/vision'
     | '/how-it-works/workflow'
@@ -611,6 +621,7 @@ export interface FileRouteTypes {
     | '/contact/consultation'
     | '/contact/demo'
     | '/contact/enquiry'
+    | '/how-it-works/kpi-dashboard'
     | '/how-it-works/privacy'
     | '/how-it-works/vision'
     | '/how-it-works/workflow'
@@ -669,6 +680,7 @@ export interface FileRouteTypes {
     | '/contact_/consultation'
     | '/contact_/demo'
     | '/contact_/enquiry'
+    | '/how-it-works_/kpi-dashboard'
     | '/how-it-works_/privacy'
     | '/how-it-works_/vision'
     | '/how-it-works_/workflow'
@@ -727,6 +739,7 @@ export interface RootRouteChildren {
   ContactConsultationRoute: typeof ContactConsultationRoute
   ContactDemoRoute: typeof ContactDemoRoute
   ContactEnquiryRoute: typeof ContactEnquiryRoute
+  HowItWorksKpiDashboardRoute: typeof HowItWorksKpiDashboardRoute
   HowItWorksPrivacyRoute: typeof HowItWorksPrivacyRoute
   HowItWorksVisionRoute: typeof HowItWorksVisionRoute
   HowItWorksWorkflowRoute: typeof HowItWorksWorkflowRoute
@@ -942,6 +955,13 @@ declare module '@tanstack/react-router' {
       path: '/contact/enquiry'
       fullPath: '/contact/enquiry'
       preLoaderRoute: typeof ContactEnquiryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works_/kpi-dashboard': {
+      id: '/how-it-works_/kpi-dashboard'
+      path: '/how-it-works/kpi-dashboard'
+      fullPath: '/how-it-works/kpi-dashboard'
+      preLoaderRoute: typeof HowItWorksKpiDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works_/privacy': {
@@ -1193,6 +1213,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactConsultationRoute: ContactConsultationRoute,
   ContactDemoRoute: ContactDemoRoute,
   ContactEnquiryRoute: ContactEnquiryRoute,
+  HowItWorksKpiDashboardRoute: HowItWorksKpiDashboardRoute,
   HowItWorksPrivacyRoute: HowItWorksPrivacyRoute,
   HowItWorksVisionRoute: HowItWorksVisionRoute,
   HowItWorksWorkflowRoute: HowItWorksWorkflowRoute,

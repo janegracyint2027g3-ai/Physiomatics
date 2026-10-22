@@ -134,6 +134,7 @@ export const howItWorksMenu: readonly MenuItem[] = [
   { to: "/how-it-works/workflow", label: "Workflow Overview", desc: "See the end-to-end patient & clinician flow.", tag: "EXPERIENCE", icon: "Workflow" },
   { to: "/how-it-works/vision", label: "Computer Vision", desc: "How on-device MediaPipe pose estimation works.", tag: "ALGORITHMS", icon: "Eye" },
   { to: "/how-it-works/privacy", label: "Zero-Cloud Data Privacy", desc: "Why patient videos never touch our servers.", tag: "SECURITY", icon: "ShieldCheck" },
+  { to: "/how-it-works/kpi-dashboard", label: "Wellness KPI Dashboard", desc: "15 physiotherapy wellness KPIs with interactive charts and assessment tracking.", tag: "ANALYTICS", icon: "BarChart3" },
 ];
 
 export const aboutMenu: readonly MenuItem[] = [
