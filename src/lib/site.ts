@@ -84,18 +84,28 @@ export const icpMenu: readonly MenuItem[] = [
 
 export const solutionsCategories: readonly MenuCategory[] = [
   {
-    id: "specialized",
-    label: "Target Populations",
+    id: "clinical-disciplines",
+    label: "Physiotherapy Specialties",
+    description: "Evidence-informed rehabilitation programs across primary clinical disciplines",
     items: [
-      { to: "/solutions/elderly", label: "Elderly Care", desc: "Large controls, seated exercises, and fall risk prevention.", tag: "SENIOR HEALTH", icon: "HeartHandshake" },
-      { to: "/solutions/rehab", label: "Injury Rehabilitation", desc: "Structured home programs between clinical visits.", tag: "ORTHOPEDIC", icon: "Bandage" },
-      { to: "/solutions/caregiver", label: "Caregiver Support", desc: "Resources and visual guidance for family members.", tag: "FAMILY AID", icon: "Users" },
+      { to: "/solutions/orthopedic-physiotherapy", label: "Orthopedic Physiotherapy", desc: "Joint mobility, post-op recovery, and musculoskeletal pain.", tag: "ORTHOPEDIC", icon: "Bandage" },
+      { to: "/solutions/neurological-physiotherapy", label: "Neurological Physiotherapy", desc: "Motor relearning, balance, and post-stroke gait retraining.", tag: "NEURO-REHAB", icon: "Activity" },
+      { to: "/solutions/sports-physiotherapy", label: "Sports Physiotherapy", desc: "Athletic injuries, progressive loading, and return-to-sport criteria.", tag: "ATHLETIC", icon: "Trophy" },
+      { to: "/solutions/geriatric-physiotherapy", label: "Geriatric Physiotherapy", desc: "Fall prevention, seated mobility, and senior independence.", tag: "GERIATRIC", icon: "HeartHandshake" },
+      { to: "/solutions/cardiorespiratory-physiotherapy", label: "Cardiorespiratory Physiotherapy", desc: "Breathing mechanics, airway clearance, and exercise tolerance.", tag: "PULMONARY", icon: "Gauge" },
+      { to: "/solutions/posture-spinal-physiotherapy", label: "Posture and Spinal Physiotherapy", desc: "Neck discomfort, back pain, and core stabilization.", tag: "SPINE & CORE", icon: "Layers" },
+      { to: "/solutions/pediatric-physiotherapy", label: "Pediatric Physiotherapy", desc: "Gross motor milestones and play-based functional therapy.", tag: "PEDIATRIC", icon: "Users" },
+      { to: "/solutions/womens-health-physiotherapy", label: "Women's Health Physiotherapy", desc: "Pelvic floor rehabilitation, pre/postnatal and core recovery.", tag: "PELVIC HEALTH", icon: "UserCheck" },
     ],
   },
   {
-    id: "institutional",
-    label: "Healthcare & Academic",
+    id: "delivery-models",
+    label: "Care Settings & Populations",
+    description: "Rehabilitation delivery models for organizations, caregivers, and clinics",
     items: [
+      { to: "/solutions/elderly", label: "Elderly Care & Fall Prevention", desc: "Large controls, seated exercises, and fall risk prevention.", tag: "SENIOR HEALTH", icon: "HeartHandshake" },
+      { to: "/solutions/rehab", label: "Injury Rehabilitation", desc: "Structured home programs between clinical visits.", tag: "POST-OP", icon: "Bandage" },
+      { to: "/solutions/caregiver", label: "Caregiver Support", desc: "Resources and visual guidance for family members.", tag: "FAMILY AID", icon: "Users" },
       { to: "/solutions/clinics", label: "Physiotherapy Clinics", desc: "Visibility into home-exercise performance and adherence.", tag: "CLINICAL OPS", icon: "Building2" },
       { to: "/solutions/education", label: "Physiotherapy Education", desc: "Movement analysis and anatomical mechanics for teaching.", tag: "ACADEMIC LAB", icon: "GraduationCap" },
     ],
@@ -103,11 +113,14 @@ export const solutionsCategories: readonly MenuCategory[] = [
 ];
 
 export const solutionsMenu: readonly MenuItem[] = [
-  { to: "/solutions/elderly", label: "Elderly Care", desc: "Large controls, seated exercises, caregiver support.", tag: "SENIOR HEALTH", icon: "HeartHandshake" },
-  { to: "/solutions/rehab", label: "Injury Rehabilitation", desc: "Structured home programs between visits.", tag: "ORTHOPEDIC", icon: "Bandage" },
-  { to: "/solutions/clinics", label: "Physiotherapy Clinics", desc: "Visibility into home-exercise performance.", tag: "CLINICAL OPS", icon: "Building2" },
-  { to: "/solutions/caregiver", label: "Caregiver Support", desc: "Resources and monitoring for family members.", tag: "FAMILY AID", icon: "Users" },
-  { to: "/solutions/education", label: "Physiotherapy Education", desc: "Movement analysis for teaching.", tag: "ACADEMIC LAB", icon: "GraduationCap" },
+  { to: "/solutions/orthopedic-physiotherapy", label: "Orthopedic Physiotherapy", desc: "Joint mobility & post-op protocols.", tag: "ORTHOPEDIC", icon: "Bandage" },
+  { to: "/solutions/neurological-physiotherapy", label: "Neurological Physiotherapy", desc: "Gait retraining & balance control.", tag: "NEURO-REHAB", icon: "Activity" },
+  { to: "/solutions/sports-physiotherapy", label: "Sports Physiotherapy", desc: "Athletic return-to-sport criteria.", tag: "ATHLETIC", icon: "Trophy" },
+  { to: "/solutions/geriatric-physiotherapy", label: "Geriatric Physiotherapy", desc: "Fall-prevention & senior mobility.", tag: "GERIATRIC", icon: "HeartHandshake" },
+  { to: "/solutions/cardiorespiratory-physiotherapy", label: "Cardiorespiratory Physiotherapy", desc: "Breathing retraining & stamina.", tag: "PULMONARY", icon: "Gauge" },
+  { to: "/solutions/posture-spinal-physiotherapy", label: "Posture & Spinal Physiotherapy", desc: "Neck, back & ergonomic care.", tag: "SPINE & CORE", icon: "Layers" },
+  { to: "/solutions/pediatric-physiotherapy", label: "Pediatric Physiotherapy", desc: "Play-based motor milestones.", tag: "PEDIATRIC", icon: "Users" },
+  { to: "/solutions/womens-health-physiotherapy", label: "Women's Health Physiotherapy", desc: "Pelvic floor & pre/postnatal.", tag: "PELVIC HEALTH", icon: "UserCheck" },
 ];
 
 export const resourcesMenu: readonly MenuItem[] = [

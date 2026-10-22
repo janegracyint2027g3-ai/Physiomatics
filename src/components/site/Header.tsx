@@ -144,11 +144,11 @@ function ContrastMegamenu({
       <span className={`absolute bottom-0 left-3 right-3 xl:left-3.5 xl:right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-[#5AA9AC] via-white to-[#5AA9AC] transition-all duration-200 ${open ? "opacity-100 scale-x-100 shadow-[0_0_8px_rgba(90,169,172,0.8)]" : "opacity-0 scale-x-0"}`} />
 
       {open && (
-        <div className={`absolute ${positionClasses} top-full z-50 w-[56rem] max-w-[calc(100vw-2rem)] pt-3.5 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
+        <div className={`absolute ${positionClasses} top-full z-50 w-[64rem] max-w-[calc(100vw-2rem)] pt-3.5 animate-in fade-in-0 slide-in-from-top-2 duration-200`}>
           <div className="overflow-hidden rounded-[1.75rem] shadow-[0_24px_80px_-12px_rgba(89,39,135,0.25)] ring-1 ring-[#592787]/12">
             
             {/* Top Grid: Contrast Split */}
-            <div className="grid grid-cols-[250px_1fr] min-h-[380px]">
+            <div className="grid grid-cols-[260px_1fr] min-h-[420px]">
               
               {/* LEFT COLUMN: Deep Purple-Black Panel */}
               <div
@@ -223,29 +223,36 @@ function ContrastMegamenu({
                   </div>
 
                   {/* Grid of Cards */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 max-h-[460px] overflow-y-auto pr-1">
                     {activeCategory.items.map((item) => (
                       <Link
                         key={item.label}
                         to={item.to as any}
                         onClick={() => setOpen(false)}
-                        className="group flex items-start gap-3 rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#592787]/30 hover:shadow-[0_8px_24px_-4px_rgba(89,39,135,0.15)] hover:ring-1 hover:ring-[#592787]/15"
+                        className="group flex flex-col justify-between rounded-2xl border border-zinc-100 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#592787]/30 hover:shadow-[0_8px_24px_-4px_rgba(89,39,135,0.15)] hover:ring-1 hover:ring-[#592787]/15"
                       >
-                        <div className="mt-0.5 shrink-0 rounded-xl bg-[#592787]/8 p-2.5 text-[#592787] border border-[#592787]/12 group-hover:bg-[#592787] group-hover:text-white group-hover:border-[#592787] transition-all duration-200">
-                          {renderIcon(item.icon, "size-4")}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-sm text-zinc-900 group-hover:text-[#592787] transition-colors leading-snug">
-                            {item.label}
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 shrink-0 rounded-xl bg-[#592787]/8 p-2.5 text-[#592787] border border-[#592787]/12 group-hover:bg-[#592787] group-hover:text-white group-hover:border-[#592787] transition-all duration-200">
+                            {renderIcon(item.icon, "size-4")}
                           </div>
-                          {item.tag && (
-                            <div className="inline-flex items-center text-[9px] font-bold tracking-wider text-[#5AA9AC] uppercase mt-0.5 font-sans bg-[#5AA9AC]/8 border border-[#5AA9AC]/20 rounded-full px-1.5 py-px">
-                              {item.tag}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-xs sm:text-sm text-zinc-900 group-hover:text-[#592787] transition-colors leading-snug">
+                              {item.label}
                             </div>
-                          )}
-                          <p className="mt-1 text-xs text-zinc-500 line-clamp-2 leading-relaxed">
-                            {item.desc}
-                          </p>
+                            {item.tag && (
+                              <div className="inline-flex items-center text-[9px] font-bold tracking-wider text-[#5AA9AC] uppercase mt-0.5 font-sans bg-[#5AA9AC]/8 border border-[#5AA9AC]/20 rounded-full px-1.5 py-px">
+                                {item.tag}
+                              </div>
+                            )}
+                            <p className="mt-1 text-xs text-zinc-500 line-clamp-2 leading-relaxed">
+                              {item.desc}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-2.5 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] font-semibold text-[#592787] opacity-90 group-hover:opacity-100">
+                          <span>Explore Solution</span>
+                          <ChevronRight className="size-3 transition-transform group-hover:translate-x-0.5" />
                         </div>
                       </Link>
                     ))}

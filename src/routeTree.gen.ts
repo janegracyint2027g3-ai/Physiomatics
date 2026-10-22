@@ -52,11 +52,19 @@ import { Route as ResourcesAnatomyRouteImport } from './routes/resources_.anatom
 import { Route as ResourcesFaqsRouteImport } from './routes/resources_.faqs'
 import { Route as ResourcesLibraryRouteImport } from './routes/resources_.library'
 import { Route as ResourcesRehabRouteImport } from './routes/resources_.rehab'
+import { Route as SolutionsCardiorespiratoryPhysiotherapyRouteImport } from './routes/solutions_.cardiorespiratory-physiotherapy'
 import { Route as SolutionsCaregiverRouteImport } from './routes/solutions_.caregiver'
 import { Route as SolutionsClinicsRouteImport } from './routes/solutions_.clinics'
 import { Route as SolutionsEducationRouteImport } from './routes/solutions_.education'
 import { Route as SolutionsElderlyRouteImport } from './routes/solutions_.elderly'
+import { Route as SolutionsGeriatricPhysiotherapyRouteImport } from './routes/solutions_.geriatric-physiotherapy'
+import { Route as SolutionsNeurologicalPhysiotherapyRouteImport } from './routes/solutions_.neurological-physiotherapy'
+import { Route as SolutionsOrthopedicPhysiotherapyRouteImport } from './routes/solutions_.orthopedic-physiotherapy'
+import { Route as SolutionsPediatricPhysiotherapyRouteImport } from './routes/solutions_.pediatric-physiotherapy'
+import { Route as SolutionsPostureSpinalPhysiotherapyRouteImport } from './routes/solutions_.posture-spinal-physiotherapy'
 import { Route as SolutionsRehabRouteImport } from './routes/solutions_.rehab'
+import { Route as SolutionsSportsPhysiotherapyRouteImport } from './routes/solutions_.sports-physiotherapy'
+import { Route as SolutionsWomensHealthPhysiotherapyRouteImport } from './routes/solutions_.womens-health-physiotherapy'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -272,6 +280,12 @@ const ResourcesRehabRoute = ResourcesRehabRouteImport.update({
   path: '/resources/rehab',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SolutionsCardiorespiratoryPhysiotherapyRoute =
+  SolutionsCardiorespiratoryPhysiotherapyRouteImport.update({
+    id: '/solutions_/cardiorespiratory-physiotherapy',
+    path: '/solutions/cardiorespiratory-physiotherapy',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SolutionsCaregiverRoute = SolutionsCaregiverRouteImport.update({
   id: '/solutions_/caregiver',
   path: '/solutions/caregiver',
@@ -292,11 +306,53 @@ const SolutionsElderlyRoute = SolutionsElderlyRouteImport.update({
   path: '/solutions/elderly',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SolutionsGeriatricPhysiotherapyRoute =
+  SolutionsGeriatricPhysiotherapyRouteImport.update({
+    id: '/solutions_/geriatric-physiotherapy',
+    path: '/solutions/geriatric-physiotherapy',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SolutionsNeurologicalPhysiotherapyRoute =
+  SolutionsNeurologicalPhysiotherapyRouteImport.update({
+    id: '/solutions_/neurological-physiotherapy',
+    path: '/solutions/neurological-physiotherapy',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SolutionsOrthopedicPhysiotherapyRoute =
+  SolutionsOrthopedicPhysiotherapyRouteImport.update({
+    id: '/solutions_/orthopedic-physiotherapy',
+    path: '/solutions/orthopedic-physiotherapy',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SolutionsPediatricPhysiotherapyRoute =
+  SolutionsPediatricPhysiotherapyRouteImport.update({
+    id: '/solutions_/pediatric-physiotherapy',
+    path: '/solutions/pediatric-physiotherapy',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SolutionsPostureSpinalPhysiotherapyRoute =
+  SolutionsPostureSpinalPhysiotherapyRouteImport.update({
+    id: '/solutions_/posture-spinal-physiotherapy',
+    path: '/solutions/posture-spinal-physiotherapy',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SolutionsRehabRoute = SolutionsRehabRouteImport.update({
   id: '/solutions_/rehab',
   path: '/solutions/rehab',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SolutionsSportsPhysiotherapyRoute =
+  SolutionsSportsPhysiotherapyRouteImport.update({
+    id: '/solutions_/sports-physiotherapy',
+    path: '/solutions/sports-physiotherapy',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const SolutionsWomensHealthPhysiotherapyRoute =
+  SolutionsWomensHealthPhysiotherapyRouteImport.update({
+    id: '/solutions_/womens-health-physiotherapy',
+    path: '/solutions/womens-health-physiotherapy',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -340,11 +396,19 @@ export interface FileRoutesByFullPath {
   '/resources/faqs': typeof ResourcesFaqsRoute
   '/resources/library': typeof ResourcesLibraryRoute
   '/resources/rehab': typeof ResourcesRehabRoute
+  '/solutions/cardiorespiratory-physiotherapy': typeof SolutionsCardiorespiratoryPhysiotherapyRoute
   '/solutions/caregiver': typeof SolutionsCaregiverRoute
   '/solutions/clinics': typeof SolutionsClinicsRoute
   '/solutions/education': typeof SolutionsEducationRoute
   '/solutions/elderly': typeof SolutionsElderlyRoute
+  '/solutions/geriatric-physiotherapy': typeof SolutionsGeriatricPhysiotherapyRoute
+  '/solutions/neurological-physiotherapy': typeof SolutionsNeurologicalPhysiotherapyRoute
+  '/solutions/orthopedic-physiotherapy': typeof SolutionsOrthopedicPhysiotherapyRoute
+  '/solutions/pediatric-physiotherapy': typeof SolutionsPediatricPhysiotherapyRoute
+  '/solutions/posture-spinal-physiotherapy': typeof SolutionsPostureSpinalPhysiotherapyRoute
   '/solutions/rehab': typeof SolutionsRehabRoute
+  '/solutions/sports-physiotherapy': typeof SolutionsSportsPhysiotherapyRoute
+  '/solutions/womens-health-physiotherapy': typeof SolutionsWomensHealthPhysiotherapyRoute
   '/blog/': typeof BlogIndexRoute
 }
 export interface FileRoutesByTo {
@@ -389,11 +453,19 @@ export interface FileRoutesByTo {
   '/resources/faqs': typeof ResourcesFaqsRoute
   '/resources/library': typeof ResourcesLibraryRoute
   '/resources/rehab': typeof ResourcesRehabRoute
+  '/solutions/cardiorespiratory-physiotherapy': typeof SolutionsCardiorespiratoryPhysiotherapyRoute
   '/solutions/caregiver': typeof SolutionsCaregiverRoute
   '/solutions/clinics': typeof SolutionsClinicsRoute
   '/solutions/education': typeof SolutionsEducationRoute
   '/solutions/elderly': typeof SolutionsElderlyRoute
+  '/solutions/geriatric-physiotherapy': typeof SolutionsGeriatricPhysiotherapyRoute
+  '/solutions/neurological-physiotherapy': typeof SolutionsNeurologicalPhysiotherapyRoute
+  '/solutions/orthopedic-physiotherapy': typeof SolutionsOrthopedicPhysiotherapyRoute
+  '/solutions/pediatric-physiotherapy': typeof SolutionsPediatricPhysiotherapyRoute
+  '/solutions/posture-spinal-physiotherapy': typeof SolutionsPostureSpinalPhysiotherapyRoute
   '/solutions/rehab': typeof SolutionsRehabRoute
+  '/solutions/sports-physiotherapy': typeof SolutionsSportsPhysiotherapyRoute
+  '/solutions/womens-health-physiotherapy': typeof SolutionsWomensHealthPhysiotherapyRoute
   '/blog': typeof BlogIndexRoute
 }
 export interface FileRoutesById {
@@ -440,11 +512,19 @@ export interface FileRoutesById {
   '/resources_/faqs': typeof ResourcesFaqsRoute
   '/resources_/library': typeof ResourcesLibraryRoute
   '/resources_/rehab': typeof ResourcesRehabRoute
+  '/solutions_/cardiorespiratory-physiotherapy': typeof SolutionsCardiorespiratoryPhysiotherapyRoute
   '/solutions_/caregiver': typeof SolutionsCaregiverRoute
   '/solutions_/clinics': typeof SolutionsClinicsRoute
   '/solutions_/education': typeof SolutionsEducationRoute
   '/solutions_/elderly': typeof SolutionsElderlyRoute
+  '/solutions_/geriatric-physiotherapy': typeof SolutionsGeriatricPhysiotherapyRoute
+  '/solutions_/neurological-physiotherapy': typeof SolutionsNeurologicalPhysiotherapyRoute
+  '/solutions_/orthopedic-physiotherapy': typeof SolutionsOrthopedicPhysiotherapyRoute
+  '/solutions_/pediatric-physiotherapy': typeof SolutionsPediatricPhysiotherapyRoute
+  '/solutions_/posture-spinal-physiotherapy': typeof SolutionsPostureSpinalPhysiotherapyRoute
   '/solutions_/rehab': typeof SolutionsRehabRoute
+  '/solutions_/sports-physiotherapy': typeof SolutionsSportsPhysiotherapyRoute
+  '/solutions_/womens-health-physiotherapy': typeof SolutionsWomensHealthPhysiotherapyRoute
   '/blog/': typeof BlogIndexRoute
 }
 export interface FileRouteTypes {
@@ -491,11 +571,19 @@ export interface FileRouteTypes {
     | '/resources/faqs'
     | '/resources/library'
     | '/resources/rehab'
+    | '/solutions/cardiorespiratory-physiotherapy'
     | '/solutions/caregiver'
     | '/solutions/clinics'
     | '/solutions/education'
     | '/solutions/elderly'
+    | '/solutions/geriatric-physiotherapy'
+    | '/solutions/neurological-physiotherapy'
+    | '/solutions/orthopedic-physiotherapy'
+    | '/solutions/pediatric-physiotherapy'
+    | '/solutions/posture-spinal-physiotherapy'
     | '/solutions/rehab'
+    | '/solutions/sports-physiotherapy'
+    | '/solutions/womens-health-physiotherapy'
     | '/blog/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -540,11 +628,19 @@ export interface FileRouteTypes {
     | '/resources/faqs'
     | '/resources/library'
     | '/resources/rehab'
+    | '/solutions/cardiorespiratory-physiotherapy'
     | '/solutions/caregiver'
     | '/solutions/clinics'
     | '/solutions/education'
     | '/solutions/elderly'
+    | '/solutions/geriatric-physiotherapy'
+    | '/solutions/neurological-physiotherapy'
+    | '/solutions/orthopedic-physiotherapy'
+    | '/solutions/pediatric-physiotherapy'
+    | '/solutions/posture-spinal-physiotherapy'
     | '/solutions/rehab'
+    | '/solutions/sports-physiotherapy'
+    | '/solutions/womens-health-physiotherapy'
     | '/blog'
   id:
     | '__root__'
@@ -590,11 +686,19 @@ export interface FileRouteTypes {
     | '/resources_/faqs'
     | '/resources_/library'
     | '/resources_/rehab'
+    | '/solutions_/cardiorespiratory-physiotherapy'
     | '/solutions_/caregiver'
     | '/solutions_/clinics'
     | '/solutions_/education'
     | '/solutions_/elderly'
+    | '/solutions_/geriatric-physiotherapy'
+    | '/solutions_/neurological-physiotherapy'
+    | '/solutions_/orthopedic-physiotherapy'
+    | '/solutions_/pediatric-physiotherapy'
+    | '/solutions_/posture-spinal-physiotherapy'
     | '/solutions_/rehab'
+    | '/solutions_/sports-physiotherapy'
+    | '/solutions_/womens-health-physiotherapy'
     | '/blog/'
   fileRoutesById: FileRoutesById
 }
@@ -640,11 +744,19 @@ export interface RootRouteChildren {
   ResourcesFaqsRoute: typeof ResourcesFaqsRoute
   ResourcesLibraryRoute: typeof ResourcesLibraryRoute
   ResourcesRehabRoute: typeof ResourcesRehabRoute
+  SolutionsCardiorespiratoryPhysiotherapyRoute: typeof SolutionsCardiorespiratoryPhysiotherapyRoute
   SolutionsCaregiverRoute: typeof SolutionsCaregiverRoute
   SolutionsClinicsRoute: typeof SolutionsClinicsRoute
   SolutionsEducationRoute: typeof SolutionsEducationRoute
   SolutionsElderlyRoute: typeof SolutionsElderlyRoute
+  SolutionsGeriatricPhysiotherapyRoute: typeof SolutionsGeriatricPhysiotherapyRoute
+  SolutionsNeurologicalPhysiotherapyRoute: typeof SolutionsNeurologicalPhysiotherapyRoute
+  SolutionsOrthopedicPhysiotherapyRoute: typeof SolutionsOrthopedicPhysiotherapyRoute
+  SolutionsPediatricPhysiotherapyRoute: typeof SolutionsPediatricPhysiotherapyRoute
+  SolutionsPostureSpinalPhysiotherapyRoute: typeof SolutionsPostureSpinalPhysiotherapyRoute
   SolutionsRehabRoute: typeof SolutionsRehabRoute
+  SolutionsSportsPhysiotherapyRoute: typeof SolutionsSportsPhysiotherapyRoute
+  SolutionsWomensHealthPhysiotherapyRoute: typeof SolutionsWomensHealthPhysiotherapyRoute
   BlogIndexRoute: typeof BlogIndexRoute
 }
 
@@ -951,6 +1063,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResourcesRehabRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/solutions_/cardiorespiratory-physiotherapy': {
+      id: '/solutions_/cardiorespiratory-physiotherapy'
+      path: '/solutions/cardiorespiratory-physiotherapy'
+      fullPath: '/solutions/cardiorespiratory-physiotherapy'
+      preLoaderRoute: typeof SolutionsCardiorespiratoryPhysiotherapyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/solutions_/caregiver': {
       id: '/solutions_/caregiver'
       path: '/solutions/caregiver'
@@ -979,11 +1098,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SolutionsElderlyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/solutions_/geriatric-physiotherapy': {
+      id: '/solutions_/geriatric-physiotherapy'
+      path: '/solutions/geriatric-physiotherapy'
+      fullPath: '/solutions/geriatric-physiotherapy'
+      preLoaderRoute: typeof SolutionsGeriatricPhysiotherapyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/neurological-physiotherapy': {
+      id: '/solutions_/neurological-physiotherapy'
+      path: '/solutions/neurological-physiotherapy'
+      fullPath: '/solutions/neurological-physiotherapy'
+      preLoaderRoute: typeof SolutionsNeurologicalPhysiotherapyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/orthopedic-physiotherapy': {
+      id: '/solutions_/orthopedic-physiotherapy'
+      path: '/solutions/orthopedic-physiotherapy'
+      fullPath: '/solutions/orthopedic-physiotherapy'
+      preLoaderRoute: typeof SolutionsOrthopedicPhysiotherapyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/pediatric-physiotherapy': {
+      id: '/solutions_/pediatric-physiotherapy'
+      path: '/solutions/pediatric-physiotherapy'
+      fullPath: '/solutions/pediatric-physiotherapy'
+      preLoaderRoute: typeof SolutionsPediatricPhysiotherapyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/posture-spinal-physiotherapy': {
+      id: '/solutions_/posture-spinal-physiotherapy'
+      path: '/solutions/posture-spinal-physiotherapy'
+      fullPath: '/solutions/posture-spinal-physiotherapy'
+      preLoaderRoute: typeof SolutionsPostureSpinalPhysiotherapyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/solutions_/rehab': {
       id: '/solutions_/rehab'
       path: '/solutions/rehab'
       fullPath: '/solutions/rehab'
       preLoaderRoute: typeof SolutionsRehabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/sports-physiotherapy': {
+      id: '/solutions_/sports-physiotherapy'
+      path: '/solutions/sports-physiotherapy'
+      fullPath: '/solutions/sports-physiotherapy'
+      preLoaderRoute: typeof SolutionsSportsPhysiotherapyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/solutions_/womens-health-physiotherapy': {
+      id: '/solutions_/womens-health-physiotherapy'
+      path: '/solutions/womens-health-physiotherapy'
+      fullPath: '/solutions/womens-health-physiotherapy'
+      preLoaderRoute: typeof SolutionsWomensHealthPhysiotherapyRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1042,11 +1210,23 @@ const rootRouteChildren: RootRouteChildren = {
   ResourcesFaqsRoute: ResourcesFaqsRoute,
   ResourcesLibraryRoute: ResourcesLibraryRoute,
   ResourcesRehabRoute: ResourcesRehabRoute,
+  SolutionsCardiorespiratoryPhysiotherapyRoute:
+    SolutionsCardiorespiratoryPhysiotherapyRoute,
   SolutionsCaregiverRoute: SolutionsCaregiverRoute,
   SolutionsClinicsRoute: SolutionsClinicsRoute,
   SolutionsEducationRoute: SolutionsEducationRoute,
   SolutionsElderlyRoute: SolutionsElderlyRoute,
+  SolutionsGeriatricPhysiotherapyRoute: SolutionsGeriatricPhysiotherapyRoute,
+  SolutionsNeurologicalPhysiotherapyRoute:
+    SolutionsNeurologicalPhysiotherapyRoute,
+  SolutionsOrthopedicPhysiotherapyRoute: SolutionsOrthopedicPhysiotherapyRoute,
+  SolutionsPediatricPhysiotherapyRoute: SolutionsPediatricPhysiotherapyRoute,
+  SolutionsPostureSpinalPhysiotherapyRoute:
+    SolutionsPostureSpinalPhysiotherapyRoute,
   SolutionsRehabRoute: SolutionsRehabRoute,
+  SolutionsSportsPhysiotherapyRoute: SolutionsSportsPhysiotherapyRoute,
+  SolutionsWomensHealthPhysiotherapyRoute:
+    SolutionsWomensHealthPhysiotherapyRoute,
   BlogIndexRoute: BlogIndexRoute,
 }
 export const routeTree = rootRouteImport

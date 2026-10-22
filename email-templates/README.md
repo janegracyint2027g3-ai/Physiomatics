@@ -35,14 +35,16 @@ email-templates/
 
 ## 2. Template Inventory & Strategic Objectives
 
-| # | File | Subject Line | Target Audience | Primary Conversion Goal |
-|---|---|---|---|---|
-| **1** | `welcome.html` | Welcome to Physiomatics — Let's Move Forward Together! | New website enquiries, newsletter subscribers & opted-in contacts | Platform exploration & direct WhatsApp connection |
-| **2** | `advertising.html` | Discover a Smarter Approach to Physiotherapy | Opted-in healthcare professionals, solo PTs & clinic directors | Test-drive browser video analytics & submit an inquiry |
-| **3** | `business-value.html` | Explore New Possibilities for Your Physiotherapy Practice | Hospital administrators, clinic owners & practice directors | Schedule a clinical walkthrough & discuss practice requirements |
-| **4** | `reengagement.html` | Ready to Revisit Physiomatics, {{name}}? | Inactive leads, past demo requesters & contacts due for follow-up | Revisit platform features & reply via low-friction WhatsApp |
-| **5** | `lead-generation.html` | Let's Explore Your Physiotherapy Technology Needs | High-intent prospective partners, clinics & sports academies | Direct demo booking (`/contact/demo`) & consultation lead capture |
-| **6** | `products-features.html` | Explore Physiomatics — Movement Insights and More | Evaluators interested in technical goniometry & data privacy | Explore live features, review privacy specs & submit requirements |
+| # | File | Subject Line | Header | Target Audience | Primary Conversion Goal |
+|---|---|---|---|---|---|
+| **1** | `welcome.html` | Welcome to Physiomatics — Let's Move Forward Together! | 1 | New website enquiries, newsletter subscribers & opted-in contacts | Platform exploration & direct WhatsApp connection |
+| **2** | `advertising.html` | Discover a Smarter Approach to Physiotherapy | 2 | Opted-in healthcare professionals, solo PTs & clinic directors | Test-drive browser video analytics & submit an inquiry |
+| **3** | `business-value.html` | Explore New Possibilities for Your Physiotherapy Practice | 3 | Hospital administrators, clinic owners & practice directors | Schedule a clinical walkthrough & discuss practice requirements |
+| **4** | `reengagement.html` | Ready to Revisit Physiomatics, {{name}}? | 4 | Inactive leads, past demo requesters & contacts due for follow-up | Revisit platform features & reply via low-friction WhatsApp |
+| **5** | `lead-generation.html` | Let's Explore Your Physiotherapy Technology Needs | 5 | High-intent prospective partners, clinics & sports academies | Direct demo booking (`/contact/demo`) & consultation lead capture |
+| **6** | `products-features.html` | Explore Physiomatics — Movement Insights and More | 3 | Evaluators interested in technical goniometry & data privacy | Explore live features, review privacy specs & submit requirements |
+
+Templates use the numbered 1200-pixel-wide header artwork, sized for crisp display at 600px on high-density screens. Footer banner images are intentionally omitted; the centered, table-based HTML footer retains contact details, social and legal links, and the unsubscribe link. Template 6 reuses header 3, whose assessment-to-recovery artwork best fits the product deep-dive.
 
 ---
 

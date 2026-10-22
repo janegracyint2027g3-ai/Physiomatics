@@ -11,8 +11,8 @@ import {
 export function Footer() {
   return (
     <footer className="mt-24 bg-ink text-ink-foreground">
-      <div className="container-page grid gap-10 py-16 md:grid-cols-4">
-        <div className="md:col-span-2">
+      <div className="container-page grid gap-10 py-16 md:grid-cols-2 lg:grid-cols-5">
+        <div className="lg:col-span-2">
           <div className="font-display text-2xl">Physiomatics</div>
           <p className="mt-3 max-w-sm text-sm opacity-75">Move Better. Recover Smarter. Age Stronger. Exercise guidance and AI-assisted movement monitoring — not a diagnostic tool or a replacement for professional care.</p>
         </div>
@@ -20,10 +20,21 @@ export function Footer() {
           <div className="font-semibold">Explore</div>
           <Link to="/platform" className="opacity-75 hover:opacity-100">Platform</Link>
           <Link to="/analyze" className="opacity-75 hover:opacity-100">AI Video Analytics</Link>
-          <Link to="/solutions" className="opacity-75 hover:opacity-100">Solutions</Link>
+          <Link to="/solutions" className="opacity-75 hover:opacity-100">Solutions Hub</Link>
           <Link to="/how-it-works" className="opacity-75 hover:opacity-100">How It Works</Link>
           <Link to="/resources" className="opacity-75 hover:opacity-100">Resources &amp; FAQ</Link>
           <Link to="/blog" className="opacity-75 hover:opacity-100">Blog</Link>
+        </div>
+        <div className="grid gap-2 text-sm">
+          <div className="font-semibold">Specialties</div>
+          <Link to="/solutions/orthopedic-physiotherapy" className="opacity-75 hover:opacity-100">Orthopedic PT</Link>
+          <Link to="/solutions/neurological-physiotherapy" className="opacity-75 hover:opacity-100">Neurological PT</Link>
+          <Link to="/solutions/sports-physiotherapy" className="opacity-75 hover:opacity-100">Sports PT</Link>
+          <Link to="/solutions/geriatric-physiotherapy" className="opacity-75 hover:opacity-100">Geriatric PT</Link>
+          <Link to="/solutions/cardiorespiratory-physiotherapy" className="opacity-75 hover:opacity-100">Cardiorespiratory</Link>
+          <Link to="/solutions/posture-spinal-physiotherapy" className="opacity-75 hover:opacity-100">Posture &amp; Spinal</Link>
+          <Link to="/solutions/pediatric-physiotherapy" className="opacity-75 hover:opacity-100">Pediatric PT</Link>
+          <Link to="/solutions/womens-health-physiotherapy" className="opacity-75 hover:opacity-100">Women's Health</Link>
         </div>
         <div className="grid gap-2 text-sm">
           <div className="font-semibold">Contact &amp; Connect</div>
