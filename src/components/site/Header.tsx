@@ -531,14 +531,14 @@ export function Header() {
           />
 
           <CompactMegamenu 
-            label="Platform" 
-            to="/platform" 
-            sidebarEyebrow="CORE ARCHITECTURE" 
-            sidebarDesc="AI-powered video analysis infrastructure built for clinical-grade accuracy."
-            items={platformMenu}
-            ctaText="Try our browser-based AI video analysis instantly."
-            ctaButtonText="Test in Browser →"
-            ctaLink="/analyze"
+            label="Resources" 
+            to="/resources" 
+            sidebarEyebrow="KNOWLEDGE BASE"
+            sidebarDesc="Clinical exercise library, goniometric standards, and research papers."
+            items={resourcesMenu}
+            ctaText="Explore our verified clinical exercises and goniometric angles."
+            ctaButtonText="Browse Library →"
+            ctaLink="/resources/library"
             align="left"
           />
 
@@ -567,14 +567,14 @@ export function Header() {
           />
 
           <CompactMegamenu 
-            label="Resources" 
-            to="/resources" 
-            sidebarEyebrow="KNOWLEDGE BASE"
-            sidebarDesc="Clinical exercise library, goniometric standards, and research papers."
-            items={resourcesMenu}
-            ctaText="Explore our verified clinical exercises and goniometric angles."
-            ctaButtonText="Browse Library →"
-            ctaLink="/resources/library"
+            label="Platform" 
+            to="/platform" 
+            sidebarEyebrow="CORE ARCHITECTURE" 
+            sidebarDesc="AI-powered video analysis infrastructure built for clinical-grade accuracy."
+            items={platformMenu}
+            ctaText="Try our browser-based AI video analysis instantly."
+            ctaButtonText="Test in Browser →"
+            ctaLink="/analyze"
             align="center"
           />
 
