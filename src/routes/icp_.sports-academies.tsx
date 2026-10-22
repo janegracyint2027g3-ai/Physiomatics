@@ -141,7 +141,7 @@ function SportsAcademiesICPPage() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
               <div className="absolute bottom-5 left-6 right-6 text-white">
                 <span className="text-xs font-bold uppercase tracking-wider bg-primary px-2.5 py-0.5 rounded-full">Live Bilateral Symmetry Analysis</span>
-                <h3 className="text-xl font-bold mt-2">Sub-Degree Joint Angle Telemetry for Every Athlete on Your Roster</h3>
+                <h3 className="text-xl font-bold mt-2">Computer Vision Kinematic Telemetry for Every Athlete on Your Roster</h3>
               </div>
             </div>
             <div className="p-6 grid sm:grid-cols-3 gap-4 text-center">

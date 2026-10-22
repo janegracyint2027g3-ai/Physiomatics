@@ -51,7 +51,7 @@ function PhysiotherapistsICPPage() {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-2">
               <Stethoscope className="size-3.5" /> Direct Telemetry & Tablet Goniometry
             </span>
-            <h3 className="text-xl md:text-2xl font-bold">Live Sub-Degree Joint Angular Biofeedback on Any Screen</h3>
+            <h3 className="text-xl md:text-2xl font-bold">Live Real-Time Joint Angular Biofeedback on Any Screen</h3>
           </div>
         </div>
       </div>
@@ -122,8 +122,8 @@ function PhysiotherapistsICPPage() {
             </div>
             <div className="p-6 grid sm:grid-cols-3 gap-4 text-center">
               <div className="rounded-2xl bg-muted/50 p-3">
-                <div className="text-2xl font-bold text-primary">0.5°</div>
-                <div className="text-xs text-muted-foreground mt-0.5">Kinematic Angular Accuracy</div>
+                <div className="text-2xl font-bold text-primary">60 FPS</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Real-Time Pose Tracking</div>
               </div>
               <div className="rounded-2xl bg-muted/50 p-3">
                 <div className="text-2xl font-bold text-emerald-600">3.2x</div>

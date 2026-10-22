@@ -50,7 +50,7 @@ const icpCards = [
     secondaryImage: clinicAnalytics,
     painPoint: "High patient drop-off between visits, zero visibility into at-home exercise compliance, and manual documentation bottlenecks.",
     solution: "Browser-based video movement tracking with objective adherence telemetry and automated progress reporting.",
-    roi: "+42% Treatment plan completion rate; 3.5 hrs saved per therapist/week on review notes.",
+    roi: "Designed to improve treatment plan adherence and save therapists hours each week on manual review notes.",
     features: ["Practice-wide compliance metrics", "No app install required for patients", "Zero-server on-device video privacy", "Multi-therapist workflow"],
   },
   {
@@ -62,8 +62,8 @@ const icpCards = [
     image: ptTablet,
     secondaryImage: clinicAnalytics,
     painPoint: "Relying on subjective patient recall during follow-ups and lacking proof of form correctness during home routines.",
-    solution: "Sub-degree angular kinematic tracking directly in the client's browser, giving objective proof of extension and reps.",
-    roi: "Dramatically faster discharge with verified functional goals and higher client retention.",
+    solution: "Objective angular kinematic tracking directly in the client's browser, giving clear proof of extension and reps.",
+    roi: "Supports goal-directed discharge with verified functional metrics and strengthened client engagement.",
     features: ["Real-time joint angle overlay", "Automated rep counting thresholds", "Exportable PDF progress summaries", "Instant WhatsApp integration"],
   },
   {

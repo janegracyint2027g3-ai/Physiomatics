@@ -183,7 +183,8 @@ function Home() {
           <div className="relative z-10 text-center max-w-2xl mx-auto mb-16">
             <div className="eyebrow text-primary mb-4">Progress Monitoring</div>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-[#3b1d60]">Track your recovery journey</h2>
-            <p className="text-muted-foreground text-lg font-sans">Review session history, completion rates, and exercise adherence in one beautiful dashboard.</p>
+            <p className="text-muted-foreground text-lg font-sans">Review session history, completion rates, and exercise adherence in one intuitive dashboard.</p>
+            <p className="text-xs text-muted-foreground/75 font-mono mt-2 uppercase tracking-wider">Illustrative Patient Dashboard Preview</p>
           </div>
           
           <div className="relative z-10 grid gap-6 md:grid-cols-3">
@@ -192,11 +193,11 @@ function Home() {
                 <div className="bg-primary/10 border border-primary/15 p-3 rounded-2xl">
                   <BarChart className="text-primary size-6" />
                 </div>
-                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Adherence</h4>
+                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Adherence (Sample)</h4>
               </div>
               <div className="text-5xl font-display font-bold text-[#3b1d60]">85<span className="text-2xl text-muted-foreground">%</span></div>
               <div className="text-sm text-emerald-600 font-medium mt-3 flex items-center gap-1">
-                <CheckCircle2 className="size-4" /> +5% from last week
+                <CheckCircle2 className="size-4" /> +5% illustrative trend
               </div>
             </div>
             
@@ -205,10 +206,10 @@ function Home() {
                 <div className="bg-[#5AA9AC]/15 border border-[#5AA9AC]/20 p-3 rounded-2xl">
                   <Activity className="text-[#5AA9AC] size-6" />
                 </div>
-                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Completion</h4>
+                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Completion (Sample)</h4>
               </div>
               <div className="text-5xl font-display font-bold text-[#3b1d60]">12<span className="text-2xl text-muted-foreground">/14</span></div>
-              <div className="text-sm text-muted-foreground mt-3">Sessions this month</div>
+              <div className="text-sm text-muted-foreground mt-3">Monthly prescribed sessions</div>
             </div>
             
             <div className="rounded-3xl bg-white/85 dark:bg-card/70 backdrop-blur-xl p-8 border border-white/90 shadow-lg hover:-translate-y-1.5 transition-all">
@@ -216,10 +217,10 @@ function Home() {
                 <div className="bg-primary/10 border border-primary/15 p-3 rounded-2xl">
                   <History className="text-primary size-6" />
                 </div>
-                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Avg Time</h4>
+                <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Avg Duration (Sample)</h4>
               </div>
               <div className="text-5xl font-display font-bold text-[#3b1d60]">24<span className="text-2xl text-muted-foreground">m</span></div>
-              <div className="text-sm text-muted-foreground mt-3">Optimal range achieved</div>
+              <div className="text-sm text-muted-foreground mt-3">Target therapeutic session time</div>
             </div>
           </div>
           
