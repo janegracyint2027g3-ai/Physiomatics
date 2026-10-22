@@ -33,11 +33,14 @@ import {
   Mail,
   Phone,
   Zap,
+  Cpu,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { 
   platformMenu, 
   icpCategories, 
+  icpMenu,
   solutionsCategories, 
   resourcesMenu, 
   howItWorksMenu, 
@@ -77,6 +80,8 @@ const iconMap: Record<string, any> = {
   Mail,
   Phone,
   Zap,
+  Cpu,
+  Lock,
 };
 
 function renderIcon(name?: string, className: string = "size-5") {
@@ -355,40 +360,40 @@ function CompactMegamenu({
           <div className="overflow-hidden rounded-[1.75rem] shadow-[0_24px_80px_-12px_rgba(89,39,135,0.25)] ring-1 ring-[#592787]/12">
             
             {/* Top Grid */}
-            <div className="grid grid-cols-[230px_1fr] min-h-[320px]">
+            <div className="grid grid-cols-[210px_1fr] min-h-[280px]">
               
               {/* Left Dark Purple-Black Panel */}
               <div
-                className="flex flex-col justify-between p-6 text-white border-r border-[#592787]/20"
+                className="flex flex-col justify-between p-4 xl:p-5 text-white border-r border-[#592787]/20"
                 style={{ background: "linear-gradient(160deg, #1a0a2e 0%, #0d0520 60%, #061020 100%)" }}
               >
                 <div>
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-1.5 mb-3">
                     <div className="size-1.5 rounded-full bg-[#5AA9AC] animate-pulse" />
-                    <div className="text-[9px] font-bold tracking-[0.22em] text-[#5AA9AC]/80 uppercase">
+                    <div className="text-[8.5px] font-bold tracking-[0.2em] text-[#5AA9AC]/80 uppercase">
                       {sidebarEyebrow}
                     </div>
                   </div>
-                  <h3 className="font-display text-2xl font-bold tracking-tight text-white mb-3">
+                  <h3 className="font-display text-xl xl:text-2xl font-bold tracking-tight text-white mb-2">
                     {label}
                   </h3>
-                  <p className="text-xs text-white/40 leading-relaxed">
+                  <p className="text-[11px] xl:text-xs text-white/50 leading-relaxed">
                     {sidebarDesc || "AI-assisted video kinematics, precision angular tracking, and structured recovery guidance."}
                   </p>
 
                   {/* Decorative dots */}
-                  <div className="mt-6 flex gap-1.5">
+                  <div className="mt-4 flex gap-1.5">
                     {[0,1,2].map(i => (
                       <div key={i} className="size-1.5 rounded-full" style={{ background: i === 0 ? "#592787" : i === 1 ? "#5AA9AC" : "#592787", opacity: i === 2 ? 0.3 : 0.7 }} />
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-5 border-t border-white/10">
+                <div className="pt-3 border-t border-white/10">
                   <Link 
                     to={to as any} 
                     onClick={() => setOpen(false)}
-                    className="inline-flex items-center gap-1.5 text-xs text-white/40 hover:text-white/80 transition-colors group"
+                    className="inline-flex items-center gap-1 text-[11px] text-white/50 hover:text-white transition-colors group"
                   >
                     <span>View all {label.toLowerCase()}</span>
                     <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
@@ -397,39 +402,39 @@ function CompactMegamenu({
               </div>
 
               {/* Right Panel */}
-              <div className="p-6 bg-white flex flex-col justify-between">
+              <div className="p-4 xl:p-5 bg-white flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#592787]/10">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-[#592787]/10">
+                    <div className="flex items-center gap-1.5">
                       <div className="size-1 rounded-full bg-[#592787]" />
-                      <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#592787] font-sans">
+                      <div className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-[#592787] font-sans">
                         CORE CAPABILITIES
                       </div>
                     </div>
-                    <span className="text-[10px] text-zinc-400 font-medium bg-zinc-50 border border-zinc-100 rounded-full px-2 py-px">{items.length} items</span>
+                    <span className="text-[9.5px] text-zinc-400 font-medium bg-zinc-50 border border-zinc-100 rounded-full px-2 py-px">{items.length} items</span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-2 gap-2">
                     {items.map((item) => (
                       <Link
                         key={item.label}
                         to={item.to as any}
                         onClick={() => setOpen(false)}
-                        className="group flex items-start gap-3 rounded-2xl border border-zinc-100 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#592787]/30 hover:shadow-[0_8px_24px_-4px_rgba(89,39,135,0.15)] hover:ring-1 hover:ring-[#592787]/15"
+                        className="group flex items-start gap-2.5 rounded-xl border border-zinc-100 bg-white p-2.5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-[#592787]/30 hover:shadow-[0_6px_20px_-4px_rgba(89,39,135,0.12)] hover:ring-1 hover:ring-[#592787]/15"
                       >
-                        <div className="mt-0.5 shrink-0 rounded-xl bg-[#592787]/8 p-2 text-[#592787] border border-[#592787]/12 group-hover:bg-[#592787] group-hover:text-white group-hover:border-[#592787] transition-all duration-200">
+                        <div className="mt-0.5 shrink-0 rounded-lg bg-[#592787]/8 p-1.5 text-[#592787] border border-[#592787]/12 group-hover:bg-[#592787] group-hover:text-white group-hover:border-[#592787] transition-all duration-200">
                           {renderIcon(item.icon, "size-3.5")}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-sm text-zinc-900 group-hover:text-[#592787] transition-colors leading-snug">
+                          <div className="font-semibold text-[13px] text-zinc-900 group-hover:text-[#592787] transition-colors leading-snug">
                             {item.label}
                           </div>
                           {item.tag && (
-                            <div className="inline-flex items-center text-[9px] font-bold tracking-wider text-[#5AA9AC] uppercase mt-0.5 font-sans bg-[#5AA9AC]/8 border border-[#5AA9AC]/20 rounded-full px-1.5 py-px">
+                            <div className="inline-flex items-center text-[8.5px] font-bold tracking-wider text-[#5AA9AC] uppercase mt-0.5 font-sans bg-[#5AA9AC]/8 border border-[#5AA9AC]/20 rounded-full px-1.5 py-px">
                               {item.tag}
                             </div>
                           )}
-                          <p className="mt-0.5 text-xs text-zinc-500 line-clamp-1 leading-relaxed">
+                          <p className="mt-0.5 text-[11px] text-zinc-500 line-clamp-1 leading-normal">
                             {item.desc}
                           </p>
                         </div>
@@ -438,7 +443,7 @@ function CompactMegamenu({
                   </div>
                 </div>
 
-                <div className="pt-4 mt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-400">
+                <div className="pt-2.5 mt-2.5 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-400">
                   <span>Client-side pose telemetry</span>
                   <Link 
                     to={to as any} 
@@ -578,12 +583,12 @@ export function Header() {
             align="center"
           />
 
-          <ContrastMegamenu 
+          <CompactMegamenu 
             label="ICP Profiles" 
             to="/icp" 
-            sidebarEyebrow="IDEAL CUSTOMER PROFILES" 
-            sidebarTitle="Target Personas"
-            categories={icpCategories}
+            sidebarEyebrow="TARGET PERSONAS" 
+            sidebarDesc="Tailored rehabilitation solutions for clinics, solo therapists, patients, seniors, and sports academies."
+            items={icpMenu}
             ctaText="Looking for a custom plan tailored to your specific organization?"
             ctaButtonText="Book Custom Demo →"
             ctaLink="/contact/demo"

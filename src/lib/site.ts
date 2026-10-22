@@ -41,6 +41,7 @@ export const platformMenu: readonly MenuItem[] = [
   { to: "/platform/movement", label: "Movement Analysis", desc: "Detailed angular insights into functional recovery.", tag: "DIAGNOSTICS", icon: "Gauge" },
   { to: "/platform/progress", label: "Progress Monitoring", desc: "Longitudinal recovery charts & compliance velocity.", tag: "TELEMETRY", icon: "LineChart" },
   { to: "/platform/dashboard", label: "Physiotherapist Dashboard", desc: "Oversight of shared patient recordings and clinical metrics.", tag: "CLINICAL PORTAL", icon: "BarChart3" },
+  { to: "/diagnostics", label: "System & AI Diagnostics", desc: "Camera pipeline latency, frame rates & model validation.", tag: "DEVICE TELEMETRY", icon: "Cpu" },
 ];
 
 export const icpCategories: readonly MenuCategory[] = [
@@ -108,6 +109,7 @@ export const solutionsCategories: readonly MenuCategory[] = [
       { to: "/solutions/caregiver", label: "Caregiver Support", desc: "Resources and visual guidance for family members.", tag: "FAMILY AID", icon: "Users" },
       { to: "/solutions/clinics", label: "Physiotherapy Clinics", desc: "Visibility into home-exercise performance and adherence.", tag: "CLINICAL OPS", icon: "Building2" },
       { to: "/solutions/education", label: "Physiotherapy Education", desc: "Movement analysis and anatomical mechanics for teaching.", tag: "ACADEMIC LAB", icon: "GraduationCap" },
+      { to: "/how-it-works/kpi-dashboard", label: "Clinical Wellness Analytics", desc: "Outcome tracking and automated patient KPI reports.", tag: "METRICS SUITE", icon: "BarChart3" },
     ],
   },
 ];
@@ -138,9 +140,12 @@ export const howItWorksMenu: readonly MenuItem[] = [
 ];
 
 export const aboutMenu: readonly MenuItem[] = [
-  { to: "/about/mission", label: "Our Mission", desc: "Bridging the clinic-to-home recovery gap.", tag: "PURPOSE", icon: "Target" },
-  { to: "/about/team", label: "Clinical & AI Team", desc: "Physiotherapists & computer vision engineers.", tag: "LEADERSHIP", icon: "Users" },
-  { to: "/about/careers", label: "Careers", desc: "Join our team pioneering computer-vision health.", tag: "HIRING", icon: "Sparkles" },
+  { to: "/about", label: "Company Overview", desc: "Our founding story, team values, and health-tech vision.", tag: "ABOUT US", icon: "Building2" },
+  { to: "/about/mission", label: "Our Mission", desc: "Bridging the clinic-to-home recovery gap with vision AI.", tag: "PURPOSE", icon: "Target" },
+  { to: "/about/team", label: "Clinical & AI Team", desc: "Physiotherapists, clinicians & computer vision engineers.", tag: "LEADERSHIP", icon: "Users" },
+  { to: "/about/careers", label: "Careers & Culture", desc: "Join our team pioneering on-device digital therapeutics.", tag: "HIRING", icon: "Sparkles" },
+  { to: "/safety", label: "Clinical Safety Standards", desc: "Responsible AI guardrails, confidence scoring & oversight.", tag: "CLINICAL SAFETY", icon: "ShieldCheck" },
+  { to: "/privacy", label: "Zero-Cloud Data Privacy", desc: "On-device processing ensuring patient video confidentiality.", tag: "DATA SOVEREIGNTY", icon: "Lock" },
 ];
 
 export const contactMenu: readonly MenuItem[] = [
